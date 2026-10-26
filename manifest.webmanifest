@@ -1,0 +1,16 @@
+{
+  "name": "베어쌤 복습",
+  "short_name": "베어쌤 복습",
+  "description": "영어 과외 문장 섀도잉·발음 비교·간격 반복 복습",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F2F4F7",
+  "theme_color": "#2457D6",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

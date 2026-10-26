@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F2F4F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101318" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="베어쌤 복습">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>베어쌤 복습</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: one-screen app shell — sticky top bar, scrolling content, fixed bottom tabs; practice view is a card + result stack. */
+:root{
+  --bg:#F2F4F7; --surface:#FFFFFF; --surface-2:#E8ECF2; --fg:#161A20; --muted:#5B6473; --line:#D3D9E2;
+  --teacher:#2457D6; --teacher-soft:#E3EAFB; --me:#E2611A; --me-soft:#FCE7DA;
+  --good:#1E8A58; --good-soft:#DCF2E6; --warn:#B9800A; --warn-soft:#FAEFD0; --bad:#CC3C3C; --bad-soft:#F9DCDC;
+  --font-ui:"Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --font-en:"Atkinson Hyperlegible","Noto Sans KR",system-ui,sans-serif;
+  --r:14px; --shadow:0 1px 2px rgba(20,30,50,.06),0 6px 20px rgba(20,30,50,.06);
+  --tab-h:58px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#101318; --surface:#181C23; --surface-2:#222833; --fg:#E8ECF2; --muted:#9AA3B2; --line:#2E3540;
+  --teacher:#7A9DFF; --teacher-soft:#1C2A4F; --me:#FF9B57; --me-soft:#4A2812;
+  --good:#4FCB8E; --good-soft:#143324; --warn:#E6B84A; --warn-soft:#3A2F10; --bad:#F27676; --bad-soft:#3F1A1A;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#101318; --surface:#181C23; --surface-2:#222833; --fg:#E8ECF2; --muted:#9AA3B2; --line:#2E3540;
+  --teacher:#7A9DFF; --teacher-soft:#1C2A4F; --me:#FF9B57; --me-soft:#4A2812;
+  --good:#4FCB8E; --good-soft:#143324; --warn:#E6B84A; --warn-soft:#3A2F10; --bad:#F27676; --bad-soft:#3F1A1A;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+input,select,textarea{font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px;width:100%;max-width:100%}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--teacher);outline-offset:1px}
+h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}
+h2{font-size:17px;font-weight:700}
+h3{font-size:14px;font-weight:700;color:var(--muted);letter-spacing:.02em}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.num{font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
+
+.topbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px));display:flex;align-items:center;justify-content:space-between;gap:10px}
+.topbar .brand{font-weight:700;font-size:18px;display:flex;align-items:center;gap:8px}
+.topbar .brand .mark{width:22px;height:22px;border-radius:7px;background:var(--teacher);position:relative;flex:none}
+.topbar .brand .mark::after{content:"";position:absolute;left:5px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--me)}
+.status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.status i{width:8px;height:8px;border-radius:50%;background:var(--warn);display:inline-block}
+.status.ok i{background:var(--good)}
+.status.bad i{background:var(--bad)}
+
+main{padding:0 max(16px,env(safe-area-inset-right,0px)) calc(var(--tab-h) + 24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));max-width:720px;margin:0 auto}
+.view{display:flex;flex-direction:column;gap:14px}
+
+.card{background:var(--surface);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
+.card.flat{box-shadow:none;border:1px solid var(--line)}
+.card-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.between{justify-content:space-between}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stack{display:flex;flex-direction:column;gap:8px}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 14px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;transition:transform .08s ease,background .15s ease}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.btn.teacher{background:var(--teacher-soft);border-color:transparent;color:var(--teacher);font-weight:700}
+.btn.me{background:var(--me-soft);border-color:transparent;color:var(--me);font-weight:700}
+.btn.rec{background:var(--me);color:#fff;border-color:transparent;font-weight:700}
+.btn.rec.on{background:var(--bad);animation:pulse 1.2s ease-in-out infinite}
+.btn.small{padding:7px 11px;min-height:36px;font-size:13px;border-radius:10px}
+.btn.ghost{background:transparent}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.45;cursor:default}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(204,60,60,.35)}50%{box-shadow:0 0 0 10px rgba(204,60,60,0)}}
+@media (prefers-reduced-motion: reduce){ .btn.rec.on{animation:none} *{transition:none!important} }
+
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap;font-weight:500}
+.chip.t1{background:var(--teacher-soft);color:var(--teacher)}
+.chip.t2{background:var(--good-soft);color:var(--good)}
+.chip.t3{background:var(--warn-soft);color:var(--warn)}
+.chip.ok{background:var(--good-soft);color:var(--good)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.chip.sel{outline:2px solid var(--fg);color:var(--fg)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button.chip{border:0;cursor:pointer}
+
+.big{font-size:44px;font-weight:700;line-height:1;letter-spacing:-.02em}
+.bar{height:8px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--teacher);border-radius:999px;width:0;transition:width .4s ease}
+.bar i.good{background:var(--good)}
+.bar i.me{background:var(--me)}
+
+.banner{background:var(--warn-soft);color:var(--fg);border-radius:12px;padding:10px 12px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+.banner b{color:var(--warn);white-space:nowrap}
+.banner.info{background:var(--teacher-soft)} .banner.info b{color:var(--teacher)}
+
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px max(10px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));height:calc(var(--tab-h) + env(safe-area-inset-bottom,0px))}
+.tabbar button{flex:1;border:0;background:none;color:var(--muted);font-size:11px;font-weight:500;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;cursor:pointer;border-radius:10px}
+.tabbar button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabbar button.active{color:var(--fg)}
+
+/* practice */
+.prac-head{display:flex;align-items:center;gap:10px}
+.prac-head .bar{flex:1}
+.sentence-card{background:var(--surface);border-radius:var(--r);padding:18px 16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+.sentence-card .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
+.sentence{font-family:var(--font-en);font-size:clamp(22px,5.4vw,28px);font-weight:700;line-height:1.35;letter-spacing:-.005em}
+.sentence.hidden-text{filter:blur(9px);user-select:none}
+.ko{font-size:15px;color:var(--muted)}
+.note{font-size:13px;color:var(--fg);background:var(--surface-2);border-radius:10px;padding:8px 10px}
+.context{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px}
+.context b{color:var(--fg)}
+.controls{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:8px}
+.rec-status{font-size:13px;color:var(--muted);min-height:20px;display:flex;align-items:center;gap:8px}
+.level{height:6px;flex:1;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.level i{display:block;height:100%;background:var(--me);width:0}
+
+.result{display:flex;flex-direction:column;gap:12px}
+.score-row{display:flex;gap:14px;align-items:center}
+.ring{position:relative;width:96px;height:96px;flex:none}
+.ring canvas{width:96px;height:96px}
+.ring .n{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.subs{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;flex:1;min-width:0}
+.sub{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
+.sub b{font-size:15px;color:var(--fg);font-variant-numeric:tabular-nums}
+.sub .bar{height:5px}
+.words{display:flex;flex-wrap:wrap;gap:6px 6px;font-family:var(--font-en);font-size:19px;font-weight:700;line-height:1.3}
+.w{padding:2px 6px;border:0;border-radius:8px 8px 3px 3px;border-bottom:3px solid transparent;background:transparent;font:inherit;cursor:pointer}
+.w.ok{border-bottom-color:var(--good)}
+.w.warn{border-bottom-color:var(--warn);background:var(--warn-soft)}
+.w.bad{border-bottom-color:var(--bad);background:var(--bad-soft)}
+.w.missing{color:var(--bad);text-decoration:line-through;text-decoration-thickness:2px}
+.w.extra{color:var(--muted);font-weight:400;font-style:italic;font-size:15px}
+.w.unknown{border-bottom-color:var(--line)}
+.w.sel{outline:2px solid var(--fg)}
+.word-detail{background:var(--surface-2);border-radius:10px;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.phs{display:flex;gap:4px;flex-wrap:wrap;font-family:var(--font-en);font-size:16px}
+.ph{padding:2px 7px;border-radius:7px;background:var(--surface)}
+.ph.bad{background:var(--bad-soft);color:var(--bad)} .ph.warn{background:var(--warn-soft);color:var(--warn)} .ph.ok{color:var(--good)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:4px}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.contour canvas{width:100%;height:150px;display:block;border-radius:10px;background:var(--surface-2)}
+.hints{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.hints li{display:flex;gap:8px;font-size:14px;align-items:flex-start;line-height:1.4}
+.hints li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--warn);flex:none;margin-top:7px}
+.hints li.good::before{background:var(--good)}
+.hints li.bad::before{background:var(--bad)}
+.hints li.info::before{background:var(--teacher)}
+.grade-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.grade-row .g{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:13px;cursor:pointer;font-weight:500}
+.grade-row .g.sel{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.next-row{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+
+/* bank list */
+.list{display:flex;flex-direction:column;gap:8px}
+.item{background:var(--surface);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow);display:flex;gap:10px;align-items:flex-start}
+.item .t{flex:1;min-width:0}
+.item .en{font-family:var(--font-en);font-weight:700;font-size:16px;line-height:1.35}
+.item .k{font-size:13px;color:var(--muted);margin-top:2px}
+.item .m{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center;font-size:12px;color:var(--muted)}
+.score-pill{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
+.score-pill.ok{background:var(--good-soft);color:var(--good)} .score-pill.warn{background:var(--warn-soft);color:var(--warn)} .score-pill.bad{background:var(--bad-soft);color:var(--bad)} .score-pill.none{background:var(--surface-2);color:var(--muted)}
+
+/* stats */
+.tier-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;font-size:13px}
+.tier-row .bar{grid-column:1 / -1}
+.forecast{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:11px;color:var(--muted)}
+.forecast .d{background:var(--surface-2);border-radius:8px;padding:6px 2px}
+.forecast .d b{display:block;font-size:15px;color:var(--fg);font-variant-numeric:tabular-nums}
+.forecast .d.today{outline:2px solid var(--teacher)}
+.chart{width:100%;height:160px;display:block}
+
+/* settings */
+.field{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.field input,.field select,.field textarea{color:var(--fg)}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.kv:last-child{border-bottom:0}
+details{border:1px solid var(--line);border-radius:12px;padding:0 12px;background:var(--surface)}
+details summary{cursor:pointer;padding:12px 0;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details summary::after{content:"+";color:var(--muted);font-weight:400;font-size:18px}
+details[open] summary::after{content:"–"}
+details .inner{padding:0 0 14px;display:flex;flex-direction:column;gap:10px}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:var(--surface-2);padding:1px 5px;border-radius:5px}
+
+#toast{position:fixed;left:50%;bottom:calc(var(--tab-h) + 18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(10px);background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:12px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20;max-width:calc(100% - 32px);text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.summary-list{display:flex;flex-direction:column;gap:6px}
+.summary-list .s{display:flex;justify-content:space-between;gap:10px;font-size:14px;align-items:center}
+.summary-list .s .en{font-family:var(--font-en);font-weight:700;min-width:0;flex:1}
+@media (max-width:380px){ .controls{grid-template-columns:1fr 1fr 1fr} .grid2{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="mark" aria-hidden="true"></span><span>베어쌤 복습</span></div>
+  <div class="status" id="status"><i></i><span id="status-text">불러오는 중</span></div>
+</header>
+
+<main id="app">
+  <!-- TODAY -->
+  <section id="view-today" class="view">
+    <div id="demo-banner" class="banner" hidden><b>데모</b><span>지금 보이는 문장은 예시예요. 설정 → <b>자료 연결</b>에서 비공개 저장소를 연결하면 실제 수업 문장이 나옵니다.</span></div>
+    <div class="card">
+      <div class="card-head"><h2>오늘의 연습</h2><span class="muted small" id="today-date"></span></div>
+      <div class="row" style="align-items:flex-end;gap:14px">
+        <div class="big num" id="today-count">0</div>
+        <div class="muted small" style="padding-bottom:6px">문장</div>
+      </div>
+      <div class="chips" id="today-breakdown" style="margin:10px 0 14px"></div>
+      <button class="btn primary wide" id="btn-start">연습 시작</button>
+      <div class="row" style="margin-top:8px">
+        <button class="btn small" id="btn-weak">취약 문장 10</button>
+        <button class="btn small" id="btn-random">랜덤 10</button>
+        <button class="btn small" id="btn-week">이번 주 전체</button>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>이번 주 수업</h3>
+        <div class="big num" style="font-size:30px;margin-top:6px" id="week-count">0</div>
+        <div class="muted small" id="week-label">—</div>
+        <div class="bar" style="margin-top:8px"><i id="week-bar"></i></div>
+        <div class="muted small" id="week-sub" style="margin-top:4px"></div>
+      </div>
+      <div class="card">
+        <h3>전체 진도</h3>
+        <div class="big num" style="font-size:30px;margin-top:6px" id="cov-pct">0%</div>
+        <div class="muted small" id="cov-label">시작한 문장</div>
+        <div class="bar" style="margin-top:8px"><i id="cov-bar"></i></div>
+        <div class="muted small" id="cov-sub" style="margin-top:4px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>목표</h3><span class="muted small" id="goal-date"></span></div>
+      <p id="goal-text" class="small"></p>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>최근 7일</h3><span class="muted small num" id="streak"></span></div>
+      <div class="row between small"><span>연습 횟수</span><b class="num" id="w7-attempts">0</b></div>
+      <div class="row between small"><span>평균 점수</span><b class="num" id="w7-avg">—</b></div>
+      <div class="row between small"><span>동기화</span><span class="muted num" id="sync-state">—</span></div>
+    </div>
+  </section>
+
+  <!-- PRACTICE -->
+  <section id="view-practice" class="view" hidden>
+    <div class="prac-head">
+      <button class="btn small ghost" id="prac-exit">닫기</button>
+      <div class="bar"><i id="prac-bar"></i></div>
+      <span class="small muted num" id="prac-count">1/1</span>
+      <button class="btn small" id="prac-hide" title="문장 가리기">가리기</button>
+    </div>
+    <div class="sentence-card">
+      <div class="meta"><span class="chip t1" id="c-tier"></span><span id="c-source"></span><span class="chip" id="c-kind"></span></div>
+      <div class="context" id="c-context" hidden></div>
+      <p class="sentence" id="c-text"></p>
+      <p class="ko" id="c-ko"></p>
+      <p class="note" id="c-note" hidden></p>
+    </div>
+    <div class="controls">
+      <button class="btn teacher" id="btn-teacher">▶ 선생님</button>
+      <button class="btn rec" id="btn-rec">● 녹음</button>
+      <button class="btn me" id="btn-me" disabled>▶ 내 소리</button>
+    </div>
+    <div class="rec-status" id="rec-status"><span id="rec-msg">선생님 소리를 듣고, 녹음을 누른 뒤 따라 말하세요.</span><div class="level" id="level" hidden><i></i></div></div>
+    <div class="result" id="result" hidden>
+      <div class="card" style="display:flex;flex-direction:column;gap:12px">
+        <div class="score-row">
+          <div class="ring"><canvas id="ring" width="192" height="192"></canvas><div class="n" id="score-num">—</div></div>
+          <div class="subs" id="subs"></div>
+        </div>
+        <div class="words" id="words"></div>
+        <div class="word-detail" id="word-detail" hidden></div>
+        <div class="contour">
+          <div class="legend"><span><i style="background:var(--teacher)"></i>선생님 억양</span><span><i style="background:var(--me)"></i>내 억양</span><span class="muted" id="contour-note"></span></div>
+          <canvas id="contour" height="150"></canvas>
+        </div>
+        <ul class="hints" id="hints"></ul>
+        <div class="grade-row"><span class="small muted">평가</span>
+          <button class="g" data-g="1">다시</button><button class="g" data-g="2">어려움</button><button class="g" data-g="3">좋음</button><button class="g" data-g="4">쉬움</button>
+        </div>
+      </div>
+      <div class="next-row">
+        <button class="btn" id="btn-retry">다시 녹음</button>
+        <button class="btn primary" id="btn-next">다음 →</button>
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end">
+      <button class="btn small ghost" id="btn-capture">선생님 음성 직접 녹음</button>
+    </div>
+  </section>
+
+  <!-- SESSION SUMMARY -->
+  <section id="view-summary" class="view" hidden>
+    <div class="card">
+      <h2>오늘 연습 끝</h2>
+      <div class="row" style="margin-top:10px;gap:18px">
+        <div><div class="big num" id="sum-count">0</div><div class="muted small">문장</div></div>
+        <div><div class="big num" id="sum-avg">—</div><div class="muted small">평균 점수</div></div>
+      </div>
+      <p class="small muted" style="margin-top:10px" id="sum-note"></p>
+    </div>
+    <div class="card">
+      <h3>다시 볼 문장</h3>
+      <div class="summary-list" id="sum-low" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="btn-sum-redo">낮은 점수만 다시</button>
+        <button class="btn primary" id="btn-sum-home">오늘 화면으로</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- BANK -->
+  <section id="view-bank" class="view" hidden>
+    <div class="card">
+      <div class="card-head"><h2>문장 목록</h2><span class="muted small num" id="bank-count"></span></div>
+      <input type="search" id="bank-q" placeholder="영어 / 한국어 검색" autocomplete="off">
+      <div class="chips" id="bank-tiers" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:10px">
+        <select id="bank-lesson" style="flex:1;min-width:0"></select>
+        <button class="btn small" id="btn-bank-practice">이 목록 연습</button>
+      </div>
+    </div>
+    <div class="list" id="bank-list"></div>
+    <button class="btn wide" id="btn-bank-more" hidden>더 보기</button>
+  </section>
+
+  <!-- STATS -->
+  <section id="view-stats" class="view" hidden>
+    <div class="card">
+      <div class="card-head"><h2>진도</h2><span class="muted small" id="stats-total"></span></div>
+      <div class="stack" id="tier-cov"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>최근 14일 평균 점수</h3></div>
+      <canvas class="chart" id="trend" height="160"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>앞으로 7일 복습 예정</h3></div>
+      <div class="forecast" id="forecast"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>취약 문장</h3><span class="muted small">평균 75점 미만</span></div>
+      <div class="list" id="weak-list"></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="view-settings" class="view" hidden>
+    <details open>
+      <summary>자료 연결 (비공개 저장소)</summary>
+      <div class="inner">
+        <p class="small muted">문장·선생님 음성·연습 기록은 본인 GitHub 비공개 저장소에만 저장돼요. 토큰은 이 기기 안에만 보관됩니다.</p>
+        <div class="grid2">
+          <label class="field">GitHub 사용자명<input id="s-ghOwner" autocapitalize="off" autocomplete="off"></label>
+          <label class="field">저장소 이름<input id="s-ghRepo" autocapitalize="off" autocomplete="off"></label>
+        </div>
+        <div class="grid2">
+          <label class="field">브랜치<input id="s-ghBranch" autocapitalize="off" autocomplete="off"></label>
+          <label class="field">토큰 (Fine-grained, Contents 읽기/쓰기)<input id="s-ghToken" type="password" autocomplete="off"></label>
+        </div>
+        <div class="row">
+          <button class="btn small" id="btn-gh-test">연결 테스트</button>
+          <button class="btn small" id="btn-reload">자료 다시 불러오기</button>
+          <button class="btn small" id="btn-sync">기록 동기화</button>
+        </div>
+        <p class="small muted" id="gh-status"></p>
+      </div>
+    </details>
+    <details>
+      <summary>연습량</summary>
+      <div class="inner">
+        <div class="grid2">
+          <label class="field">하루 목표 문장 수<input id="s-dailyTarget" type="number" min="5" max="80" inputmode="numeric"></label>
+          <label class="field">과거 문장 신규 투입 (하루)<input id="s-newPerDay" type="number" min="0" max="40" inputmode="numeric"></label>
+          <label class="field">이번 주 수업 비중 (%)<input id="s-weekShare" type="number" min="20" max="100" inputmode="numeric"></label>
+          <label class="field">취약 문장 비중 (%)<input id="s-strugglePct" type="number" min="0" max="60" inputmode="numeric"></label>
+        </div>
+        <label class="field">전체 숙지 목표일<input id="s-targetDate" type="date"></label>
+        <p class="small muted">매일 목표 수만큼 구성: 이번 주 수업 문장 → 복습 기한 지난 문장 → 취약 문장 → 과거 신규 순서. 점수가 낮은 문장은 더 짧은 간격으로 다시 나와요.</p>
+      </div>
+    </details>
+    <details>
+      <summary>표시 · 소리</summary>
+      <div class="inner">
+        <label class="row"><input type="checkbox" id="s-showKo" style="width:auto"> 한국어 뜻 보이기</label>
+        <label class="row"><input type="checkbox" id="s-hideText" style="width:auto"> 기본으로 문장 가리고 시작 (듣고 따라하기)</label>
+        <label class="field">대체 음성(TTS) 속도 <span class="num" id="s-ttsRate-val"></span><input id="s-ttsRate" type="range" min="0.6" max="1.2" step="0.05"></label>
+        <p class="small muted">선생님 클립이 없는 문장은 기기 음성(TTS)으로 들려줘요. 이때는 억양 비교가 안 되고 단어 인식만 됩니다.</p>
+      </div>
+    </details>
+    <details>
+      <summary>정밀 발음 평가 (선택)</summary>
+      <div class="inner">
+        <p class="small muted">Azure Speech 키를 넣으면 단어·음소 단위 정확도, 끊어 읽기, 억양(단조로움) 피드백이 정밀해져요. 무료 등급(F0)은 월 5시간까지. 비워두면 브라우저 음성 인식으로 단어 단위만 비교합니다.</p>
+        <div class="grid2">
+          <label class="field">Azure Speech 키<input id="s-azureKey" type="password" autocomplete="off"></label>
+          <label class="field">리전<input id="s-azureRegion" placeholder="koreacentral" autocapitalize="off" autocomplete="off"></label>
+        </div>
+      </div>
+    </details>
+    <details>
+      <summary>문장 직접 추가</summary>
+      <div class="inner">
+        <p class="small muted">한 줄에 한 문장. 형식: <code>영어 | 한국어 뜻 | 메모</code> (뜻·메모는 생략 가능)</p>
+        <textarea id="add-text" rows="4" placeholder="I'll get right on it. | 바로 할게요. | get right on → 바로 착수"></textarea>
+        <div class="grid2">
+          <label class="field">우선순위<select id="add-tier"></select></label>
+          <label class="field">수업 날짜<input id="add-lesson" type="date"></label>
+        </div>
+        <button class="btn" id="btn-add">추가</button>
+      </div>
+    </details>
+    <details>
+      <summary>백업 · 초기화</summary>
+      <div class="inner">
+        <div class="row">
+          <button class="btn small" id="btn-export">기록 내보내기</button>
+          <label class="btn small" for="import-file">기록 가져오기</label><input type="file" id="import-file" accept="application/json" hidden>
+          <button class="btn small" id="btn-clear-cache">음성 캐시 비우기</button>
+        </div>
+        <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
+      </div>
+    </details>
+    <p class="small muted">베어쌤 복습 v1.0 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+  </section>
+</main>
+
+<nav class="tabbar" aria-label="메뉴">
+  <button data-view="today" class="active"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>오늘</button>
+  <button data-view="bank"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg>문장</button>
+  <button data-view="stats"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>통계</button>
+  <button data-view="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>설정</button>
+</nav>
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+/* ===================== utils ===================== */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const pad2=n=>String(n).padStart(2,'0');
+const todayStr=(d=new Date())=>`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+function addDays(ds,n){const [y,m,d]=ds.split('-').map(Number);return todayStr(new Date(y,m-1,d+n))}
+function dayDiff(a,b){const [y1,m1,d1]=a.split('-').map(Number),[y2,m2,d2]=b.split('-').map(Number);return Math.round((new Date(y2,m2-1,d2)-new Date(y1,m1-1,d1))/864e5)}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(msg,ms=2400){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),ms)}
+const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const LS={progress:'bear.progress.v1',settings:'bear.settings.v1',log:'bear.log.v1',local:'bear.localItems.v1',sync:'bear.sync.v1',bankCache:'bear.bankCache.v1'};
+const idb={
+  open(){return new Promise((res,rej)=>{try{const r=indexedDB.open('bear',1);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains('clips'))db.createObjectStore('clips')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})},
+  async get(k){try{const db=await this.open();return await new Promise((res,rej)=>{const t=db.transaction('clips').objectStore('clips').get(k);t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error)})}catch(e){return undefined}},
+  async set(k,v){try{const db=await this.open();await new Promise((res,rej)=>{const t=db.transaction('clips','readwrite');t.objectStore('clips').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error)});return true}catch(e){return false}},
+  async del(k){try{const db=await this.open();await new Promise((res,rej)=>{const t=db.transaction('clips','readwrite');t.objectStore('clips').delete(k);t.oncomplete=res;t.onerror=()=>rej(t.error)});return true}catch(e){return false}},
+  async clear(){try{const db=await this.open();await new Promise((res,rej)=>{const t=db.transaction('clips','readwrite');t.objectStore('clips').clear();t.oncomplete=res;t.onerror=()=>rej(t.error)});return true}catch(e){return false}}
+};
+
+/* ===================== state ===================== */
+const DEFAULT_TIERS={1:{name:'최신 수업 (00 From 202503 · 2026-10~)',short:'1순위'},2:{name:'복습용묶음',short:'2순위'},3:{name:'00 From 202503 나머지',short:'3순위'},4:{name:'1대1 · ★자습',short:'4순위'},5:{name:'2020-06~2021-10 · 유튜브 스크립트',short:'5순위'},6:{name:'오피스',short:'6순위'}};
+const DEMO_BANK={version:1,demo:true,items:[
+  {id:'demo-01',text:'I was wondering if you could give me a hand with this.',ko:'이것 좀 도와주실 수 있을까 해서요.',tier:1,source:'데모',lesson:todayStr(),kind:'sentence',note:"could give → 'couldgive'처럼 붙여서. WON-dering 첫 음절 강세."},
+  {id:'demo-02',text:'Let me get back to you on that by tomorrow.',ko:'그건 내일까지 다시 연락드릴게요.',tier:1,source:'데모',lesson:todayStr(),kind:'sentence',note:"get back to you → 한 덩어리로."},
+  {id:'demo-03',text:'That totally slipped my mind.',ko:'그거 완전히 깜빡했어요.',tier:1,source:'데모',lesson:todayStr(),kind:'sentence'},
+  {id:'demo-d1',text:'Hey, do you have a minute?',ko:'저기, 잠깐 시간 있어요?',tier:1,source:'데모',lesson:todayStr(),kind:'dialogue',group:'demo-dlg',role:'A',seq:1},
+  {id:'demo-d2',text:"Sure, what's up?",ko:'그럼요, 무슨 일이에요?',tier:1,source:'데모',lesson:todayStr(),kind:'dialogue',group:'demo-dlg',role:'B',seq:2},
+  {id:'demo-04',text:"I'm on the fence about it.",ko:'아직 결정을 못 했어요.',tier:2,source:'데모',lesson:'2026-08-13',kind:'sentence'}
+]};
+const DEFAULTS={dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,ttsRate:0.95,azureKey:'',azureRegion:'koreacentral',ghOwner:'',ghRepo:'',ghBranch:'main',ghToken:''};
+const state={bank:{items:[],byId:{},tiers:DEFAULT_TIERS,demo:true,source:'demo'},progress:store.get(LS.progress,{}),log:store.get(LS.log,[]),localItems:store.get(LS.local,[]),settings:Object.assign({},DEFAULTS,store.get(LS.settings,{})),session:null,view:'today',bankPage:1};
+function saveProgress(){store.set(LS.progress,state.progress);store.set(LS.log,state.log.slice(-3000))}
+function saveSettings(){store.set(LS.settings,state.settings)}
+function P(id){return state.progress[id]}
+
+/* ===================== GitHub data source ===================== */
+const gh={
+  cfg(){const s=state.settings;return{owner:(s.ghOwner||'').trim(),repo:(s.ghRepo||'').trim(),branch:(s.ghBranch||'main').trim()||'main',token:(s.ghToken||'').trim()}},
+  ready(){const c=this.cfg();return !!(c.owner&&c.repo&&c.token)},
+  base(path){const c=this.cfg();return `https://api.github.com/repos/${encodeURIComponent(c.owner)}/${encodeURIComponent(c.repo)}/contents/${path.split('/').map(encodeURIComponent).join('/')}`},
+  headers(raw){return{Authorization:'Bearer '+this.cfg().token,Accept:raw?'application/vnd.github.raw+json':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}},
+  async raw(path){const r=await fetch(this.base(path)+'?ref='+encodeURIComponent(this.cfg().branch),{headers:this.headers(true)});if(r.status===404)return null;if(!r.ok)throw new Error('GitHub '+r.status);return r},
+  async getText(path){const r=await fetch(this.base(path)+'?ref='+encodeURIComponent(this.cfg().branch),{headers:this.headers(false)});if(r.status===404)return null;if(!r.ok)throw new Error('GitHub '+r.status);const j=await r.json();if(j.encoding!=='base64'||!j.content){const rr=await this.raw(path);return{sha:j.sha,text:rr?await rr.text():''}}return{sha:j.sha,text:decodeURIComponent(escape(atob(j.content.replace(/\n/g,''))))}},
+  async putText(path,text,sha,message){const body={message,content:btoa(unescape(encodeURIComponent(text))),branch:this.cfg().branch};if(sha)body.sha=sha;const r=await fetch(this.base(path),{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},this.headers(false)),body:JSON.stringify(body)});if(!r.ok){let t='';try{t=(await r.json()).message||''}catch(e){}throw new Error('GitHub '+r.status+(t?' · '+t:''))}return(await r.json()).content.sha}
+};
+
+/* ===================== bank ===================== */
+function normalizeBank(j,source){
+  const items=(j.items||[]).filter(x=>x&&x.text&&x.id).map(x=>({id:String(x.id),text:String(x.text).trim(),ko:x.ko||'',tier:clamp(parseInt(x.tier)||3,1,6),source:x.source||'',lesson:x.lesson||'',kind:x.kind||'sentence',group:x.group||null,role:x.role||null,seq:x.seq||0,clip:x.clip||null,words:Array.isArray(x.words)?x.words:null,note:x.note||''}));
+  const tiers=Object.assign({},DEFAULT_TIERS);if(j.tiers)for(const k of Object.keys(j.tiers)){tiers[k]=Object.assign({},tiers[k]||{},j.tiers[k])}
+  return{items,tiers,demo:!!(j.demo||j.sample),source,generatedAt:j.generatedAt||null,version:j.version||1};
+}
+function finalizeBank(b){
+  const all=b.items.concat(state.localItems.map(x=>Object.assign({},x,{local:true})));
+  const byId={};for(const it of all)byId[it.id]=it;
+  b.items=Object.values(byId);b.byId=byId;state.bank=b;
+}
+async function loadBank(){
+  setStatus('wait','불러오는 중');
+  if(gh.ready()){
+    try{
+      const r=await gh.raw('bank.json');
+      if(r){const j=await r.json();const b=normalizeBank(j,'github');store.set(LS.bankCache,j);finalizeBank(b);setStatus('ok',`연결됨 · ${b.items.length}문장`);return}
+      setStatus('bad','저장소에 bank.json 없음');
+    }catch(e){
+      const cached=store.get(LS.bankCache,null);
+      if(cached){finalizeBank(normalizeBank(cached,'github-cache'));setStatus('bad','오프라인 · 저장된 자료 사용');return}
+      setStatus('bad','연결 실패: '+e.message);
+    }
+  }
+  try{const r=await fetch('data/bank.json',{cache:'no-cache'});if(r.ok){const j=await r.json();finalizeBank(normalizeBank(j,'local'));setStatus(j.demo?'wait':'ok',`${state.bank.items.length}문장`);return}}catch(e){}
+  finalizeBank(normalizeBank(DEMO_BANK,'demo'));setStatus('wait','데모 자료');
+}
+function setStatus(kind,text){const el=$('#status');el.className='status '+(kind==='ok'?'ok':kind==='bad'?'bad':'');$('#status-text').textContent=text}
+function clipPath(item){if(!item.clip)return null;if(/^https?:/.test(item.clip))return item.clip;if(state.bank.source==='local')return 'data/'+item.clip.replace(/^data\//,'');return item.clip.replace(/^data\//,'')}
+
+/* ===================== scheduler ===================== */
+function gradeFromScore(s){return s>=90?4:s>=80?3:s>=65?2:1}
+function applyGrade(id,grade,score){
+  const p=state.progress[id]||{reps:0,lapses:0,ivl:0,ease:2.5,scores:[],avg:null,best:null,last:null,due:null};
+  const today=todayStr();
+  if(!p.first)p.first=today;
+  p.reps=(p.reps||0)+1;
+  if(score!=null){p.scores=(p.scores||[]).concat([Math.round(score)]).slice(-20);p.avg=p.avg==null?Math.round(score):Math.round(0.6*score+0.4*p.avg);p.best=Math.max(p.best||0,Math.round(score))}
+  let ivl=p.ivl||0,ease=p.ease||2.5;
+  if(grade===1){p.lapses=(p.lapses||0)+1;ease=Math.max(1.3,ease-0.2);ivl=0}
+  else if(grade===2){ease=Math.max(1.3,ease-0.15);ivl=ivl<1?1:Math.max(ivl+1,Math.round(ivl*1.2))}
+  else if(grade===3){ivl=ivl<1?1:ivl<3?3:Math.round(ivl*ease)}
+  else{ease=Math.min(3,ease+0.1);ivl=ivl<1?3:Math.round(ivl*ease*1.3)}
+  if(grade>=3&&p.avg!=null){ivl=Math.max(1,Math.round(ivl*clamp(p.avg/85,0.6,1.15)))}
+  ivl=Math.min(ivl,120);
+  p.ivl=ivl;p.ease=Math.round(ease*100)/100;p.last=new Date().toISOString();p.due=addDays(today,ivl);
+  p.state=ivl===0?'learning':(ivl>=21&&p.avg>=85)?'mastered':'review';
+  state.progress[id]=p;
+  state.log.push({t:p.last,id,score:score==null?null:Math.round(score),g:grade});
+  saveProgress();
+}
+function latestLesson(){const ls=state.bank.items.filter(i=>i.lesson&&/^\d{4}-\d{2}-\d{2}$/.test(i.lesson)).map(i=>i.lesson);return ls.length?ls.sort().pop():null}
+function weekItems(){const L=latestLesson();if(!L)return[];return state.bank.items.filter(i=>i.lesson&&dayDiff(i.lesson,L)>=0&&dayDiff(i.lesson,L)<=6)}
+function sortNew(a,b){if(a.tier!==b.tier)return a.tier-b.tier;if(a.tier<=3&&a.lesson!==b.lesson)return b.lesson<a.lesson?-1:1;if(a.lesson!==b.lesson)return a.lesson<b.lesson?-1:1;if((a.group||'')!==(b.group||''))return (a.group||'')<(b.group||'')?-1:1;return (a.seq||0)-(b.seq||0)}
+function expandGroup(item,pool,taken){if(!item.group)return[item];const g=pool.filter(x=>x.group===item.group&&!taken.has(x.id)).sort((a,b)=>(a.seq||0)-(b.seq||0));return g.length?g:[item]}
+function buildSession(){
+  const s=state.settings,N=Math.max(3,s.dailyTarget|0),today=todayStr();
+  const items=state.bank.items,taken=new Set(),queue=[];
+  const push=it=>{if(!taken.has(it.id)&&queue.length<N){taken.add(it.id);queue.push(it.id);return true}return false};
+  const overdue=i=>{const p=P(i.id);return p&&p.due&&p.due<=today};
+  const isNew=i=>!P(i.id);
+  const wk=new Set(weekItems().map(i=>i.id));
+  const breakdown={week:0,due:0,weak:0,fresh:0};
+  // 1. this week's lesson: due first, then new in order
+  const weekCap=Math.ceil(N*clamp(s.weekShare,20,100)/100);
+  const wDue=items.filter(i=>wk.has(i.id)&&overdue(i)).sort((a,b)=>(P(a.id).avg??100)-(P(b.id).avg??100));
+  const wNew=items.filter(i=>wk.has(i.id)&&isNew(i)).sort(sortNew);
+  for(const it of wDue){if(queue.length>=weekCap)break;if(push(it))breakdown.week++}
+  for(const it of wNew){if(queue.length>=weekCap)break;for(const g of expandGroup(it,wNew,taken)){if(queue.length>=weekCap)break;if(push(g))breakdown.week++}}
+  // 2. overdue reviews (older), most overdue & weakest first
+  const due=items.filter(i=>!wk.has(i.id)&&overdue(i)).sort((a,b)=>{const pa=P(a.id),pb=P(b.id);const oa=dayDiff(pa.due,today),ob=dayDiff(pb.due,today);if(oa!==ob)return ob-oa;return (pa.avg??100)-(pb.avg??100)});
+  const dueCap=Math.max(0,N-queue.length);let d=0;
+  for(const it of due){if(d>=dueCap)break;if(push(it)){breakdown.due++;d++}}
+  // 3. struggling not yet due
+  const weakCap=Math.round(N*clamp(s.strugglePct,0,60)/100);
+  const weak=items.filter(i=>{const p=P(i.id);return p&&p.reps>=2&&p.avg!=null&&p.avg<75&&!taken.has(i.id)}).sort((a,b)=>(P(a.id).last||'')<(P(b.id).last||'')?-1:1);
+  let w=0;for(const it of weak){if(w>=weakCap)break;if(push(it)){breakdown.weak++;w++}}
+  // 4. new from the past, by tier (the daily cap counts items first seen today)
+  const freshToday=items.filter(i=>!wk.has(i.id)&&P(i.id)&&P(i.id).first===today).length;
+  const freshCap=Math.min(Math.max(0,clamp(s.newPerDay|0,0,40)-freshToday),Math.max(0,N-queue.length));
+  const fresh=items.filter(i=>!wk.has(i.id)&&isNew(i)).sort(sortNew);
+  let f=0;for(const it of fresh){if(f>=freshCap)break;for(const g of expandGroup(it,fresh,taken)){if(f>=freshCap)break;if(push(g)){breakdown.fresh++;f++}}}
+  // 5. fill with remaining due, then this week's rest
+  for(const it of due){if(queue.length>=N)break;if(push(it))breakdown.due++}
+  for(const it of wNew){if(queue.length>=N)break;if(push(it))breakdown.week++}
+  return{queue,breakdown};
+}
+function coverage(){const items=state.bank.items;const total=items.length;let started=0,mastered=0;for(const i of items){const p=P(i.id);if(p){started++;if(p.state==='mastered')mastered++}}return{total,started,mastered}}
+
+/* ===================== audio engine ===================== */
+const audio={ctx:null,ensure(){if(!this.ctx){const AC=window.AudioContext||window.webkitAudioContext;this.ctx=new AC()}if(this.ctx.state==='suspended')this.ctx.resume();return this.ctx}};
+let playing=null;
+function stopPlayback(){if(playing){try{playing.stop()}catch(e){}playing=null}try{speechSynthesis.cancel()}catch(e){}}
+function playBuffer(buf,s=0,e=null,onend){const ctx=audio.ensure();stopPlayback();const src=ctx.createBufferSource();src.buffer=buf;src.connect(ctx.destination);const dur=e!=null?Math.max(0.05,e-s):undefined;src.onended=()=>{if(playing===src)playing=null;onend&&onend()};src.start(0,s,dur);playing=src}
+function pcmToBuffer(pcm,sr){const ctx=audio.ensure();const b=ctx.createBuffer(1,pcm.length,sr);b.getChannelData(0).set(pcm);return b}
+function speak(text,onend){stopPlayback();if(!('speechSynthesis' in window)){toast('이 기기는 음성 합성을 지원하지 않아요');onend&&onend();return}const u=new SpeechSynthesisUtterance(text);u.lang='en-US';u.rate=state.settings.ttsRate||0.95;const vs=speechSynthesis.getVoices().filter(v=>/^en[-_]US/i.test(v.lang));const pref=vs.find(v=>/Samantha|Google US|Aria|Jenny|Natural/i.test(v.name))||vs[0];if(pref)u.voice=pref;u.onend=()=>onend&&onend();u.onerror=()=>onend&&onend();speechSynthesis.speak(u)}
+class Recorder{
+  constructor(){this.chunks=[];this.sr=16000;this.speech=false;this.silence=0;this.onlevel=null;this.onauto=null}
+  async start(){const ctx=audio.ensure();this.sr=ctx.sampleRate;this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:true}});this.src=ctx.createMediaStreamSource(this.stream);this.node=ctx.createScriptProcessor(4096,1,1);this.gain=ctx.createGain();this.gain.gain.value=0;this.chunks=[];this.speech=false;this.silence=0;this.t0=performance.now();
+    this.node.onaudioprocess=e=>{const d=e.inputBuffer.getChannelData(0);this.chunks.push(new Float32Array(d));let s=0;for(let i=0;i<d.length;i++)s+=d[i]*d[i];const rms=Math.sqrt(s/d.length),ms=d.length/this.sr*1000;if(rms>0.02){this.speech=true;this.silence=0}else if(this.speech)this.silence+=ms;this.onlevel&&this.onlevel(rms);const el=performance.now()-this.t0;if((this.speech&&this.silence>1300)||el>15000){const f=this.onauto;this.onauto=null;f&&f()}};
+    this.src.connect(this.node);this.node.connect(this.gain);this.gain.connect(ctx.destination)}
+  stop(){try{this.src&&this.src.disconnect();this.node&&this.node.disconnect();this.gain&&this.gain.disconnect()}catch(e){}if(this.node)this.node.onaudioprocess=null;this.stream&&this.stream.getTracks().forEach(t=>t.stop());let n=0;for(const c of this.chunks)n+=c.length;const out=new Float32Array(n);let o=0;for(const c of this.chunks){out.set(c,o);o+=c.length}return{pcm:out,sr:this.sr}}
+}
+function resample(pcm,sr,target=16000){if(sr===target)return pcm;const ratio=sr/target,n=Math.floor(pcm.length/ratio),out=new Float32Array(n);for(let i=0;i<n;i++){const a=Math.floor(i*ratio),b=Math.min(pcm.length,Math.floor((i+1)*ratio));let s=0;for(let j=a;j<b;j++)s+=pcm[j];out[i]=b>a?s/(b-a):0}return out}
+function toWav(pcm){const n=pcm.length,buf=new ArrayBuffer(44+n*2),v=new DataView(buf),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,16000,true);v.setUint32(28,32000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);let o=44;for(let i=0;i<n;i++,o+=2){const s=clamp(pcm[i],-1,1);v.setInt16(o,s<0?s*0x8000:s*0x7FFF,true)}return buf}
+
+/* ===================== analysis: pitch, timing, contour ===================== */
+function trackPitch(x,sr){
+  const frame=Math.round(sr*0.04),hop=Math.round(sr*0.01);
+  const minLag=Math.floor(sr/400),maxLag=Math.min(Math.floor(sr/70),frame-2);
+  const n=Math.max(0,Math.floor((x.length-frame)/hop)+1);
+  const f0=new Float32Array(n),rms=new Float32Array(n);let maxR=0;
+  for(let i=0;i<n;i++){const o=i*hop;let s=0;for(let j=0;j<frame;j++){const v=x[o+j];s+=v*v}rms[i]=Math.sqrt(s/frame);if(rms[i]>maxR)maxR=rms[i]}
+  const gate=Math.max(0.006,maxR*0.08);
+  const nsdf=new Float32Array(maxLag+2);
+  for(let i=0;i<n;i++){
+    if(rms[i]<gate)continue;
+    const o=i*hop;
+    for(let tau=minLag;tau<=maxLag;tau++){let acf=0,m=0;const lim=frame-tau;for(let j=0;j<lim;j++){const a=x[o+j],b=x[o+j+tau];acf+=a*b;m+=a*a+b*b}nsdf[tau]=m>0?2*acf/m:0}
+    let maxPeak=0;const peaks=[];
+    for(let tau=minLag+1;tau<maxLag;tau++){if(nsdf[tau]>nsdf[tau-1]&&nsdf[tau]>=nsdf[tau+1]&&nsdf[tau]>0){peaks.push(tau);if(nsdf[tau]>maxPeak)maxPeak=nsdf[tau]}}
+    if(maxPeak<0.55)continue;
+    let best=-1;for(const p of peaks){if(nsdf[p]>=0.85*maxPeak){best=p;break}}
+    if(best<0)continue;
+    const y0=nsdf[best-1],y1=nsdf[best],y2=nsdf[best+1],den=y0-2*y1+y2,shift=den!==0?0.5*(y0-y2)/den:0;
+    f0[i]=sr/(best+shift);
+  }
+  return{f0:cleanF0(f0),rms,hop,frame,sr,gate};
+}
+function cleanF0(f0){
+  const n=f0.length,out=new Float32Array(n);
+  for(let i=0;i<n;i++){if(!(f0[i]>0))continue;const w=[];for(let k=-2;k<=2;k++){const v=f0[i+k];if(v>0)w.push(v)}if(w.length<3)continue;w.sort((a,b)=>a-b);out[i]=w[Math.floor(w.length/2)]}
+  // drop voiced runs shorter than 3 frames
+  let i=0;while(i<n){if(out[i]>0){let j=i;while(j<n&&out[j]>0)j++;if(j-i<3)for(let k=i;k<j;k++)out[k]=0;i=j}else i++}
+  // octave jump smoothing
+  let prev=0;for(let k=0;k<n;k++){if(out[k]>0){if(prev>0){if(out[k]>1.8*prev)out[k]/=2;else if(out[k]<0.55*prev)out[k]*=2}prev=out[k]}}
+  return out;
+}
+function speechSpan(rms,gate,hop,sr){let first=-1,last=-1;for(let i=0;i<rms.length;i++)if(rms[i]>gate){if(first<0)first=i;last=i}if(first<0)return null;const pauses=[];let run=0;for(let i=first;i<=last;i++){if(rms[i]<=gate*0.8)run++;else{if(run>=18)pauses.push({at:(i-run-first)/(last-first+1),len:run*hop/sr});run=0}}return{first,last,dur:(last-first+1)*hop/sr,pauses}}
+function makeContour(f0,span){
+  if(!span)return null;const idx=[],vals=[];for(let i=span.first;i<=span.last;i++)if(f0[i]>0){idx.push(i);vals.push(f0[i])}
+  if(vals.length<6)return null;
+  const sorted=[...vals].sort((a,b)=>a-b),med=sorted[Math.floor(sorted.length/2)];
+  const st=vals.map(v=>12*Math.log2(v/med));
+  const v0=idx[0],v1=idx[idx.length-1],out=new Float32Array(100);let k=0;
+  for(let t=0;t<100;t++){const pos=v0+(v1-v0)*t/99;while(k<idx.length-2&&idx[k+1]<=pos)k++;const x0=idx[k],x1=idx[Math.min(k+1,idx.length-1)];const f=x1===x0?0:clamp((pos-x0)/(x1-x0),0,1);out[t]=st[k]+(st[Math.min(k+1,st.length-1)]-st[k])*f}
+  return{pts:out,v0,v1,voiced:vals.length/(span.last-span.first+1),medHz:med};
+}
+function analyzeAudio(pcm,sr){const tr=trackPitch(pcm,sr);const span=speechSpan(tr.rms,tr.gate,tr.hop,sr);return{f0:tr.f0,rms:tr.rms,hop:tr.hop,sr,gate:tr.gate,span,contour:makeContour(tr.f0,span),dur:span?span.dur:0}}
+function pearson(a,b){const n=Math.min(a.length,b.length);let ma=0,mb=0;for(let i=0;i<n;i++){ma+=a[i];mb+=b[i]}ma/=n;mb/=n;let num=0,da=0,db=0;for(let i=0;i<n;i++){const x=a[i]-ma,y=b[i]-mb;num+=x*y;da+=x*x;db+=y*y}return da>0&&db>0?num/Math.sqrt(da*db):0}
+function prange(a){const s=[...a].sort((x,y)=>x-y);return s[Math.floor(s.length*0.9)]-s[Math.floor(s.length*0.1)]}
+function endSlope(a){return mean([...a].slice(85,100))-mean([...a].slice(65,85))}
+function compareContours(me,te){const a=me.pts,b=te.pts;const r=pearson(a,b);const ra=prange(a),rb=prange(b);const rr=Math.max(ra,rb)>0?Math.min(ra,rb)/Math.max(ra,rb):0;return{r,rangeMe:ra,rangeTe:rb,rangeRatio:rr,endMe:endSlope(a),endTe:endSlope(b),score:clamp(Math.round(((r+1)/2)*70+rr*30),0,100)}}
+
+/* ===================== word alignment ===================== */
+const CONTR={"gonna":"going to","wanna":"want to","gotta":"got to","kinda":"kind of","gimme":"give me","lemme":"let me","dunno":"don't know","ya":"you","'cause":"because","cuz":"because"};
+function normWords(text){return text.toLowerCase().replace(/[’‘`]/g,"'").replace(/[^a-z0-9' ]+/g,' ').split(/\s+/).filter(Boolean).flatMap(w=>(CONTR[w]||w).split(' '))}
+function displayTokens(text){return text.split(/\s+/).filter(Boolean)}
+function alignWords(ref,hyp){
+  const n=ref.length,m=hyp.length,dp=[];for(let i=0;i<=n;i++)dp.push(new Int16Array(m+1));
+  for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)dp[i][j]=ref[i]===hyp[j]?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
+  const status=new Array(n).fill('missing'),heard=new Array(n).fill(null),extras=[];let i=0,j=0;
+  while(i<n&&j<m){if(ref[i]===hyp[j]){status[i]='ok';heard[i]=hyp[j];i++;j++}else if(dp[i+1][j]>=dp[i][j+1]){i++}else{extras.push({after:i-1,w:hyp[j]});j++}}
+  while(j<m){extras.push({after:n-1,w:hyp[j]});j++}
+  // pair an extra with an adjacent missing ref word → substitution
+  for(const ex of extras){for(const cand of [ex.after+1,ex.after]){if(cand>=0&&cand<n&&status[cand]==='missing'&&!heard[cand]){status[cand]='sub';heard[cand]=ex.w;ex.used=true;break}}}
+  const matched=status.filter(s=>s==='ok').length;
+  return{status,heard,extras:extras.filter(e=>!e.used),matched,n};
+}
+function bestAlignment(refText,transcripts){const ref=normWords(refText);let best=null;for(const t of transcripts){const a=alignWords(ref,normWords(t));a.transcript=t;if(!best||a.matched>best.matched||(a.matched===best.matched&&a.extras.length<best.extras.length))best=a}return best}
+function mapRefToDisplay(refText){const disp=displayTokens(refText);const map=[];for(let d=0;d<disp.length;d++){const k=normWords(disp[d]).length;for(let q=0;q<k;q++)map.push(d)}return{disp,map}}
+
+/* ===================== Azure pronunciation assessment (optional) ===================== */
+let sdkPromise=null;
+function loadSpeechSDK(){if(window.SpeechSDK)return Promise.resolve();if(sdkPromise)return sdkPromise;const urls=['https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@1.43.1/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js','https://aka.ms/csspeech/jsbrowserpackageraw'];sdkPromise=(async()=>{for(const u of urls){try{await new Promise((res,rej)=>{const s=document.createElement('script');s.src=u;s.onload=res;s.onerror=rej;document.head.appendChild(s)});if(window.SpeechSDK)return}catch(e){}}sdkPromise=null;throw new Error('평가 모듈을 불러오지 못했어요')})();return sdkPromise}
+async function azureAssess(pcm16,refText){
+  await loadSpeechSDK();const S=window.SpeechSDK,s=state.settings;
+  const cfg=S.SpeechConfig.fromSubscription(s.azureKey.trim(),(s.azureRegion||'koreacentral').trim());cfg.speechRecognitionLanguage='en-US';
+  const fmt=S.AudioStreamFormat.getWaveFormatPCM(16000,16,1),push=S.AudioInputStream.createPushStream(fmt);
+  push.write(toWav(pcm16).slice(44));push.close();
+  const ac=S.AudioConfig.fromStreamInput(push);
+  const pa=new S.PronunciationAssessmentConfig(refText,S.PronunciationAssessmentGradingSystem.HundredMark,S.PronunciationAssessmentGranularity.Phoneme,true);
+  try{pa.enableProsodyAssessment=true}catch(e){}try{pa.phonemeAlphabet='IPA'}catch(e){}
+  const rec=new S.SpeechRecognizer(cfg,ac);pa.applyTo(rec);
+  return new Promise((res,rej)=>{rec.recognizeOnceAsync(r=>{let json=null;try{json=r.properties.getProperty(S.PropertyId.SpeechServiceResponse_JsonResult)}catch(e){}try{rec.close()}catch(e){}if(r.reason===S.ResultReason.RecognizedSpeech&&json)res(JSON.parse(json));else rej(new Error(r.errorDetails||'음성을 인식하지 못했어요'))},e=>{try{rec.close()}catch(_){}rej(new Error(String(e)))})});
+}
+function parseAzure(j){const nb=(j.NBest||[])[0];if(!nb)return null;const pa=nb.PronunciationAssessment||{};const words=(nb.Words||[]).map(w=>{const a=w.PronunciationAssessment||{};return{w:w.Word,acc:a.AccuracyScore,err:a.ErrorType||'None',offset:(w.Offset||0)/1e7,dur:(w.Duration||0)/1e7,phonemes:(w.Phonemes||[]).map(p=>({p:p.Phoneme,acc:(p.PronunciationAssessment||{}).AccuracyScore})),prosody:(a.Feedback||{}).Prosody||null}});return{acc:pa.AccuracyScore,flu:pa.FluencyScore,comp:pa.CompletenessScore,pros:pa.ProsodyScore,pron:pa.PronScore,words,text:nb.Display||''}}
+
+/* ===================== practice flow ===================== */
+const teacherCache={};
+let cur=null,rec=null,recognizer=null,srBroken=false;
+async function getTeacher(item){
+  if(item.id in teacherCache)return teacherCache[item.id];
+  let arr=null,local=false;
+  const saved=await idb.get('local:'+item.id);
+  if(saved&&saved.wav){arr=saved.wav;local=true}
+  else{const path=clipPath(item);if(path){const cached=await idb.get('clip:'+path);if(cached&&cached.buf)arr=cached.buf;else{try{let r=null;if(state.bank.source==='github'||state.bank.source==='github-cache'){r=await gh.raw(path)}else{r=await fetch(path);if(!r.ok)r=null}if(r){arr=await r.arrayBuffer();idb.set('clip:'+path,{buf:arr,at:Date.now()})}}catch(e){}}}}
+  if(!arr){teacherCache[item.id]=null;return null}
+  try{const ctx=audio.ensure();const buf=await ctx.decodeAudioData(arr.slice(0));const pcm=resample(buf.getChannelData(0),buf.sampleRate);const t={buffer:buf,pcm,an:analyzeAudio(pcm,16000),local};teacherCache[item.id]=t;return t}catch(e){teacherCache[item.id]=null;return null}
+}
+function startSession(ids,label){if(!ids.length){toast('연습할 문장이 없어요');return}state.session={queue:ids.slice(),idx:0,results:[],again:{},label:label||''};showView('practice');renderCard()}
+function tierClass(t){return t<=2?'t1':t<=4?'t2':'t3'}
+function kindLabel(k){return k==='dialogue'?'대화':k==='script'?'스크립트':'문장'}
+async function renderCard(){
+  const S=state.session,id=S.queue[S.idx],item=state.bank.byId[id];
+  if(!item){nextCard();return}
+  stopPlayback();if(rec){try{rec.stop()}catch(e){}rec=null}
+  cur={item,teacher:undefined,attempts:[],best:null,grade:null,hidden:state.settings.hideText};
+  $('#prac-count').textContent=`${S.idx+1}/${S.queue.length}`;$('#prac-bar').style.width=(S.idx/S.queue.length*100)+'%';
+  const T=state.bank.tiers[item.tier]||{short:item.tier+'순위'};
+  const tierEl=$('#c-tier');tierEl.textContent=T.short;tierEl.className='chip '+tierClass(item.tier);
+  $('#c-source').textContent=(item.lesson&&item.lesson!=='office'?item.lesson+' · ':'')+(item.source||'');
+  $('#c-kind').textContent=kindLabel(item.kind)+(item.role?' '+item.role:'');
+  const textEl=$('#c-text');textEl.textContent=item.text;textEl.classList.toggle('hidden-text',cur.hidden);$('#prac-hide').textContent=cur.hidden?'보기':'가리기';
+  $('#c-ko').textContent=state.settings.showKo?item.ko:'';$('#c-ko').hidden=!(state.settings.showKo&&item.ko);
+  $('#c-note').textContent=item.note||'';$('#c-note').hidden=!item.note;
+  const ctxEl=$('#c-context');ctxEl.hidden=true;
+  if(item.group){const g=state.bank.items.filter(x=>x.group===item.group&&(x.seq||0)<(item.seq||0)).sort((a,b)=>(b.seq||0)-(a.seq||0))[0];if(g){ctxEl.innerHTML=`<span class="muted">앞 대사${g.role?' ('+esc(g.role)+')':''}: </span><b>${esc(g.text)}</b>`;ctxEl.hidden=false}}
+  $('#result').hidden=true;$('#btn-me').disabled=true;$('#rec-msg').textContent='선생님 소리를 듣고, 녹음을 누른 뒤 따라 말하세요.';$('#level').hidden=true;
+  $('#btn-teacher').textContent='▶ 선생님';$('#btn-teacher').disabled=false;
+  const t=await getTeacher(item);
+  if(cur&&cur.item.id===item.id){cur.teacher=t;$('#btn-teacher').textContent=t?'▶ 선생님'+(t.local?' (내 녹음)':''):'▶ 대체음성'}
+}
+function playTeacher(){if(!cur)return;const b=$('#btn-teacher');if(playing||('speechSynthesis' in window&&speechSynthesis.speaking)){stopPlayback();return}if(cur.teacher){b.textContent='■ 정지';playBuffer(cur.teacher.buffer,0,null,()=>{b.textContent='▶ 선생님'+(cur.teacher.local?' (내 녹음)':'')})}else if(cur.teacher===null){b.textContent='■ 정지';speak(cur.item.text,()=>{b.textContent='▶ 대체음성'})}else{toast('선생님 음성을 불러오는 중이에요')}}
+function startRecognition(){
+  if(IS_IOS||srBroken)return null;const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;
+  const r=new SR();r.lang='en-US';r.interimResults=false;r.maxAlternatives=5;r.continuous=true;const out={transcripts:[],ended:false,error:null};
+  r.onresult=e=>{for(let i=0;i<e.results.length;i++){const res=e.results[i];for(let k=0;k<res.length;k++){const t=res[k].transcript;if(t)out.transcripts.push(t)}}};
+  r.onerror=e=>{out.error=e.error;if(e.error==='audio-capture'||e.error==='not-allowed'||e.error==='service-not-allowed')srBroken=true};
+  r.onend=()=>{out.ended=true};
+  try{r.start()}catch(e){return null}out.rec=r;return out;
+}
+async function toggleRecord(){
+  if(!cur)return;const btn=$('#btn-rec');
+  if(rec){await stopRecording();return}
+  stopPlayback();
+  try{rec=new Recorder();await rec.start()}catch(e){rec=null;toast('마이크를 쓸 수 없어요. 브라우저의 마이크 권한을 확인해 주세요.');return}
+  recognizer=startRecognition();
+  btn.textContent='■ 멈춤';btn.classList.add('on');$('#result').hidden=true;$('#level').hidden=false;$('#rec-msg').textContent='말하세요… (말이 끝나면 자동으로 멈춰요)';
+  const lv=$('#level i');rec.onlevel=v=>{lv.style.width=clamp(v*500,2,100)+'%'};
+  rec.onauto=()=>stopRecording();
+}
+async function stopRecording(){
+  if(!rec)return;const btn=$('#btn-rec');btn.textContent='● 녹음';btn.classList.remove('on');
+  const {pcm,sr}=rec.stop();rec=null;$('#level').hidden=true;
+  const rz=recognizer;recognizer=null;
+  if(rz&&rz.rec){try{rz.rec.stop()}catch(e){}}
+  $('#rec-msg').textContent='분석 중…';
+  // give the recognizer a moment to deliver its final result
+  if(rz){const t0=Date.now();while(!rz.ended&&Date.now()-t0<2500)await new Promise(r=>setTimeout(r,100))}
+  const transcripts=rz?rz.transcripts:[];
+  await analyzeAttempt(pcm,sr,transcripts);
+}
+async function analyzeAttempt(pcm,sr,transcripts){
+  const item=cur.item;const pcm16=resample(pcm,sr);const my=analyzeAudio(pcm16,16000);
+  cur.lastPcm=pcm;cur.lastSr=sr;$('#btn-me').disabled=false;
+  if(!my.span||my.dur<0.25){$('#rec-msg').textContent='소리가 거의 안 잡혔어요. 마이크에 조금 더 가까이, 다시 녹음해 보세요.';return}
+  if(cur.hidden){cur.hidden=false;$('#c-text').classList.remove('hidden-text');$('#prac-hide').textContent='가리기'}
+  let az=null;
+  if(state.settings.azureKey&&state.settings.azureKey.trim()){$('#rec-msg').textContent='정밀 평가 중…';try{az=parseAzure(await azureAssess(pcm16,item.text))}catch(e){toast('정밀 평가 실패: '+e.message+' — 기본 비교로 보여드려요')}}
+  const te=cur.teacher||null;
+  const ct=(te&&te.an.contour&&my.contour)?compareContours(my.contour,te.an.contour):null;
+  const timing={ratio:te&&te.an.dur?my.dur/te.an.dur:null,myDur:my.dur,teDur:te?te.an.dur:null,myPauses:my.span.pauses.length,tePauses:te&&te.an.span?te.an.span.pauses.length:null};
+  // words
+  const {disp,map}=mapRefToDisplay(item.text);
+  let wordView=null,acc=null,wordSource='none';
+  if(az){
+    const ref=normWords(item.text);const st=new Array(disp.length).fill('unknown'),det=new Array(disp.length).fill(null),extras=[];let ri=0;
+    for(const w of az.words){if(w.err==='Insertion'){extras.push(w.w);continue}const di=map[Math.min(ri,map.length-1)];ri++;if(di==null)continue;const cls=w.err==='Omission'?'missing':(w.acc==null?'unknown':w.acc>=80?'ok':w.acc>=60?'warn':'bad');if(st[di]==='unknown'||cls==='bad'||(cls==='warn'&&st[di]==='ok')||cls==='missing')st[di]=cls;det[di]=det[di]||[];det[di].push(w)}
+    wordView={st,det,extras};acc=az.acc;wordSource='azure';
+  }else if(transcripts.length){
+    const al=bestAlignment(item.text,transcripts);const st=new Array(disp.length).fill('unknown'),det=new Array(disp.length).fill(null);
+    for(let k=0;k<al.status.length;k++){const di=map[k];if(di==null)continue;const s=al.status[k]==='ok'?'ok':al.status[k]==='sub'?'bad':'missing';if(st[di]==='unknown'||s!=='ok')st[di]=s;if(al.heard[k]&&al.status[k]!=='ok'){det[di]=det[di]||[];det[di].push({heard:al.heard[k]})}}
+    wordView={st,det,extras:al.extras.map(e=>e.w),transcript:al.transcript};acc=Math.round(al.matched/al.n*100);wordSource='browser';
+  }
+  // scores
+  const into=ct?ct.score:null;
+  let timingScore=null;
+  if(timing.ratio!=null){timingScore=clamp(Math.round(100-Math.min(70,Math.abs(Math.log(timing.ratio))*80)-12*Math.max(0,timing.myPauses-(timing.tePauses||0))),0,100)}
+  let overall=null,parts=[];
+  if(az){overall=Math.round(az.pron??az.acc);parts=[['정확도',az.acc],['유창성',az.flu],['완성도',az.comp],['억양·리듬',az.pros!=null?az.pros:into]]}
+  else{const ws=[];if(acc!=null)ws.push([acc,0.5]);if(into!=null)ws.push([into,0.3]);if(timingScore!=null)ws.push([timingScore,0.2]);if(ws.length){const tw=ws.reduce((a,b)=>a+b[1],0);overall=Math.round(ws.reduce((a,b)=>a+b[0]*b[1],0)/tw)}parts=[['단어 정확도',acc],['억양 유사도',into],['속도·끊김',timingScore],['억양 폭',ct?Math.round(clamp(ct.rangeRatio,0,1)*100):null]]}
+  const hints=makeHints({item,az,wordView,ct,timing,acc,wordSource,overall});
+  const attempt={overall,parts,wordView,ct,timing,az,my,te,hints,wordSource,disp};
+  cur.attempts.push(attempt);if(overall!=null)cur.best=Math.max(cur.best??0,overall);
+  renderResult(attempt);
+}
+function makeHints(o){
+  const h=[];const {item,az,wordView,ct,timing,wordSource}=o;
+  if(az){
+    const ws=az.words.filter(w=>w.err!=='Insertion');
+    const bad=ws.filter(w=>w.err==='Mispronunciation'||(w.acc!=null&&w.acc<60)).slice(0,4);
+    for(const w of bad){const ph=(w.phonemes||[]).filter(p=>p.acc!=null&&p.acc<60).map(p=>p.p);h.push({c:'bad',t:`'${w.w}' 발음 ${w.acc!=null?Math.round(w.acc)+'점':''}${ph.length?' — 특히 /'+ph.join(' ')+'/ 소리':''}. 단어를 눌러 선생님 발음을 다시 들어보세요.`})}
+    for(const w of ws.filter(w=>w.err==='Omission').slice(0,3))h.push({c:'bad',t:`'${w.w}'를 빠뜨렸어요.`});
+    const ins=az.words.filter(w=>w.err==='Insertion').slice(0,3);if(ins.length)h.push({c:'',t:`문장에 없는 말이 들어갔어요: ${ins.map(w=>"'"+w.w+"'").join(', ')}`});
+    let prev=null;for(const w of ws){const p=w.prosody;if(p&&p.Break&&Array.isArray(p.Break.ErrorTypes)){if(p.Break.ErrorTypes.includes('UnexpectedBreak')&&prev)h.push({c:'',t:`'${prev.w} ${w.w}' 사이가 끊겼어요 → 붙여서 한 호흡으로(연음).`});if(p.Break.ErrorTypes.includes('MissingBreak'))h.push({c:'',t:`'${w.w}' 앞에서 잠깐 끊어 주세요.`})}if(p&&p.Intonation&&Array.isArray(p.Intonation.ErrorTypes)&&p.Intonation.ErrorTypes.includes('Monotone')&&!h.some(x=>x.t.startsWith('억양이 평탄')))h.push({c:'',t:'억양이 평탄해요 — 강세 단어에서 올렸다가 내려주세요.'});prev=w}
+  }else if(wordView&&wordSource==='browser'){
+    const disp=o.item.text.split(/\s+/).filter(Boolean);
+    disp.forEach((w0,i)=>{const w=w0.replace(/^[^A-Za-z0-9']+|[^A-Za-z0-9']+$/g,'');const s=wordView.st[i];if(s==='missing')h.push({c:'bad',t:`'${w}' 인식 안 됨 — 발음·강세를 다시 확인하세요.`});else if(s==='bad'){const heard=(wordView.det[i]||[]).map(d=>d.heard).filter(Boolean)[0];h.push({c:'bad',t:`'${w}' → '${heard||'?'}'로 들렸어요.`})}});
+    if(wordView.extras.length)h.push({c:'',t:`문장에 없는 말이 들어갔어요: ${wordView.extras.slice(0,3).map(w=>"'"+w+"'").join(', ')}`});
+    if(h.length>5)h.length=5;
+  }else if(wordSource==='none'){
+    h.push({c:'info',t:IS_IOS?'아이폰에서는 단어 인식이 꺼져 있어요. 정밀 평가(설정)를 켜면 단어·발음까지 비교됩니다. 지금은 억양·속도만 비교해요.':'단어 인식 결과가 없어요. 억양·속도만 비교했어요. 들어보고 직접 평가해 주세요.'});
+  }
+  if(ct){
+    if(ct.r<0.3)h.push({c:'',t:'억양 흐름이 선생님과 달라요. 아래 그래프에서 올라가고 내려가는 자리를 맞춰보세요.'});
+    const dirMe=ct.endMe>0.8?'올림':ct.endMe<-0.8?'내림':'평탄',dirTe=ct.endTe>0.8?'올림':ct.endTe<-0.8?'내림':'평탄';
+    if(dirMe!==dirTe&&(dirTe!=='평탄'||dirMe!=='평탄'))h.push({c:'',t:`문장 끝을 ${dirMe}으로 말했어요 — 선생님은 ${dirTe}이에요.`});
+    if(ct.rangeRatio<0.5&&ct.rangeMe<ct.rangeTe)h.push({c:'',t:'억양 폭이 좁아요(단조로움). 강세 단어는 더 높게, 끝은 더 확실하게.'});
+    if(ct.r>=0.6&&ct.rangeRatio>=0.6)h.push({c:'good',t:'억양 흐름이 선생님과 잘 맞아요.'});
+  }
+  if(timing.ratio!=null){
+    if(timing.ratio>1.3)h.push({c:'',t:`선생님보다 ${Math.round((timing.ratio-1)*100)}% 느려요. 단어 사이를 끊지 말고 한 호흡으로.`});
+    else if(timing.ratio<0.72)h.push({c:'',t:`선생님보다 ${Math.round((1-timing.ratio)*100)}% 빨라요. 강세 단어를 조금 길게.`});
+    if(timing.tePauses!=null&&timing.myPauses>timing.tePauses)h.push({c:'',t:`중간에 ${timing.myPauses}번 멈췄어요 (선생님 ${timing.tePauses}번). 멈춘 자리를 이어서 말해보세요.`});
+  }
+  if(!h.length)h.push({c:'good',t:'좋아요. 한 번 더 들어보고 똑같이 따라 해보세요.'});
+  return h;
+}
+function scoreClass(s){return s==null?'none':s>=80?'ok':s>=65?'warn':'bad'}
+function scoreColor(s){return s==null?getVar('--muted'):s>=80?getVar('--good'):s>=65?getVar('--warn'):getVar('--bad')}
+function getVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+function renderResult(a){
+  $('#rec-msg').textContent=a.wordSource==='azure'?'정밀 평가 결과':a.wordSource==='browser'?'브라우저 인식 + 억양 비교':'억양·속도 비교';
+  $('#result').hidden=false;
+  // ring
+  const c=$('#ring'),g=c.getContext('2d');g.clearRect(0,0,192,192);g.lineWidth=14;g.lineCap='round';g.strokeStyle=getVar('--surface-2');g.beginPath();g.arc(96,96,80,0,Math.PI*2);g.stroke();
+  if(a.overall!=null){g.strokeStyle=scoreColor(a.overall);g.beginPath();g.arc(96,96,80,-Math.PI/2,-Math.PI/2+Math.PI*2*a.overall/100);g.stroke()}
+  $('#score-num').textContent=a.overall==null?'—':a.overall;$('#score-num').style.color=a.overall==null?getVar('--muted'):scoreColor(a.overall);
+  $('#subs').innerHTML=a.parts.map(([k,v])=>`<div class="sub"><span>${esc(k)}</span><b>${v==null?'—':Math.round(v)}</b><div class="bar"><i style="width:${v==null?0:clamp(v,0,100)}%;background:${v==null?'transparent':scoreColor(v)}"></i></div></div>`).join('');
+  // words
+  const wEl=$('#words');wEl.innerHTML='';$('#word-detail').hidden=true;
+  a.disp.forEach((w,i)=>{const s=a.wordView?a.wordView.st[i]:'unknown';const b=document.createElement('button');b.className='w '+s;b.textContent=w;b.type='button';b.addEventListener('click',()=>showWord(a,i,b));wEl.appendChild(b)});
+  if(a.wordView&&a.wordView.extras&&a.wordView.extras.length){const x=document.createElement('span');x.className='w extra';x.textContent='+ '+a.wordView.extras.join(' ');wEl.appendChild(x)}
+  drawContour(a);
+  $('#hints').innerHTML=a.hints.map(h=>`<li class="${h.c}">${esc(h.t)}</li>`).join('');
+  const auto=a.overall!=null?gradeFromScore(cur.best??a.overall):null;cur.grade=auto;
+  $$('.grade-row .g').forEach(b=>b.classList.toggle('sel',auto!=null&&parseInt(b.dataset.g)===auto));
+}
+function showWord(a,i,btn){
+  $$('.w').forEach(x=>x.classList.remove('sel'));btn.classList.add('sel');
+  const d=$('#word-detail');const w=a.disp[i];const det=a.wordView?a.wordView.det[i]:null;let html=`<div class="row between"><b style="font-family:var(--font-en);font-size:16px">${esc(w)}</b><span class="row" style="gap:6px"></span></div>`;
+  if(det&&det.length&&det[0].phonemes){html+=det.map(x=>`<div class="phs">${(x.phonemes||[]).map(p=>`<span class="ph ${p.acc==null?'':p.acc>=80?'ok':p.acc>=60?'warn':'bad'}">${esc(p.p)}<small class="muted"> ${p.acc==null?'':Math.round(p.acc)}</small></span>`).join('')}</div>${x.err&&x.err!=='None'?`<div class="small muted">${esc({Mispronunciation:'발음 부정확',Omission:'빠뜨림',UnexpectedBreak:'끊어 읽음',MissingBreak:'끊어야 하는 곳'}[x.err]||x.err)}</div>`:''}`).join('')}
+  else if(det&&det.length&&det[0].heard){html+=`<div class="small">이렇게 들렸어요: <b>${esc(det[0].heard)}</b></div>`}
+  else if(a.wordView&&a.wordView.st[i]==='missing'){html+=`<div class="small">이 단어가 인식되지 않았어요.</div>`}
+  else{html+=`<div class="small muted">${a.wordView?'문제 없음':'단어 비교 결과가 없어요'}</div>`}
+  d.innerHTML=html;
+  const bar=d.querySelector('.row span');
+  if(a.te&&cur.item.words){const tw=teacherWordSpan(cur.item,i);if(tw){const b=document.createElement('button');b.className='btn small teacher';b.textContent='▶ 선생님';b.addEventListener('click',()=>playBuffer(a.te.buffer,Math.max(0,tw.s-0.08),tw.e+0.12));bar.appendChild(b)}}
+  if(det&&det.length&&det[0].offset!=null&&cur.lastPcm){const x=det[0];const b=document.createElement('button');b.className='btn small me';b.textContent='▶ 나';b.addEventListener('click',()=>{const buf=pcmToBuffer(cur.lastPcm,cur.lastSr);playBuffer(buf,Math.max(0,x.offset-0.08),x.offset+x.dur+0.12)});bar.appendChild(b)}
+  d.hidden=false;
+}
+function teacherWordSpan(item,dispIndex){const ws=item.words;if(!ws||!ws.length)return null;const disp=displayTokens(item.text);const target=normWords(disp[dispIndex]).join(' ');// match by order first
+  const norm=ws.map(w=>normWords(w.w||'').join(' '));let hits=[];for(let k=0;k<ws.length;k++)if(norm[k]===target)hits.push(k);if(!hits.length)return null;const pick=hits.reduce((b,k)=>Math.abs(k-dispIndex)<Math.abs(b-dispIndex)?k:b,hits[0]);return{s:+ws[pick].s||0,e:+ws[pick].e||(+ws[pick].s+0.4)}}
+function drawContour(a){
+  const c=$('#contour');const W=c.clientWidth||320,H=150,dpr=window.devicePixelRatio||1;c.width=W*dpr;c.height=H*dpr;const g=c.getContext('2d');g.scale(dpr,dpr);g.clearRect(0,0,W,H);
+  const padL=8,padR=8,padT=14,padB=22,iw=W-padL-padR,ih=H-padT-padB;
+  const te=a.te&&a.te.an.contour?a.te.an.contour.pts:null,me=a.my.contour?a.my.contour.pts:null;
+  $('#contour-note').textContent=!te&&!me?'억양을 잡지 못했어요':!te?'선생님 클립 없음 — 내 억양만 표시':'';
+  const all=[];if(te)all.push(...te);if(me)all.push(...me);
+  const lo=Math.min(-4,...all.map(v=>Math.floor(v))),hi=Math.max(4,...all.map(v=>Math.ceil(v)));
+  const y=v=>padT+ih*(1-(v-lo)/(hi-lo)),x=t=>padL+iw*t/99;
+  g.strokeStyle=getVar('--line');g.lineWidth=1;g.setLineDash([3,4]);
+  for(const v of [lo,0,hi]){g.beginPath();g.moveTo(padL,y(v));g.lineTo(W-padR,y(v));g.stroke()}g.setLineDash([]);
+  g.fillStyle=getVar('--muted');g.font='11px '+getVar('--font-ui');g.textAlign='left';g.fillText('높음',padL,padT-3);g.fillText('낮음',padL,H-padB+12);g.textAlign='right';g.fillText('문장 시작 → 끝 (시간 정규화)',W-padR,H-padB+12);
+  // word boundaries from teacher timings
+  if(te&&cur.item.words&&a.te.an.span){const sp=a.te.an.span,ct=a.te.an.contour;const t0=ct.v0*a.te.an.hop/16000,t1=ct.v1*a.te.an.hop/16000;g.fillStyle=getVar('--muted');g.font='10px '+getVar('--font-en');g.textAlign='center';for(const w of cur.item.words){const f=(w.s-t0)/Math.max(0.01,t1-t0);if(f<0||f>1)continue;const xx=padL+iw*f;g.strokeStyle=getVar('--line');g.beginPath();g.moveTo(xx,padT);g.lineTo(xx,padT+ih);g.stroke();if(cur.item.words.length<=10)g.fillText(w.w,Math.min(W-14,Math.max(14,xx+2)),padT+ih+10)}}
+  const line=(pts,col,wdt)=>{g.strokeStyle=col;g.lineWidth=wdt;g.lineJoin='round';g.beginPath();pts.forEach((v,i)=>{i?g.lineTo(x(i),y(v)):g.moveTo(x(i),y(v))});g.stroke()};
+  if(te)line(te,getVar('--teacher'),2.5);if(me)line(me,getVar('--me'),2.5);
+}
+function finishCard(){
+  if(!cur)return;const S=state.session,id=cur.item.id;const score=cur.best;const grade=cur.grade??(score!=null?gradeFromScore(score):3);
+  applyGrade(id,grade,score);S.results.push({id,score,grade});
+  if(grade===1&&(S.again[id]||0)<2){S.again[id]=(S.again[id]||0)+1;S.queue.push(id)}
+  nextCard();
+}
+function nextCard(){const S=state.session;S.idx++;if(S.idx>=S.queue.length)endSession();else renderCard()}
+function endSession(){
+  const S=state.session;stopPlayback();if(rec){try{rec.stop()}catch(e){}rec=null}
+  const scored=S.results.filter(r=>r.score!=null);const avg=scored.length?Math.round(mean(scored.map(r=>r.score))):null;
+  $('#sum-count').textContent=S.results.length;$('#sum-avg').textContent=avg==null?'—':avg;
+  const byId={};for(const r of S.results)byId[r.id]=r;const low=Object.values(byId).filter(r=>r.score!=null?r.score<80:r.grade<=2).sort((a,b)=>(a.score??0)-(b.score??0));
+  $('#sum-low').innerHTML=low.length?low.map(r=>`<div class="s"><span class="en">${esc(state.bank.byId[r.id]?state.bank.byId[r.id].text:r.id)}</span><span class="score-pill ${scoreClass(r.score)}">${r.score==null?'—':r.score}</span></div>`).join(''):'<p class="small muted">모두 80점 이상이에요.</p>';
+  $('#sum-note').textContent=low.length?`${low.length}문장은 더 짧은 간격으로 다시 나와요.`:'간격이 늘어나요. 내일 또 봐요.';
+  $('#btn-sum-redo').hidden=!low.length;$('#btn-sum-redo').onclick=()=>startSession(low.map(r=>r.id),'다시');
+  state.session=null;showView('summary');syncIfReady(true);
+}
+
+/* ===================== capture teacher audio from phone mic ===================== */
+let capRec=null;
+async function toggleCapture(){
+  const b=$('#btn-capture');if(!cur)return;
+  if(capRec){const {pcm,sr}=capRec.stop();capRec=null;b.textContent='선생님 음성 직접 녹음';const pcm16=resample(pcm,sr);if(pcm16.length<16000*0.3){toast('너무 짧아요');return}const wav=toWav(pcm16);await idb.set('local:'+cur.item.id,{wav,at:Date.now()});delete teacherCache[cur.item.id];const t=await getTeacher(cur.item);cur.teacher=t;$('#btn-teacher').textContent='▶ 선생님 (내 녹음)';toast('이 기기에 선생님 음성을 저장했어요');return}
+  if(rec){toast('내 녹음을 먼저 멈춰주세요');return}
+  try{capRec=new Recorder();await capRec.start();capRec.onauto=null;b.textContent='■ 선생님 음성 저장';toast('영상을 틀고 선생님이 이 문장을 말하는 동안 녹음하세요. 끝나면 다시 누르기.',3500)}catch(e){capRec=null;toast('마이크를 쓸 수 없어요')}
+}
+
+/* ===================== sync (progress.json in the private repo) ===================== */
+function mergeProgress(local,remote){
+  const progress=Object.assign({},remote.progress||{});for(const [id,p] of Object.entries(local.progress||{})){const q=progress[id];if(!q||(p.last||'')>(q.last||''))progress[id]=p}
+  const seen=new Set(),log=[];for(const e of [...(remote.log||[]),...(local.log||[])]){const k=e.t+'|'+e.id;if(!seen.has(k)){seen.add(k);log.push(e)}}log.sort((a,b)=>a.t<b.t?-1:1);
+  const li={};for(const it of [...(remote.localItems||[]),...(local.localItems||[])])li[it.id]=it;
+  return{progress,log:log.slice(-3000),localItems:Object.values(li)};
+}
+let syncing=false;
+async function syncIfReady(silent){
+  if(!gh.ready()||syncing)return;syncing=true;const el=$('#sync-state');el.textContent='동기화 중…';
+  try{
+    const remote=await gh.getText('progress.json');let rj={};if(remote){try{rj=JSON.parse(remote.text)}catch(e){rj={}}}
+    const merged=mergeProgress({progress:state.progress,log:state.log,localItems:state.localItems},rj);
+    state.progress=merged.progress;state.log=merged.log;state.localItems=merged.localItems;saveProgress();store.set(LS.local,state.localItems);
+    const out=JSON.stringify({updatedAt:new Date().toISOString(),device:navigator.platform||'',progress:state.progress,log:state.log,localItems:state.localItems});
+    if(!remote||remote.text!==out){await gh.putText('progress.json',out,remote?remote.sha:null,'progress '+new Date().toISOString().slice(0,16))}
+    const t=new Date();store.set(LS.sync,t.toISOString());el.textContent=`${pad2(t.getMonth()+1)}-${pad2(t.getDate())} ${pad2(t.getHours())}:${pad2(t.getMinutes())}`;
+    if(!silent)toast('기록을 동기화했어요');
+    finalizeBank(state.bank);
+    if(state.view==='today')renderToday();
+  }catch(e){el.textContent='실패: '+e.message;if(!silent)toast('동기화 실패: '+e.message)}
+  syncing=false;
+}
+
+/* ===================== views ===================== */
+function showView(v){state.view=v;$$('.view').forEach(s=>s.hidden=true);$('#view-'+v).hidden=false;$$('.tabbar button').forEach(b=>b.classList.toggle('active',b.dataset.view===v||(v==='practice'&&b.dataset.view==='today')||(v==='summary'&&b.dataset.view==='today')));window.scrollTo(0,0);if(v==='today')renderToday();if(v==='bank')renderBank();if(v==='stats')renderStats();if(v==='settings')renderSettings();if(v!=='practice'){stopPlayback();if(rec){try{rec.stop()}catch(e){}rec=null;$('#btn-rec').textContent='● 녹음';$('#btn-rec').classList.remove('on')}}}
+function renderToday(){
+  const d=new Date();$('#today-date').textContent=`${d.getMonth()+1}월 ${d.getDate()}일 (${'일월화수목금토'[d.getDay()]})`;
+  $('#demo-banner').hidden=!(state.bank.demo||state.bank.source==='demo');
+  const {queue,breakdown}=buildSession();
+  $('#today-count').textContent=queue.length;
+  $('#today-breakdown').innerHTML=[['이번 주 수업',breakdown.week,'t1'],['복습',breakdown.due,''],['취약',breakdown.weak,'t3'],['과거 신규',breakdown.fresh,'t2']].filter(x=>x[1]>0).map(x=>`<span class="chip ${x[2]}">${x[0]} ${x[1]}</span>`).join('')||'<span class="chip">오늘 할 것이 없어요</span>';
+  $('#btn-start').disabled=!queue.length;$('#btn-start').onclick=()=>startSession(queue,'오늘');
+  const wk=weekItems();const L=latestLesson();$('#week-count').textContent=wk.length;$('#week-label').textContent=L?`${L} 수업`:'수업 자료 없음';
+  const wkDone=wk.filter(i=>{const p=P(i.id);return p&&p.reps>=1}).length,wkGood=wk.filter(i=>{const p=P(i.id);return p&&p.avg>=80}).length;
+  $('#week-bar').style.width=(wk.length?wkDone/wk.length*100:0)+'%';$('#week-sub').textContent=wk.length?`연습 ${wkDone} · 80점 이상 ${wkGood}`:'';
+  const cv=coverage();const pct=cv.total?Math.round(cv.started/cv.total*100):0;$('#cov-pct').textContent=pct+'%';$('#cov-bar').style.width=pct+'%';$('#cov-sub').textContent=`${cv.started}/${cv.total} 시작 · 숙달 ${cv.mastered}`;
+  const td=state.settings.targetDate;const daysLeft=td?Math.max(0,dayDiff(todayStr(),td)):null;$('#goal-date').textContent=td?`목표일 ${td}`:'';
+  const unstarted=cv.total-cv.started;const perDay=daysLeft?Math.ceil(unstarted/Math.max(1,daysLeft)):null;
+  $('#goal-text').textContent=daysLeft==null?'설정에서 목표일을 정하면 하루에 몇 개씩 새로 봐야 하는지 알려드려요.':unstarted===0?'모든 문장을 한 번 이상 연습했어요. 이제 점수를 올리는 단계예요.':`${daysLeft}일 남음. 아직 안 본 문장 ${unstarted}개 → 하루 ${perDay}개씩 새로 보면 목표일에 맞아요 (지금 설정: 하루 ${state.settings.newPerDay}개 + 이번 주 수업).`;
+  const since=addDays(todayStr(),-6);const recent=state.log.filter(e=>e.t.slice(0,10)>=since);$('#w7-attempts').textContent=recent.length;const sc=recent.filter(e=>e.score!=null).map(e=>e.score);$('#w7-avg').textContent=sc.length?Math.round(mean(sc)):'—';
+  const days=new Set(state.log.map(e=>e.t.slice(0,10)));let streak=0,dd=todayStr();if(!days.has(dd))dd=addDays(dd,-1);while(days.has(dd)){streak++;dd=addDays(dd,-1)}$('#streak').textContent=streak?`${streak}일 연속`:'';
+  const ls=store.get(LS.sync,null);$('#sync-state').textContent=!gh.ready()?'미연결':ls?ls.slice(5,16).replace('T',' '):'아직 안 함';
+}
+let bankFilter={tier:0,lesson:'',q:''};
+function renderBank(){
+  const tiers=state.bank.tiers;const tEl=$('#bank-tiers');tEl.innerHTML=`<button class="chip ${bankFilter.tier===0?'sel':''}" data-t="0">전체</button>`+Object.keys(tiers).sort().map(k=>`<button class="chip ${tierClass(+k)} ${bankFilter.tier===+k?'sel':''}" data-t="${k}">${esc(tiers[k].short)}</button>`).join('');
+  tEl.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{bankFilter.tier=+b.dataset.t;state.bankPage=1;renderBank()}));
+  const lessons=[...new Set(state.bank.items.filter(i=>bankFilter.tier===0||i.tier===bankFilter.tier).map(i=>i.lesson).filter(Boolean))].sort().reverse();
+  const sel=$('#bank-lesson');sel.innerHTML='<option value="">모든 수업</option>'+lessons.map(l=>`<option value="${esc(l)}" ${bankFilter.lesson===l?'selected':''}>${esc(l)}</option>`).join('');
+  const q=bankFilter.q.trim().toLowerCase();
+  const list=state.bank.items.filter(i=>(bankFilter.tier===0||i.tier===bankFilter.tier)&&(!bankFilter.lesson||i.lesson===bankFilter.lesson)&&(!q||i.text.toLowerCase().includes(q)||(i.ko||'').includes(q))).sort((a,b)=>{if(a.lesson!==b.lesson)return a.lesson<b.lesson?1:-1;return (a.seq||0)-(b.seq||0)||(a.id<b.id?-1:1)});
+  $('#bank-count').textContent=`${list.length}문장`;
+  const page=state.bankPage*40;const shown=list.slice(0,page);
+  $('#bank-list').innerHTML=shown.map(i=>{const p=P(i.id);const sc=p?p.avg:null;return`<div class="item"><div class="t"><div class="en">${esc(i.text)}</div>${i.ko?`<div class="k">${esc(i.ko)}</div>`:''}<div class="m"><span class="chip ${tierClass(i.tier)}">${esc((state.bank.tiers[i.tier]||{}).short||i.tier)}</span><span>${esc(i.lesson)}</span>${i.kind!=='sentence'?`<span>${kindLabel(i.kind)}</span>`:''}${i.clip||i.local?'':''}<span class="score-pill ${scoreClass(sc)}">${sc==null?'미학습':sc}</span>${p&&p.due?`<span>다음 ${esc(p.due.slice(5))}</span>`:''}</div></div><button class="btn small" data-id="${esc(i.id)}">연습</button></div>`}).join('')||'<p class="small muted">문장이 없어요.</p>';
+  $('#bank-list').querySelectorAll('button[data-id]').forEach(b=>b.addEventListener('click',()=>startSession([b.dataset.id],'단일')));
+  $('#btn-bank-more').hidden=shown.length>=list.length;$('#btn-bank-more').onclick=()=>{state.bankPage++;renderBank()};
+  $('#btn-bank-practice').onclick=()=>startSession(list.slice(0,40).map(i=>i.id),'목록');
+}
+function renderStats(){
+  const items=state.bank.items,tiers=state.bank.tiers;$('#stats-total').textContent=`${items.length}문장`;
+  $('#tier-cov').innerHTML=Object.keys(tiers).sort().map(k=>{const its=items.filter(i=>i.tier===+k);if(!its.length)return'';const st=its.filter(i=>P(i.id)).length,ms=its.filter(i=>P(i.id)&&P(i.id).state==='mastered').length;return`<div class="tier-row"><span>${esc(tiers[k].short)} · ${esc(tiers[k].name)}</span><span class="num muted">${st}/${its.length} · 숙달 ${ms}</span><div class="bar"><i style="width:${st/its.length*100}%"></i></div></div>`}).join('')||'<p class="small muted">자료가 없어요.</p>';
+  // trend
+  const c=$('#trend');const W=c.clientWidth||320,H=160,dpr=window.devicePixelRatio||1;c.width=W*dpr;c.height=H*dpr;const g=c.getContext('2d');g.scale(dpr,dpr);g.clearRect(0,0,W,H);
+  const days=[];for(let k=13;k>=0;k--)days.push(addDays(todayStr(),-k));
+  const per=days.map(d=>{const s=state.log.filter(e=>e.t.slice(0,10)===d&&e.score!=null).map(e=>e.score);return{d,avg:s.length?mean(s):null,n:s.length}});
+  const padL=28,padR=8,padT=10,padB=22,iw=W-padL-padR,ih=H-padT-padB;const y=v=>padT+ih*(1-v/100),x=i=>padL+iw*(i+0.5)/14;
+  g.strokeStyle=getVar('--line');g.lineWidth=1;g.fillStyle=getVar('--muted');g.font='10px '+getVar('--font-ui');g.textAlign='right';
+  for(const v of [0,50,80,100]){g.beginPath();g.moveTo(padL,y(v));g.lineTo(W-padR,y(v));g.stroke();g.fillText(v,padL-4,y(v)+3)}
+  g.textAlign='center';per.forEach((p,i)=>{if(i%2===1)g.fillText(p.d.slice(5).replace('-','/'),x(i),H-6)});
+  const maxN=Math.max(1,...per.map(p=>p.n));g.fillStyle=getVar('--teacher-soft');per.forEach((p,i)=>{if(p.n){const h=ih*0.5*p.n/maxN;g.fillRect(x(i)-iw/14*0.3,padT+ih-h,iw/14*0.6,h)}});
+  g.strokeStyle=getVar('--me');g.lineWidth=2.5;g.lineJoin='round';g.beginPath();let started=false;per.forEach((p,i)=>{if(p.avg==null)return;if(!started){g.moveTo(x(i),y(p.avg));started=true}else g.lineTo(x(i),y(p.avg))});g.stroke();
+  g.fillStyle=getVar('--me');per.forEach((p,i)=>{if(p.avg!=null){g.beginPath();g.arc(x(i),y(p.avg),3,0,Math.PI*2);g.fill()}});
+  // forecast
+  const today=todayStr();$('#forecast').innerHTML=[0,1,2,3,4,5,6].map(k=>{const d=addDays(today,k);const n=items.filter(i=>{const p=P(i.id);return p&&p.due&&(k===0?p.due<=d:p.due===d)}).length;return`<div class="d ${k===0?'today':''}">${k===0?'오늘':d.slice(5).replace('-','/')}<b>${n}</b></div>`}).join('');
+  const weak=items.filter(i=>{const p=P(i.id);return p&&p.reps>=1&&p.avg!=null&&p.avg<75}).sort((a,b)=>P(a.id).avg-P(b.id).avg).slice(0,15);
+  $('#weak-list').innerHTML=weak.map(i=>`<div class="item"><div class="t"><div class="en">${esc(i.text)}</div><div class="m"><span>${esc(i.lesson)}</span><span class="score-pill ${scoreClass(P(i.id).avg)}">${P(i.id).avg}</span><span>${P(i.id).reps}회</span></div></div><button class="btn small" data-id="${esc(i.id)}">연습</button></div>`).join('')||'<p class="small muted">아직 취약 문장이 없어요.</p>';
+  $('#weak-list').querySelectorAll('button[data-id]').forEach(b=>b.addEventListener('click',()=>startSession([b.dataset.id],'단일')));
+  if(weak.length){const b=document.createElement('button');b.className='btn wide';b.textContent='취약 문장 전체 연습';b.addEventListener('click',()=>startSession(weak.map(i=>i.id),'취약'));$('#weak-list').appendChild(b)}
+}
+function renderSettings(){
+  const s=state.settings;for(const k of ['ghOwner','ghRepo','ghBranch','ghToken','dailyTarget','newPerDay','weekShare','strugglePct','targetDate','azureKey','azureRegion','ttsRate']){const el=$('#s-'+k);if(el&&document.activeElement!==el)el.value=s[k]??''}
+  $('#s-showKo').checked=!!s.showKo;$('#s-hideText').checked=!!s.hideText;$('#s-ttsRate-val').textContent=(+s.ttsRate).toFixed(2)+'×';
+  const sel=$('#add-tier');if(!sel.options.length){sel.innerHTML=Object.keys(state.bank.tiers).sort().map(k=>`<option value="${k}">${esc(state.bank.tiers[k].short)} · ${esc(state.bank.tiers[k].name)}</option>`).join('')}
+  if(!$('#add-lesson').value)$('#add-lesson').value=todayStr();
+  $('#gh-status').textContent=gh.ready()?`연결 설정됨 · 자료 출처: ${state.bank.source==='github'?'저장소':state.bank.source}`:'아직 연결 안 됨';
+}
+function bindSettings(){
+  const num=['dailyTarget','newPerDay','weekShare','strugglePct'];
+  for(const k of ['ghOwner','ghRepo','ghBranch','ghToken','dailyTarget','newPerDay','weekShare','strugglePct','targetDate','azureKey','azureRegion','ttsRate']){const el=$('#s-'+k);el.addEventListener('change',()=>{let v=el.value;if(num.includes(k))v=parseInt(v)||DEFAULTS[k];if(k==='ttsRate')v=parseFloat(v)||0.95;state.settings[k]=v;saveSettings();if(k==='ttsRate')$('#s-ttsRate-val').textContent=(+v).toFixed(2)+'×'})}
+  $('#s-ttsRate').addEventListener('input',()=>{$('#s-ttsRate-val').textContent=(+$('#s-ttsRate').value).toFixed(2)+'×'});
+  $('#s-showKo').addEventListener('change',e=>{state.settings.showKo=e.target.checked;saveSettings()});
+  $('#s-hideText').addEventListener('change',e=>{state.settings.hideText=e.target.checked;saveSettings()});
+  $('#btn-gh-test').addEventListener('click',async()=>{if(!gh.ready()){toast('사용자명·저장소·토큰을 모두 입력하세요');return}$('#gh-status').textContent='확인 중…';try{const r=await gh.raw('bank.json');$('#gh-status').textContent=r?'연결 성공 · bank.json 확인됨':'연결은 됐지만 bank.json이 아직 없어요'}catch(e){$('#gh-status').textContent='실패: '+e.message+(String(e.message).includes('401')?' (토큰 확인)':String(e.message).includes('404')?' (저장소 이름 또는 토큰 권한 확인)':'')}});
+  $('#btn-reload').addEventListener('click',async()=>{await loadBank();renderSettings();toast(`${state.bank.items.length}문장 불러옴`)});
+  $('#btn-sync').addEventListener('click',()=>syncIfReady(false));
+  $('#btn-add').addEventListener('click',()=>{const lines=$('#add-text').value.split('\n').map(l=>l.trim()).filter(Boolean);if(!lines.length)return;const tier=+$('#add-tier').value||1,lesson=$('#add-lesson').value||todayStr();const base=Date.now();lines.forEach((l,i)=>{const [en,ko,note]=l.split('|').map(x=>(x||'').trim());if(!en)return;state.localItems.push({id:`local-${base}-${i}`,text:en,ko:ko||'',note:note||'',tier,lesson,source:'직접 추가',kind:'sentence'})});store.set(LS.local,state.localItems);finalizeBank(state.bank);$('#add-text').value='';toast(`${lines.length}문장 추가됨`);syncIfReady(true)});
+  $('#btn-export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),progress:state.progress,log:state.log,localItems:state.localItems,settings:Object.assign({},state.settings,{ghToken:'',azureKey:''})},null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`bear-review-backup-${todayStr()}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)});
+  $('#import-file').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());const m=mergeProgress({progress:state.progress,log:state.log,localItems:state.localItems},j);state.progress=m.progress;state.log=m.log;state.localItems=m.localItems;saveProgress();store.set(LS.local,state.localItems);finalizeBank(state.bank);toast('기록을 합쳤어요')}catch(err){toast('파일을 읽지 못했어요')}e.target.value=''});
+  $('#btn-clear-cache').addEventListener('click',async()=>{await idb.clear();for(const k of Object.keys(teacherCache))delete teacherCache[k];toast('음성 캐시를 비웠어요')});
+  let resetArmed=0;$('#btn-reset').addEventListener('click',()=>{if(Date.now()-resetArmed<5000){state.progress={};state.log=[];saveProgress();resetArmed=0;$('#reset-confirm').hidden=true;toast('기록을 모두 지웠어요');renderToday()}else{resetArmed=Date.now();$('#reset-confirm').hidden=false;setTimeout(()=>{$('#reset-confirm').hidden=true},5000)}});
+}
+
+/* ===================== wiring ===================== */
+function bind(){
+  $$('.tabbar button').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
+  $('#btn-weak').addEventListener('click',()=>{const w=state.bank.items.filter(i=>{const p=P(i.id);return p&&p.avg!=null&&p.avg<75}).sort((a,b)=>P(a.id).avg-P(b.id).avg).slice(0,10);if(!w.length){toast('아직 취약 문장이 없어요');return}startSession(w.map(i=>i.id),'취약')});
+  $('#btn-random').addEventListener('click',()=>{const a=state.bank.items.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}startSession(a.slice(0,10).map(i=>i.id),'랜덤')});
+  $('#btn-week').addEventListener('click',()=>{const w=weekItems().sort(sortNew);startSession(w.map(i=>i.id),'이번 주')});
+  $('#prac-exit').addEventListener('click',()=>{if(state.session&&state.session.results.length){endSession()}else{state.session=null;showView('today')}});
+  $('#prac-hide').addEventListener('click',()=>{if(!cur)return;cur.hidden=!cur.hidden;$('#c-text').classList.toggle('hidden-text',cur.hidden);$('#prac-hide').textContent=cur.hidden?'보기':'가리기'});
+  $('#btn-teacher').addEventListener('click',playTeacher);
+  $('#btn-rec').addEventListener('click',toggleRecord);
+  $('#btn-me').addEventListener('click',()=>{if(!cur||!cur.lastPcm)return;if(playing){stopPlayback();return}playBuffer(pcmToBuffer(cur.lastPcm,cur.lastSr))});
+  $('#btn-retry').addEventListener('click',()=>{$('#result').hidden=true;toggleRecord()});
+  $('#btn-next').addEventListener('click',finishCard);
+  $$('.grade-row .g').forEach(b=>b.addEventListener('click',()=>{cur.grade=parseInt(b.dataset.g);$$('.grade-row .g').forEach(x=>x.classList.toggle('sel',x===b))}));
+  $('#btn-capture').addEventListener('click',toggleCapture);
+  $('#btn-sum-home').addEventListener('click',()=>showView('today'));
+  $('#bank-q').addEventListener('input',e=>{bankFilter.q=e.target.value;state.bankPage=1;renderBank()});
+  $('#bank-lesson').addEventListener('change',e=>{bankFilter.lesson=e.target.value;state.bankPage=1;renderBank()});
+  bindSettings();
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){stopPlayback()}});
+  if('speechSynthesis' in window){speechSynthesis.onvoiceschanged=()=>{}}
+}
+async function init(){
+  bind();
+  await loadBank();
+  showView('today');
+  if(gh.ready())syncIfReady(true);
+  if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+}
+init();
+</script>
+</body>
+</html>
