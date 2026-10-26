@@ -229,12 +229,12 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <div class="row" style="margin-top:8px">
         <button class="btn small" id="btn-weak">취약 문장 10</button>
         <button class="btn small" id="btn-random">랜덤 10</button>
-        <button class="btn small" id="btn-week">이번 주 전체</button>
+        <button class="btn small" id="btn-week">현재 세트 전체</button>
       </div>
     </div>
     <div class="grid2">
       <div class="card">
-        <h3>이번 주 수업</h3>
+        <h3>현재 세트</h3>
         <div class="big num" style="font-size:30px;margin-top:6px" id="week-count">0</div>
         <div class="muted small" id="week-label">—</div>
         <div class="bar" style="margin-top:8px"><i id="week-bar"></i></div>
@@ -391,11 +391,11 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="grid2">
           <label class="field">하루 목표 문장 수<input id="s-dailyTarget" type="number" min="5" max="80" inputmode="numeric"></label>
           <label class="field">과거 문장 신규 투입 (하루)<input id="s-newPerDay" type="number" min="0" max="40" inputmode="numeric"></label>
-          <label class="field">이번 주 수업 비중 (%)<input id="s-weekShare" type="number" min="20" max="100" inputmode="numeric"></label>
+          <label class="field">현재 세트 비중 (%)<input id="s-weekShare" type="number" min="20" max="100" inputmode="numeric"></label>
           <label class="field">취약 문장 비중 (%)<input id="s-strugglePct" type="number" min="0" max="60" inputmode="numeric"></label>
         </div>
         <label class="field">전체 숙지 목표일<input id="s-targetDate" type="date"></label>
-        <p class="small muted">매일 목표 수만큼 구성: 이번 주 수업 문장 → 복습 기한 지난 문장 → 취약 문장 → 과거 신규 순서. 점수가 낮은 문장은 더 짧은 간격으로 다시 나와요.</p>
+        <p class="small muted">매일 목표 수만큼 구성: 현재 세트(이번 달 묶음 또는 최신 수업) → 복습 기한 지난 문장 → 취약 문장 → 과거 신규 순서. 점수가 낮은 문장은 더 짧은 간격으로 다시 나와요.</p>
       </div>
     </details>
     <details>
@@ -485,7 +485,7 @@ const DEMO_BANK={version:1,demo:true,items:[
   {id:'demo-d2',text:"Sure, what's up?",ko:'그럼요, 무슨 일이에요?',tier:1,source:'데모',lesson:todayStr(),kind:'dialogue',group:'demo-dlg',role:'B',seq:2},
   {id:'demo-04',text:"I'm on the fence about it.",ko:'아직 결정을 못 했어요.',tier:2,source:'데모',lesson:'2026-08-13',kind:'sentence'}
 ]};
-const DEFAULTS={dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,ttsRate:0.95,azureKey:'',azureRegion:'koreacentral',ghOwner:'',ghRepo:'',ghBranch:'main',ghToken:''};
+const DEFAULTS={dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,ttsRate:0.95,azureKey:'',azureRegion:'koreacentral',ghOwner:'MJPark-8739',ghRepo:'english-review-data',ghBranch:'main',ghToken:''};
 const state={bank:{items:[],byId:{},tiers:DEFAULT_TIERS,demo:true,source:'demo'},progress:store.get(LS.progress,{}),log:store.get(LS.log,[]),localItems:store.get(LS.local,[]),settings:Object.assign({},DEFAULTS,store.get(LS.settings,{})),session:null,view:'today',bankPage:1};
 function saveProgress(){store.set(LS.progress,state.progress);store.set(LS.log,state.log.slice(-3000))}
 function saveSettings(){store.set(LS.settings,state.settings)}
@@ -504,9 +504,9 @@ const gh={
 
 /* ===================== bank ===================== */
 function normalizeBank(j,source){
-  const items=(j.items||[]).filter(x=>x&&x.text&&x.id).map(x=>({id:String(x.id),text:String(x.text).trim(),ko:x.ko||'',tier:clamp(parseInt(x.tier)||3,1,6),source:x.source||'',lesson:x.lesson||'',kind:x.kind||'sentence',group:x.group||null,role:x.role||null,seq:x.seq||0,clip:x.clip||null,words:Array.isArray(x.words)?x.words:null,note:x.note||''}));
+  const items=(j.items||[]).filter(x=>x&&x.text&&x.id).map(x=>({id:String(x.id),text:String(x.text).trim(),ko:x.ko||'',tier:clamp(parseInt(x.tier)||3,1,6),source:x.source||'',lesson:x.lesson||'',kind:x.kind||'sentence',group:x.group||null,role:x.role||null,seq:x.seq||0,clip:x.clip||null,words:Array.isArray(x.words)?x.words:null,note:x.note||'',sets:Array.isArray(x.sets)?x.sets.map(String):[]}));
   const tiers=Object.assign({},DEFAULT_TIERS);if(j.tiers)for(const k of Object.keys(j.tiers)){tiers[k]=Object.assign({},tiers[k]||{},j.tiers[k])}
-  return{items,tiers,demo:!!(j.demo||j.sample),source,generatedAt:j.generatedAt||null,version:j.version||1};
+  return{items,tiers,demo:!!(j.demo||j.sample),source,generatedAt:j.generatedAt||null,version:j.version||1,currentSet:j.currentSet?String(j.currentSet):null};
 }
 function finalizeBank(b){
   const all=b.items.concat(state.localItems.map(x=>Object.assign({},x,{local:true})));
@@ -554,7 +554,8 @@ function applyGrade(id,grade,score){
   saveProgress();
 }
 function latestLesson(){const ls=state.bank.items.filter(i=>i.lesson&&/^\d{4}-\d{2}-\d{2}$/.test(i.lesson)).map(i=>i.lesson);return ls.length?ls.sort().pop():null}
-function weekItems(){const L=latestLesson();if(!L)return[];return state.bank.items.filter(i=>i.lesson&&dayDiff(i.lesson,L)>=0&&dayDiff(i.lesson,L)<=6)}
+function weekItems(){const cs=state.bank.currentSet;if(cs){const inSet=state.bank.items.filter(i=>i.sets&&i.sets.includes(cs));if(inSet.length)return inSet}const L=latestLesson();if(!L)return[];return state.bank.items.filter(i=>i.lesson&&dayDiff(i.lesson,L)>=0&&dayDiff(i.lesson,L)<=6)}
+function weekLabel(){const cs=state.bank.currentSet;if(cs&&weekItems().some(i=>i.sets.includes(cs)))return cs;const L=latestLesson();return L?`${L} 수업`:'수업 자료 없음'}
 function sortNew(a,b){if(a.tier!==b.tier)return a.tier-b.tier;if(a.tier<=3&&a.lesson!==b.lesson)return b.lesson<a.lesson?-1:1;if(a.lesson!==b.lesson)return a.lesson<b.lesson?-1:1;if((a.group||'')!==(b.group||''))return (a.group||'')<(b.group||'')?-1:1;return (a.seq||0)-(b.seq||0)}
 function expandGroup(item,pool,taken){if(!item.group)return[item];const g=pool.filter(x=>x.group===item.group&&!taken.has(x.id)).sort((a,b)=>(a.seq||0)-(b.seq||0));return g.length?g:[item]}
 function buildSession(){
@@ -930,15 +931,15 @@ function renderToday(){
   $('#demo-banner').hidden=!(state.bank.demo||state.bank.source==='demo');
   const {queue,breakdown}=buildSession();
   $('#today-count').textContent=queue.length;
-  $('#today-breakdown').innerHTML=[['이번 주 수업',breakdown.week,'t1'],['복습',breakdown.due,''],['취약',breakdown.weak,'t3'],['과거 신규',breakdown.fresh,'t2']].filter(x=>x[1]>0).map(x=>`<span class="chip ${x[2]}">${x[0]} ${x[1]}</span>`).join('')||'<span class="chip">오늘 할 것이 없어요</span>';
+  $('#today-breakdown').innerHTML=[['현재 세트',breakdown.week,'t1'],['복습',breakdown.due,''],['취약',breakdown.weak,'t3'],['과거 신규',breakdown.fresh,'t2']].filter(x=>x[1]>0).map(x=>`<span class="chip ${x[2]}">${x[0]} ${x[1]}</span>`).join('')||'<span class="chip">오늘 할 것이 없어요</span>';
   $('#btn-start').disabled=!queue.length;$('#btn-start').onclick=()=>startSession(queue,'오늘');
-  const wk=weekItems();const L=latestLesson();$('#week-count').textContent=wk.length;$('#week-label').textContent=L?`${L} 수업`:'수업 자료 없음';
+  const wk=weekItems();$('#week-count').textContent=wk.length;$('#week-label').textContent=weekLabel();
   const wkDone=wk.filter(i=>{const p=P(i.id);return p&&p.reps>=1}).length,wkGood=wk.filter(i=>{const p=P(i.id);return p&&p.avg>=80}).length;
   $('#week-bar').style.width=(wk.length?wkDone/wk.length*100:0)+'%';$('#week-sub').textContent=wk.length?`연습 ${wkDone} · 80점 이상 ${wkGood}`:'';
   const cv=coverage();const pct=cv.total?Math.round(cv.started/cv.total*100):0;$('#cov-pct').textContent=pct+'%';$('#cov-bar').style.width=pct+'%';$('#cov-sub').textContent=`${cv.started}/${cv.total} 시작 · 숙달 ${cv.mastered}`;
   const td=state.settings.targetDate;const daysLeft=td?Math.max(0,dayDiff(todayStr(),td)):null;$('#goal-date').textContent=td?`목표일 ${td}`:'';
   const unstarted=cv.total-cv.started;const perDay=daysLeft?Math.ceil(unstarted/Math.max(1,daysLeft)):null;
-  $('#goal-text').textContent=daysLeft==null?'설정에서 목표일을 정하면 하루에 몇 개씩 새로 봐야 하는지 알려드려요.':unstarted===0?'모든 문장을 한 번 이상 연습했어요. 이제 점수를 올리는 단계예요.':`${daysLeft}일 남음. 아직 안 본 문장 ${unstarted}개 → 하루 ${perDay}개씩 새로 보면 목표일에 맞아요 (지금 설정: 하루 ${state.settings.newPerDay}개 + 이번 주 수업).`;
+  $('#goal-text').textContent=daysLeft==null?'설정에서 목표일을 정하면 하루에 몇 개씩 새로 봐야 하는지 알려드려요.':unstarted===0?'모든 문장을 한 번 이상 연습했어요. 이제 점수를 올리는 단계예요.':`${daysLeft}일 남음. 아직 안 본 문장 ${unstarted}개 → 하루 ${perDay}개씩 새로 보면 목표일에 맞아요 (지금 설정: 하루 ${state.settings.newPerDay}개 + 현재 세트).`;
   const since=addDays(todayStr(),-6);const recent=state.log.filter(e=>e.t.slice(0,10)>=since);$('#w7-attempts').textContent=recent.length;const sc=recent.filter(e=>e.score!=null).map(e=>e.score);$('#w7-avg').textContent=sc.length?Math.round(mean(sc)):'—';
   const days=new Set(state.log.map(e=>e.t.slice(0,10)));let streak=0,dd=todayStr();if(!days.has(dd))dd=addDays(dd,-1);while(days.has(dd)){streak++;dd=addDays(dd,-1)}$('#streak').textContent=streak?`${streak}일 연속`:'';
   const ls=store.get(LS.sync,null);$('#sync-state').textContent=!gh.ready()?'미연결':ls?ls.slice(5,16).replace('T',' '):'아직 안 함';
