@@ -403,6 +403,8 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <div class="inner">
         <label class="row"><input type="checkbox" id="s-showKo" style="width:auto"> 한국어 뜻 보이기</label>
         <label class="row"><input type="checkbox" id="s-hideText" style="width:auto"> 기본으로 문장 가리고 시작 (듣고 따라하기)</label>
+        <label class="row"><input type="checkbox" id="s-useBrowserSR" style="width:auto"> 브라우저 단어 인식 사용 (Safari·Chrome 내장)</label>
+        <p class="small muted">아이폰 Safari는 단어 인식을 지원하지만 기기에 따라 녹음과 동시에 쓰면 녹음이 비는 경우가 있어요. 그럴 땐 이 옵션을 끄면 억양·속도 비교가 되고, 단어·발음까지 함께 보려면 아래 정밀 평가를 쓰세요. 아이폰 Chrome은 단어 인식 기능이 없어요.</p>
         <label class="field">대체 음성(TTS) 속도 <span class="num" id="s-ttsRate-val"></span><input id="s-ttsRate" type="range" min="0.6" max="1.2" step="0.05"></label>
         <p class="small muted">선생님 클립이 없는 문장은 기기 음성(TTS)으로 들려줘요. 이때는 억양 비교가 안 되고 단어 인식만 됩니다.</p>
       </div>
@@ -485,7 +487,7 @@ const DEMO_BANK={version:1,demo:true,items:[
   {id:'demo-d2',text:"Sure, what's up?",ko:'그럼요, 무슨 일이에요?',tier:1,source:'데모',lesson:todayStr(),kind:'dialogue',group:'demo-dlg',role:'B',seq:2},
   {id:'demo-04',text:"I'm on the fence about it.",ko:'아직 결정을 못 했어요.',tier:2,source:'데모',lesson:'2026-08-13',kind:'sentence'}
 ]};
-const DEFAULTS={dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,ttsRate:0.95,azureKey:'',azureRegion:'koreacentral',ghOwner:'MJPark-8739',ghRepo:'english-review-data',ghBranch:'main',ghToken:''};
+const DEFAULTS={dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,useBrowserSR:true,ttsRate:0.95,azureKey:'',azureRegion:'koreacentral',ghOwner:'MJPark-8739',ghRepo:'english-review-data',ghBranch:'main',ghToken:''};
 const state={bank:{items:[],byId:{},tiers:DEFAULT_TIERS,demo:true,source:'demo'},progress:store.get(LS.progress,{}),log:store.get(LS.log,[]),localItems:store.get(LS.local,[]),settings:Object.assign({},DEFAULTS,store.get(LS.settings,{})),session:null,view:'today',bankPage:1};
 function saveProgress(){store.set(LS.progress,state.progress);store.set(LS.log,state.log.slice(-3000))}
 function saveSettings(){store.set(LS.settings,state.settings)}
@@ -728,7 +730,7 @@ async function renderCard(){
 }
 function playTeacher(){if(!cur)return;const b=$('#btn-teacher');if(playing||('speechSynthesis' in window&&speechSynthesis.speaking)){stopPlayback();return}if(cur.teacher){b.textContent='■ 정지';playBuffer(cur.teacher.buffer,0,null,()=>{b.textContent='▶ 선생님'+(cur.teacher.local?' (내 녹음)':'')})}else if(cur.teacher===null){b.textContent='■ 정지';speak(cur.item.text,()=>{b.textContent='▶ 대체음성'})}else{toast('선생님 음성을 불러오는 중이에요')}}
 function startRecognition(){
-  if(IS_IOS||srBroken)return null;const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;
+  if(srBroken||state.settings.useBrowserSR===false)return null;const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;
   const r=new SR();r.lang='en-US';r.interimResults=false;r.maxAlternatives=5;r.continuous=true;const out={transcripts:[],ended:false,error:null};
   r.onresult=e=>{for(let i=0;i<e.results.length;i++){const res=e.results[i];for(let k=0;k<res.length;k++){const t=res[k].transcript;if(t)out.transcripts.push(t)}}};
   r.onerror=e=>{out.error=e.error;if(e.error==='audio-capture'||e.error==='not-allowed'||e.error==='service-not-allowed')srBroken=true};
@@ -752,20 +754,22 @@ async function stopRecording(){
   if(rz&&rz.rec){try{rz.rec.stop()}catch(e){}}
   $('#rec-msg').textContent='분석 중…';
   // give the recognizer a moment to deliver its final result
-  if(rz){const t0=Date.now();while(!rz.ended&&Date.now()-t0<2500)await new Promise(r=>setTimeout(r,100))}
+  if(rz){const t0=Date.now();while(!rz.ended&&Date.now()-t0<3000)await new Promise(r=>setTimeout(r,100))}
   const transcripts=rz?rz.transcripts:[];
   await analyzeAttempt(pcm,sr,transcripts);
 }
 async function analyzeAttempt(pcm,sr,transcripts){
   const item=cur.item;const pcm16=resample(pcm,sr);const my=analyzeAudio(pcm16,16000);
   cur.lastPcm=pcm;cur.lastSr=sr;$('#btn-me').disabled=false;
-  if(!my.span||my.dur<0.25){$('#rec-msg').textContent='소리가 거의 안 잡혔어요. 마이크에 조금 더 가까이, 다시 녹음해 보세요.';return}
+  const silent=!my.span||my.dur<0.25;
+  if(silent&&!transcripts.length){$('#rec-msg').textContent='소리가 거의 안 잡혔어요. 마이크에 조금 더 가까이, 다시 녹음해 보세요.';return}
+  if(silent&&transcripts.length){cur.srConflict=true}
   if(cur.hidden){cur.hidden=false;$('#c-text').classList.remove('hidden-text');$('#prac-hide').textContent='가리기'}
   let az=null;
   if(state.settings.azureKey&&state.settings.azureKey.trim()){$('#rec-msg').textContent='정밀 평가 중…';try{az=parseAzure(await azureAssess(pcm16,item.text))}catch(e){toast('정밀 평가 실패: '+e.message+' — 기본 비교로 보여드려요')}}
   const te=cur.teacher||null;
-  const ct=(te&&te.an.contour&&my.contour)?compareContours(my.contour,te.an.contour):null;
-  const timing={ratio:te&&te.an.dur?my.dur/te.an.dur:null,myDur:my.dur,teDur:te?te.an.dur:null,myPauses:my.span.pauses.length,tePauses:te&&te.an.span?te.an.span.pauses.length:null};
+  const ct=(!silent&&te&&te.an.contour&&my.contour)?compareContours(my.contour,te.an.contour):null;
+  const timing={ratio:!silent&&te&&te.an.dur?my.dur/te.an.dur:null,myDur:my.dur,teDur:te?te.an.dur:null,myPauses:my.span?my.span.pauses.length:0,tePauses:te&&te.an.span?te.an.span.pauses.length:null};
   // words
   const {disp,map}=mapRefToDisplay(item.text);
   let wordView=null,acc=null,wordSource='none';
@@ -786,6 +790,7 @@ async function analyzeAttempt(pcm,sr,transcripts){
   if(az){overall=Math.round(az.pron??az.acc);parts=[['정확도',az.acc],['유창성',az.flu],['완성도',az.comp],['억양·리듬',az.pros!=null?az.pros:into]]}
   else{const ws=[];if(acc!=null)ws.push([acc,0.5]);if(into!=null)ws.push([into,0.3]);if(timingScore!=null)ws.push([timingScore,0.2]);if(ws.length){const tw=ws.reduce((a,b)=>a+b[1],0);overall=Math.round(ws.reduce((a,b)=>a+b[0]*b[1],0)/tw)}parts=[['단어 정확도',acc],['억양 유사도',into],['속도·끊김',timingScore],['억양 폭',ct?Math.round(clamp(ct.rangeRatio,0,1)*100):null]]}
   const hints=makeHints({item,az,wordView,ct,timing,acc,wordSource,overall});
+  if(cur.srConflict)hints.unshift({c:'info',t:'이 기기에서는 단어 인식이 켜져 있으면 녹음 소리가 안 잡혀요. 억양 비교를 보려면 설정 → 표시·소리에서 "브라우저 단어 인식"을 끄세요. (둘 다 보려면 정밀 평가 키 필요)'});
   const attempt={overall,parts,wordView,ct,timing,az,my,te,hints,wordSource,disp};
   cur.attempts.push(attempt);if(overall!=null)cur.best=Math.max(cur.best??0,overall);
   renderResult(attempt);
@@ -805,7 +810,10 @@ function makeHints(o){
     if(wordView.extras.length)h.push({c:'',t:`문장에 없는 말이 들어갔어요: ${wordView.extras.slice(0,3).map(w=>"'"+w+"'").join(', ')}`});
     if(h.length>5)h.length=5;
   }else if(wordSource==='none'){
-    h.push({c:'info',t:IS_IOS?'아이폰에서는 단어 인식이 꺼져 있어요. 정밀 평가(설정)를 켜면 단어·발음까지 비교됩니다. 지금은 억양·속도만 비교해요.':'단어 인식 결과가 없어요. 억양·속도만 비교했어요. 들어보고 직접 평가해 주세요.'});
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(o.item&&state.settings.useBrowserSR===false)h.push({c:'info',t:'단어 인식이 꺼져 있어요(설정 → 표시·소리). 억양·속도만 비교했어요.'});
+    else if(!SR)h.push({c:'info',t:IS_IOS?'이 브라우저에는 단어 인식 기능이 없어요. 아이폰은 Safari로 열면 단어 인식이 되고, 정밀 평가(Azure 키)를 쓰면 발음까지 비교돼요. 지금은 억양·속도만 비교했어요.':'이 브라우저에는 단어 인식 기능이 없어요. 억양·속도만 비교했어요.'});
+    else h.push({c:'info',t:'단어 인식 결과가 없어요(권한 거부 또는 인식 실패). 억양·속도만 비교했어요. 들어보고 직접 평가해 주세요.'});
   }
   if(ct){
     if(ct.r<0.3)h.push({c:'',t:'억양 흐름이 선생님과 달라요. 아래 그래프에서 올라가고 내려가는 자리를 맞춰보세요.'});
@@ -982,7 +990,7 @@ function renderStats(){
 }
 function renderSettings(){
   const s=state.settings;for(const k of ['ghOwner','ghRepo','ghBranch','ghToken','dailyTarget','newPerDay','weekShare','strugglePct','targetDate','azureKey','azureRegion','ttsRate']){const el=$('#s-'+k);if(el&&document.activeElement!==el)el.value=s[k]??''}
-  $('#s-showKo').checked=!!s.showKo;$('#s-hideText').checked=!!s.hideText;$('#s-ttsRate-val').textContent=(+s.ttsRate).toFixed(2)+'×';
+  $('#s-showKo').checked=!!s.showKo;$('#s-hideText').checked=!!s.hideText;$('#s-useBrowserSR').checked=s.useBrowserSR!==false;$('#s-ttsRate-val').textContent=(+s.ttsRate).toFixed(2)+'×';
   const sel=$('#add-tier');if(!sel.options.length){sel.innerHTML=Object.keys(state.bank.tiers).sort().map(k=>`<option value="${k}">${esc(state.bank.tiers[k].short)} · ${esc(state.bank.tiers[k].name)}</option>`).join('')}
   if(!$('#add-lesson').value)$('#add-lesson').value=todayStr();
   $('#gh-status').textContent=gh.ready()?`연결 설정됨 · 자료 출처: ${state.bank.source==='github'?'저장소':state.bank.source}`:'아직 연결 안 됨';
@@ -993,6 +1001,7 @@ function bindSettings(){
   $('#s-ttsRate').addEventListener('input',()=>{$('#s-ttsRate-val').textContent=(+$('#s-ttsRate').value).toFixed(2)+'×'});
   $('#s-showKo').addEventListener('change',e=>{state.settings.showKo=e.target.checked;saveSettings()});
   $('#s-hideText').addEventListener('change',e=>{state.settings.hideText=e.target.checked;saveSettings()});
+  $('#s-useBrowserSR').addEventListener('change',e=>{state.settings.useBrowserSR=e.target.checked;srBroken=false;saveSettings()});
   $('#btn-gh-test').addEventListener('click',async()=>{if(!gh.ready()){toast('사용자명·저장소·토큰을 모두 입력하세요');return}$('#gh-status').textContent='확인 중…';try{const r=await gh.raw('bank.json');$('#gh-status').textContent=r?'연결 성공 · bank.json 확인됨':'연결은 됐지만 bank.json이 아직 없어요'}catch(e){$('#gh-status').textContent='실패: '+e.message+(String(e.message).includes('401')?' (토큰 확인)':String(e.message).includes('404')?' (저장소 이름 또는 토큰 권한 확인)':'')}});
   $('#btn-reload').addEventListener('click',async()=>{await loadBank();renderSettings();toast(`${state.bank.items.length}문장 불러옴`)});
   $('#btn-sync').addEventListener('click',()=>syncIfReady(false));
