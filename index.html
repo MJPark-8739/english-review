@@ -452,11 +452,11 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="grid2">
           <label class="field">하루 목표 문장 수<input id="s-dailyTarget" type="number" min="5" max="80" inputmode="numeric"></label>
           <label class="field">과거 문장 신규 투입 (하루)<input id="s-newPerDay" type="number" min="0" max="40" inputmode="numeric"></label>
-          <label class="field">현재 세트 비중 (%)<input id="s-weekShare" type="number" min="20" max="100" inputmode="numeric"></label>
+          <label class="field">최신 수업·세트 비중 (%)<input id="s-weekShare" type="number" min="20" max="100" inputmode="numeric"></label>
           <label class="field">취약 문장 비중 (%)<input id="s-strugglePct" type="number" min="0" max="60" inputmode="numeric"></label>
         </div>
         <label class="field">전체 숙지 목표일<input id="s-targetDate" type="date"></label>
-        <p class="small muted">매일 목표 수만큼 구성: 현재 세트(이번 달 묶음 또는 최신 수업) → 복습 기한 지난 문장 → 취약 문장 → 과거 신규 순서. 점수가 낮은 문장은 더 짧은 간격으로 다시 나와요.</p>
+        <p class="small muted">매일 목표 수만큼 구성: 최신 수업 → 현재 세트(묶음) → 복습 기한 지난 문장 → 취약 문장 → 과거 신규 순서. 점수가 낮은 문장은 더 짧은 간격으로 다시 나와요.</p>
       </div>
     </details>
     <details>
@@ -579,10 +579,11 @@ function finalizeBank(b){
 }
 async function loadBank(){
   setStatus('wait','불러오는 중');
+  for(const k of Object.keys(teacherCache))delete teacherCache[k];
   if(gh.ready()){
     try{
       const r=await gh.raw('bank.json');
-      if(r){const j=await r.json();const b=normalizeBank(j,'github');store.set(LS.bankCache,j);finalizeBank(b);setStatus('ok',`연결됨 · ${b.items.length}문장`);return}
+      if(r){const j=await r.json();const b=normalizeBank(j,'github');store.set(LS.bankCache,j);finalizeBank(b);setStatus('ok',`연결됨 · ${b.items.length}문장`);pruneClipCache();return}
       setStatus('bad','저장소에 bank.json 없음');
     }catch(e){
       const cached=store.get(LS.bankCache,null);
@@ -594,6 +595,8 @@ async function loadBank(){
   finalizeBank(normalizeBank(DEMO_BANK,'demo'));setStatus('wait','데모 자료');
 }
 function setStatus(kind,text){const el=$('#status');el.className='status '+(kind==='ok'?'ok':kind==='bad'?'bad':'');$('#status-text').textContent=text}
+function clipKey(item,path){return 'clip:'+(state.bank.clipsVersion||'')+'#'+(item.clipRev||0)+':'+path}
+async function pruneClipCache(){try{const keep=new Set(state.bank.items.filter(i=>i.clip).map(i=>clipKey(i,clipPath(i))));for(const k of await idb.keys('clip:'))if(!keep.has(k))await idb.del(k)}catch(e){}}
 function clipPath(item){if(!item.clip)return null;if(/^https?:/.test(item.clip))return item.clip;if(state.bank.source==='local')return 'data/'+item.clip.replace(/^data\//,'');return item.clip.replace(/^data\//,'')}
 
 /* ===================== scheduler ===================== */
@@ -618,6 +621,7 @@ function applyGrade(id,grade,score){
   saveProgress();
 }
 function latestLesson(){const ls=state.bank.items.filter(i=>i.lesson&&/^\d{4}-\d{2}-\d{2}$/.test(i.lesson)).map(i=>i.lesson);return ls.length?ls.sort().pop():null}
+function latestWeekItems(){const L=latestLesson();if(!L)return[];return state.bank.items.filter(i=>/^\d{4}-\d{2}-\d{2}$/.test(i.lesson||'')&&dayDiff(i.lesson,L)>=0&&dayDiff(i.lesson,L)<=6)}
 function weekItems(){const cs=state.bank.currentSet;if(cs){const inSet=state.bank.items.filter(i=>i.sets&&i.sets.includes(cs));if(inSet.length)return inSet}const L=latestLesson();if(!L)return[];return state.bank.items.filter(i=>i.lesson&&dayDiff(i.lesson,L)>=0&&dayDiff(i.lesson,L)<=6)}
 function weekLabel(){const cs=state.bank.currentSet;if(cs&&weekItems().some(i=>i.sets.includes(cs)))return cs;const L=latestLesson();return L?`${L} 수업`:'수업 자료 없음'}
 function sortNew(a,b){if(a.tier!==b.tier)return a.tier-b.tier;if(a.tier<=3&&a.lesson!==b.lesson)return b.lesson<a.lesson?-1:1;if(a.lesson!==b.lesson)return a.lesson<b.lesson?-1:1;if((a.group||'')!==(b.group||''))return (a.group||'')<(b.group||'')?-1:1;return (a.seq||0)-(b.seq||0)}
@@ -628,14 +632,19 @@ function buildSession(){
   const push=it=>{if(!taken.has(it.id)&&queue.length<N){taken.add(it.id);queue.push(it.id);return true}return false};
   const overdue=i=>{const p=P(i.id);return p&&p.due&&p.due<=today};
   const isNew=i=>!P(i.id);
-  const wk=new Set(weekItems().map(i=>i.id));
-  const breakdown={week:0,due:0,weak:0,fresh:0};
-  // 1. this week's lesson: due first, then new in order
+  // focus = newest lesson week first, then the current bundle (homework set)
+  const lw=new Set(latestWeekItems().map(i=>i.id));
+  const cs=new Set(weekItems().map(i=>i.id).filter(id=>!lw.has(id)));
+  const wk=new Set([...lw,...cs]);
+  const breakdown={week:0,set:0,due:0,weak:0,fresh:0};
   const weekCap=Math.ceil(N*clamp(s.weekShare,20,100)/100);
-  const wDue=items.filter(i=>wk.has(i.id)&&overdue(i)).sort((a,b)=>(P(a.id).avg??100)-(P(b.id).avg??100));
-  const wNew=items.filter(i=>wk.has(i.id)&&isNew(i)).sort(sortNew);
-  for(const it of wDue){if(queue.length>=weekCap)break;if(push(it))breakdown.week++}
-  for(const it of wNew){if(queue.length>=weekCap)break;for(const g of expandGroup(it,wNew,taken)){if(queue.length>=weekCap)break;if(push(g))breakdown.week++}}
+  const weakFirst=(a,b)=>(P(a.id).avg??100)-(P(b.id).avg??100);
+  const lDue=items.filter(i=>lw.has(i.id)&&overdue(i)).sort(weakFirst);
+  const lNew=items.filter(i=>lw.has(i.id)&&isNew(i)).sort(sortNew);
+  const sDue=items.filter(i=>cs.has(i.id)&&overdue(i)).sort(weakFirst);
+  const sNew=items.filter(i=>cs.has(i.id)&&isNew(i)).sort(sortNew);
+  const take=(list,key,cap,group)=>{for(const it of list){if(queue.length>=cap)break;for(const g of (group?expandGroup(it,list,taken):[it])){if(queue.length>=cap)break;if(push(g))breakdown[key]++}}};
+  take(lDue,'week',weekCap,false);take(lNew,'week',weekCap,true);take(sDue,'set',weekCap,false);take(sNew,'set',weekCap,true);
   // 2. overdue reviews (older), most overdue & weakest first
   const due=items.filter(i=>!wk.has(i.id)&&overdue(i)).sort((a,b)=>{const pa=P(a.id),pb=P(b.id);const oa=dayDiff(pa.due,today),ob=dayDiff(pb.due,today);if(oa!==ob)return ob-oa;return (pa.avg??100)-(pb.avg??100)});
   const dueCap=Math.max(0,N-queue.length);let d=0;
@@ -650,8 +659,9 @@ function buildSession(){
   const fresh=items.filter(i=>!wk.has(i.id)&&isNew(i)).sort(sortNew);
   let f=0;for(const it of fresh){if(f>=freshCap)break;for(const g of expandGroup(it,fresh,taken)){if(f>=freshCap)break;if(push(g)){breakdown.fresh++;f++}}}
   // 5. fill with remaining due, then this week's rest
+  take(lDue,'week',N,false);take(sDue,'set',N,false);
   for(const it of due){if(queue.length>=N)break;if(push(it))breakdown.due++}
-  for(const it of wNew){if(queue.length>=N)break;if(push(it))breakdown.week++}
+  take(lNew,'week',N,true);take(sNew,'set',N,true);
   return{queue,breakdown};
 }
 function coverage(){const items=state.bank.items;const total=items.length;let started=0,mastered=0;for(const i of items){const p=P(i.id);if(p){started++;if(p.state==='mastered')mastered++}}return{total,started,mastered}}
@@ -763,7 +773,7 @@ async function getTeacher(item){
   let arr=null,local=false;
   const saved=await idb.get('local:'+item.id);
   if(saved&&saved.wav){arr=saved.wav;local=true}
-  else{const path=clipPath(item);if(path){const ck='clip:'+(item.clipRev||state.bank.clipsVersion||'')+':'+path;const cached=await idb.get(ck);if(cached&&cached.buf)arr=cached.buf;else{try{let r=null;if(state.bank.source==='github'||state.bank.source==='github-cache'){r=await gh.raw(path)}else{r=await fetch(path);if(!r.ok)r=null}if(r){arr=await r.arrayBuffer();idb.set(ck,{buf:arr,at:Date.now()})}}catch(e){}}}}
+  else{const path=clipPath(item);if(path){const ck=clipKey(item,path);const cached=await idb.get(ck);if(cached&&cached.buf)arr=cached.buf;else{try{let r=null;if(state.bank.source==='github'||state.bank.source==='github-cache'){r=await gh.raw(path)}else{r=await fetch(path);if(!r.ok)r=null}if(r){arr=await r.arrayBuffer();idb.set(ck,{buf:arr,at:Date.now()})}}catch(e){}}}}
   if(!arr){teacherCache[item.id]=null;return null}
   try{const ctx=audio.ensure();const buf=await ctx.decodeAudioData(arr.slice(0));const pcm=resample(buf.getChannelData(0),buf.sampleRate);const t={buffer:buf,pcm,an:analyzeAudio(pcm,16000),local};teacherCache[item.id]=t;return t}catch(e){teacherCache[item.id]=null;return null}
 }
@@ -1001,7 +1011,7 @@ function renderToday(){
   $('#demo-banner').hidden=!(state.bank.demo||state.bank.source==='demo');
   const {queue,breakdown}=buildSession();
   $('#today-count').textContent=queue.length;
-  $('#today-breakdown').innerHTML=[['현재 세트',breakdown.week,'t1'],['복습',breakdown.due,''],['취약',breakdown.weak,'t3'],['과거 신규',breakdown.fresh,'t2']].filter(x=>x[1]>0).map(x=>`<span class="chip ${x[2]}">${x[0]} ${x[1]}</span>`).join('')||'<span class="chip">오늘 할 것이 없어요</span>';
+  $('#today-breakdown').innerHTML=[['최신 수업',breakdown.week,'t1'],['현재 세트',breakdown.set,'t1'],['복습',breakdown.due,''],['취약',breakdown.weak,'t3'],['과거 신규',breakdown.fresh,'t2']].filter(x=>x[1]>0).map(x=>`<span class="chip ${x[2]}">${x[0]} ${x[1]}</span>`).join('')||'<span class="chip">오늘 할 것이 없어요</span>';
   $('#btn-start').disabled=!queue.length;$('#btn-start').onclick=()=>startSession(queue,'오늘');
   const wk=weekItems();$('#week-count').textContent=wk.length;$('#week-label').textContent=weekLabel();
   const wkDone=wk.filter(i=>{const p=P(i.id);return p&&p.reps>=1}).length,wkGood=wk.filter(i=>{const p=P(i.id);return p&&p.avg>=80}).length;
