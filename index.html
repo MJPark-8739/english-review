@@ -587,7 +587,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.2 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.2.1 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -741,7 +741,10 @@ function buildSession(){
   const weak=items.filter(i=>{const p=P(i.id);return p&&p.reps>=2&&p.avg!=null&&p.avg<75&&!taken.has(i.id)}).sort((a,b)=>(P(a.id).last||'')<(P(b.id).last||'')?-1:1);
   let w=0;for(const it of weak){if(w>=weakCap)break;if(push(it)){breakdown.weak++;w++}}
   const freshToday=items.filter(i=>!wk.has(i.id)&&P(i.id)&&P(i.id).first===today).length;
-  const freshCap=Math.min(Math.max(0,clamp(s.newPerDay|0,0,40)-freshToday),Math.max(0,N-queue.length));
+  // while this week's lesson or the current bundle still has unseen sentences, older material comes in
+  // only a little (2 a day); once the focus is all started, the full "new per day" applies
+  const perDay=clamp(s.newPerDay|0,0,40),focusLeft=[...lNew,...sNew].some(i=>!taken.has(i.id));
+  const freshCap=Math.min(Math.max(0,(focusLeft?Math.min(2,perDay):perDay)-freshToday),Math.max(0,N-queue.length));
   const fresh=items.filter(i=>!wk.has(i.id)&&isNew(i)).sort(sortNew);
   let f=0;for(const it of fresh){if(f>=freshCap)break;for(const g of expandGroup(it,fresh,taken)){if(f>=freshCap)break;if(push(g)){breakdown.fresh++;f++}}}
   take(lDue,'week',N,false);take(sDue,'set',N,false);
@@ -1009,8 +1012,11 @@ function coachLines(ws){
   if(weak.length)out.push({k:999,t:`약하게: ${weak.slice(0,5).join(', ')} — 짧고 낮게, 모음은 '어'처럼 흐리게`});
   return out.sort((a,b)=>a.k-b.k).map(x=>x.t);
 }
-function chunkSuggestions(prof){
-  const ws=prof.ws,n=ws.length,s=[];const add=(i,j)=>{if(i<0||j>=n||i>=j||j-i+1>=n)return;const key=i+'-'+j;if(!s.some(x=>x.key===key))s.push({key,i,j,text:ws.slice(i,j+1).map(w=>w.w).join(' ')})};
+function chunkSuggestions(prof,text){
+  const ws=prof.ws,n=ws.length,s=[];
+  // don't suggest a part that runs across a comma or a sentence end ("all. If anything")
+  const tk=String(text||'').trim().split(/\s+/),brk=tk.length===n?tk.map(t=>/[.,!?;:]["'’”)]*$/.test(t)):ws.map(()=>false);
+  const add=(i,j)=>{if(i<0||j>=n||i>=j||j-i+1>=n)return;for(let k=i;k<j;k++)if(brk[k])return;const key=i+'-'+j;if(!s.some(x=>x.key===key))s.push({key,i,j,text:ws.slice(i,j+1).map(w=>w.w).join(' ')})};
   for(const S of ws.filter(w=>w.stress)){add(S.k-1,S.k);add(S.k-2,S.k);if(S.k===0)add(0,1)}
   const lastV=[...ws].reverse().find(w=>w.f&&w.f.voiced>=3);if(lastV)add(Math.max(0,lastV.k-1),n-1);
   return s.slice(0,4);
@@ -1034,7 +1040,9 @@ function shapeMiss(T,M,stressed){const sT=T.shape,hatM=M.peak-Math.max(M.startP,
   if(sT==='fall'){if(M.slope>=1.5)return 2;return M.slope>-0.8&&M.slope>T.slope+2?1:0}
   if(sT==='hat')return hatM<1&&stressed?1:0;
   return 0}
-function shapeSim(T,M){if(T.shape==='flat')return M.shape==='flat'?1:0.75;const m=shapeMiss(T,M,true);if(T.shape==='hat')return m?0.6:1;return m===2?0:m===1?0.4:1}
+// pitch features from a list of semitone values (same rules as segFeat)
+function supFeat(v){if(v.length<5)return null;const s=[...v].sort((a,b)=>a-b),k=Math.max(1,Math.floor(v.length*0.3));const startP=mean(v.slice(0,k)),endP=mean(v.slice(-k)),peak=s[Math.min(s.length-1,Math.floor(s.length*0.9))],slope=endP-startP;
+  return{startP,endP,peak,slope,level:s[s.length>>1],shape:(v.length>=6&&peak-Math.max(startP,endP)>=2.2&&peak-Math.min(startP,endP)>=3)?'hat':slope>=2?'rise':slope<=-2?'fall':'flat'}}
 /* Compare my take with the teacher clip word by word: align the two recordings (DTW on MFCCs with
    per-utterance normalization, so mic and voice differences mostly cancel), then measure pitch shape,
    level, length, pauses and stress inside each teacher word. Pitch is in semitones from each speaker's own median. */
@@ -1080,7 +1088,13 @@ function compareWithTeacher(te,me,item,prof){
     const shapeHints=[];
     for(const w of words){
       if(!(w.te&&w.me&&w.te.voiced>=3&&w.me.voiced>=3))continue;
-      const sT=w.te.shape,sM=w.me.shape;const sev=SHAPE_FIX[sT]?shapeMiss(w.te,w.me,w.stressT):0;
+      const sT=w.te.shape,sM=w.me.shape;
+      // judge the movement twice — on the whole word, and only on frames where both voices have pitch — and flag
+      // only if both agree, so a few unvoiced frames at a word's edge can't turn "the same" into "different"
+      const ci=[];for(let i=w.ta-tA;i<=w.tb-tA;i++)if(!isNaN(teLine[i])&&!isNaN(meLine[i]))ci.push(i);
+      const cT=supFeat(ci.map(i=>teLine[i])),cM=supFeat(ci.map(i=>meLine[i]));
+      const judge=st=>{if(!SHAPE_FIX[sT])return 0;const a=shapeMiss(w.te,w.me,st);if(!a||!cT||!cM)return a;return cT.shape===sT?Math.min(a,shapeMiss(cT,cM,st)):0};
+      w.shapeSev=judge(true);const sev=judge(w.stressT);
       if(sev){w.notes.push({sev,t:`선생님 ${ARROW[sT]} ${SHAPE_KO[sT]}, 나 ${ARROW[sM]} ${SHAPE_KO[sM]} → ${SHAPE_FIX[sT]}`});shapeHints.push({w,sev,sT,sM})}
       const dl=w.me.level-w.te.level;
       // a gap of about an octave is almost always a pitch-tracking error, not a real difference
@@ -1112,7 +1126,7 @@ function compareWithTeacher(te,me,item,prof){
     if(medC>0){const ranked=words.filter(w=>!w.func&&(w.tb-w.ta)>=6).map(w=>({w,ratio:w.cost/medC})).sort((a,b)=>b.ratio-a.ratio);if(ranked.length&&ranked[0].ratio>=1.6){const w=ranked[0].w;w.soundDiff=true;w.notes.push({sev:0,t:'소리가 선생님과 가장 달라요 → ▶ 비교로 들어보세요'});hints.push({c:'',p:1,t:`'${w.w}' — 소리가 선생님과 가장 달라요 → 단어를 눌러 ▶ 비교로 들어보세요`})}}
     // scores
     const comp=words.filter(w=>w.te&&w.me&&w.te.voiced>=3&&w.me.voiced>=3);let shapeS=null,levelS=null;
-    if(comp.length){shapeS=mean(comp.map(w=>shapeSim(w.te,w.me)))*100;levelS=mean(comp.map(w=>Math.max(0,1-Math.abs(w.me.level-w.te.level)/7)))*100}
+    if(comp.length){shapeS=mean(comp.map(w=>{const a=w.te.shape,m=w.shapeSev||0;if(a==='flat')return w.me.shape==='flat'?1:0.75;if(a==='hat')return m?0.6:1;return m===2?0:m===1?0.4:1}))*100;levelS=mean(comp.map(w=>Math.max(0,1-Math.abs(w.me.level-w.te.level)/7)))*100}
     const corrS=r==null?null:clamp((r+1)/2*100,0,100);
     let into=wavg([[corrS,0.35],[shapeS,0.35],[levelS,0.3]]);if(into!=null&&rangeRatio<0.55)into-=(0.55-rangeRatio)*40;
     // each flagged word costs points directly, so one wrong rise/fall can't hide behind an otherwise similar contour
@@ -1282,7 +1296,7 @@ function onMelodyTap(k){
   const w=p.ws[k];if(cur.teacher&&cur.teacher.blob)player.play('t:'+cur.item.id,cur.teacher.blob,{start:Math.max(0,w.s-0.06),end:w.e+0.08});
 }
 function renderChunkPick(){
-  const p=cur.profile;const sugs=chunkSuggestions(p);
+  const p=cur.profile;const sugs=chunkSuggestions(p,cur.item.text);
   $('#chunk-sugs').innerHTML=sugs.map(s=>`<button type="button" class="btn small" data-i="${s.i}" data-j="${s.j}">${esc(s.text)}</button>`).join('')||'<span class="small muted">추천 구간이 없어요</span>';
   $('#chunk-sugs').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>startChunk(+b.dataset.i,+b.dataset.j)));
   const a=cur.pickA,b=cur.pickB;$$('#mchips .mc').forEach((el,k)=>el.classList.toggle('pick',a!=null&&(b==null?k===a:k>=a&&k<=b)));
