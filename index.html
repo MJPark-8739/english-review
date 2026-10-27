@@ -111,6 +111,7 @@ main{padding:0 max(16px,env(safe-area-inset-right,0px)) calc(var(--tab-h) + 24px
 .banner{background:var(--warn-soft);color:var(--fg);border-radius:12px;padding:10px 12px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
 .banner b{color:var(--warn);white-space:nowrap}
 .banner.info{background:var(--teacher-soft)} .banner.info b{color:var(--teacher)}
+.banner.bad{background:var(--bad-soft)} .banner.bad b{color:var(--bad)}
 
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px max(10px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px));height:calc(var(--tab-h) + env(safe-area-inset-bottom,0px))}
 .tabbar button{flex:1;border:0;background:none;color:var(--muted);font-size:11px;font-weight:500;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;cursor:pointer;border-radius:10px}
@@ -132,10 +133,12 @@ main{padding:0 max(16px,env(safe-area-inset-right,0px)) calc(var(--tab-h) + 24px
 .controls .btn{padding-inline:8px;font-size:14px;white-space:nowrap}
 a.btn{text-decoration:none}
 .rec-status{font-size:13px;color:var(--muted);min-height:20px;display:flex;align-items:center;gap:8px}
+.rec-status #rec-msg{flex:1;min-width:0}
 .level{height:6px;flex:1;border-radius:999px;background:var(--surface-2);overflow:hidden}
 .level i{display:block;height:100%;background:var(--me);width:0}
 
 .result{display:flex;flex-direction:column;gap:12px}
+.result-card{display:flex;flex-direction:column;gap:12px}
 .score-row{display:flex;gap:14px;align-items:center}
 .ring{position:relative;width:96px;height:96px;flex:none}
 .ring canvas{width:96px;height:96px}
@@ -144,28 +147,45 @@ a.btn{text-decoration:none}
 .sub{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
 .sub b{font-size:15px;color:var(--fg);font-variant-numeric:tabular-nums}
 .sub .bar{height:5px}
-.words{display:flex;flex-wrap:wrap;gap:6px 6px;font-family:var(--font-en);font-size:19px;font-weight:700;line-height:1.3}
-.w{padding:2px 6px;border:0;border-radius:8px 8px 3px 3px;border-bottom:3px solid transparent;background:transparent;font:inherit;cursor:pointer}
-.w.ok{border-bottom-color:var(--good)}
-.w.warn{border-bottom-color:var(--warn);background:var(--warn-soft)}
-.w.bad{border-bottom-color:var(--bad);background:var(--bad-soft)}
-.w.missing{color:var(--bad);text-decoration:line-through;text-decoration-thickness:2px}
-.w.extra{color:var(--muted);font-weight:400;font-style:italic;font-size:15px}
-.w.unknown{border-bottom-color:var(--line)}
-.w.sel{outline:2px solid var(--fg)}
-.word-detail{background:var(--surface-2);border-radius:10px;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.legend{display:flex;gap:6px 12px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.legend u{color:var(--fg);text-decoration:underline;text-decoration-color:var(--teacher);text-decoration-thickness:3px;text-underline-offset:3px}
+.wchips{display:flex;flex-wrap:wrap;gap:6px}
+.wc{display:inline-flex;flex-direction:column;align-items:stretch;gap:1px;min-width:44px;padding:4px 6px 5px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;font:inherit;color:inherit;text-align:center}
+.wc .spbox{position:relative;display:block;height:24px}
+.wc .sp{position:absolute;inset:0;display:block;width:100%;height:100%}
+.wc .sp path{fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.wc .sp path.te{stroke:var(--teacher)}
+.wc .sp path.me{stroke:var(--me)}
+.wc .sp line.mid{stroke:var(--line);stroke-width:1;stroke-dasharray:2 3}
+.wc .wt{font-family:var(--font-en);font-weight:700;font-size:16px;line-height:1.25;white-space:nowrap}
+.wc .wa{display:flex;justify-content:center;gap:6px;font-size:12px;line-height:1.1;font-weight:700}
+.wc .wa .te{color:var(--teacher)} .wc .wa .me{color:var(--me)}
+.wc.stress .wt{text-decoration:underline;text-decoration-color:var(--teacher);text-decoration-thickness:3px;text-underline-offset:3px}
+.wc.warn{border-color:var(--warn);background:var(--warn-soft)}
+.wc.bad{border-color:var(--bad);background:var(--bad-soft)}
+.wc.missing{border:1px dashed var(--bad)}
+.wc.missing .wt{color:var(--bad);text-decoration:line-through;text-decoration-thickness:2px}
+.wc.sel{outline:2px solid var(--fg);outline-offset:1px}
+.wc.extra{border-style:dashed;color:var(--muted);cursor:default;justify-content:center}
+.wc.extra .wt{font-weight:400;font-style:italic;font-size:14px}
+.word-detail{background:var(--surface-2);border-radius:10px;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:8px}
+.word-detail .dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:baseline}
+.word-detail .dl b.te{color:var(--teacher)} .word-detail .dl b.me{color:var(--me)}
 .phs{display:flex;gap:4px;flex-wrap:wrap;font-family:var(--font-en);font-size:16px}
 .ph{padding:2px 7px;border-radius:7px;background:var(--surface)}
 .ph.bad{background:var(--bad-soft);color:var(--bad)} .ph.warn{background:var(--warn-soft);color:var(--warn)} .ph.ok{color:var(--good)}
-.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-bottom:4px}
-.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
-.contour canvas{width:100%;height:150px;display:block;border-radius:10px;background:var(--surface-2)}
+.asr-box{background:var(--surface-2);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.asr-box .heard{font-family:var(--font-en);font-weight:700;color:var(--fg)}
 .hints{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
-.hints li{display:flex;gap:8px;font-size:14px;align-items:flex-start;line-height:1.4}
+.hints li{display:flex;gap:8px;font-size:14px;align-items:flex-start;line-height:1.45}
 .hints li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--warn);flex:none;margin-top:7px}
 .hints li.good::before{background:var(--good)}
 .hints li.bad::before{background:var(--bad)}
 .hints li.info::before{background:var(--teacher)}
+details.graph-wrap{border:0;padding:0;background:transparent}
+details.graph-wrap summary{padding:4px 0;font-weight:500;font-size:13px;color:var(--muted)}
+.graph-wrap canvas{width:100%;height:160px;display:block;border-radius:10px;background:var(--surface-2)}
 .grade-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .grade-row .g{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:13px;cursor:pointer;font-weight:500}
 .grade-row .g.sel{background:var(--fg);color:var(--bg);border-color:var(--fg)}
@@ -197,6 +217,7 @@ a.btn{text-decoration:none}
 .kv:last-child{border-bottom:0}
 details{border:1px solid var(--line);border-radius:12px;padding:0 12px;background:var(--surface)}
 details summary{cursor:pointer;padding:12px 0;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details summary::-webkit-details-marker{display:none}
 details summary::after{content:"+";color:var(--muted);font-weight:400;font-size:18px}
 details[open] summary::after{content:"–"}
 details .inner{padding:0 0 14px;display:flex;flex-direction:column;gap:10px}
@@ -286,6 +307,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <span class="small muted num" id="prac-count">1/1</span>
       <button class="btn small" id="prac-hide" title="문장 가리기">가리기</button>
     </div>
+    <div class="banner bad" id="mic-banner" hidden><b>마이크</b><span id="mic-banner-text"></span></div>
     <div class="sentence-card">
       <div class="meta"><span class="chip t1" id="c-tier"></span><span id="c-source"></span><span class="chip" id="c-kind"></span></div>
       <div class="context" id="c-context" hidden></div>
@@ -298,20 +320,19 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <button class="btn rec" id="btn-rec">● 녹음</button>
       <button class="btn me" id="btn-me" disabled>▶ 내 소리</button>
     </div>
-    <div class="rec-status" id="rec-status"><span id="rec-msg">선생님 소리를 듣고, 녹음을 누른 뒤 따라 말하세요.</span><div class="level" id="level" hidden><i></i></div></div>
+    <div class="rec-status" id="rec-status"><span id="rec-msg">선생님 소리를 듣고, ● 녹음을 누른 뒤 따라 말하세요.</span><div class="level" id="level" hidden><i></i></div><span class="num" id="rec-time" hidden></span></div>
     <div class="result" id="result" hidden>
-      <div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <div class="card result-card">
         <div class="score-row">
           <div class="ring"><canvas id="ring" width="192" height="192"></canvas><div class="n" id="score-num">—</div></div>
           <div class="subs" id="subs"></div>
         </div>
-        <div class="words" id="words"></div>
+        <div class="legend"><span><i style="background:var(--teacher)"></i>선생님</span><span><i style="background:var(--me)"></i>나</span><span>↗ 올림 · ↘ 내림 · → 평평</span><span><u>밑줄</u> = 선생님 강조</span></div>
+        <div class="wchips" id="wchips"></div>
         <div class="word-detail" id="word-detail" hidden></div>
-        <div class="contour">
-          <div class="legend"><span><i style="background:var(--teacher)"></i>선생님 억양</span><span><i style="background:var(--me)"></i>내 억양</span><span class="muted" id="contour-note"></span></div>
-          <canvas id="contour" height="150"></canvas>
-        </div>
+        <div class="asr-box small" id="asr-box" hidden></div>
         <ul class="hints" id="hints"></ul>
+        <details class="graph-wrap" id="graph-wrap"><summary>문장 전체 억양 그래프</summary><canvas id="contour" height="160"></canvas><p class="small muted" style="margin-top:6px">가로는 선생님 말에 맞춰 단어 위치를 정렬한 시간, 세로는 각자 평소 목소리 높이를 0으로 둔 높낮이예요. 칸 하나가 단어 하나예요.</p></details>
         <div class="grade-row"><span class="small muted">평가</span>
           <button class="g" data-g="1">다시</button><button class="g" data-g="2">어려움</button><button class="g" data-g="3">좋음</button><button class="g" data-g="4">쉬움</button>
         </div>
@@ -446,6 +467,21 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <p class="small muted" id="gh-status"></p>
       </div>
     </details>
+    <details id="mic-settings">
+      <summary>마이크 · 단어 인식</summary>
+      <div class="inner">
+        <div class="row"><button class="btn small" id="btn-mictest">마이크 테스트 (3초)</button><button class="btn small me" id="btn-mictest-play" hidden>▶ 방금 녹음 듣기</button></div>
+        <div class="level" id="mictest-level" hidden><i></i></div>
+        <p class="small muted" id="mictest-msg">녹음이 잘 되는지, 목소리 높낮이가 잡히는지 확인해요.</p>
+        <label class="field">단어 인식<select id="s-asrMode">
+          <option value="device">폰 안에서 인식 (비공개 · 처음 한 번 약 90MB)</option>
+          <option value="browser">브라우저 인식 (안드로이드·PC 크롬 · 음성이 서버로 전송)</option>
+          <option value="off">끄기 (억양·리듬만 비교)</option>
+        </select></label>
+        <div class="row"><button class="btn small" id="btn-asr-load">인식 모델 미리 받기</button><span class="small muted" id="asr-state"></span></div>
+        <p class="small muted">폰 안에서 인식하면 녹음이 밖으로 나가지 않아요. 아이폰은 녹음과 브라우저 인식을 동시에 쓰면 녹음이 비는 문제가 있어서 폰 안 인식만 지원해요.</p>
+      </div>
+    </details>
     <details>
       <summary>연습량</summary>
       <div class="inner">
@@ -464,16 +500,14 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <div class="inner">
         <label class="row"><input type="checkbox" id="s-showKo" style="width:auto"> 한국어 뜻 보이기</label>
         <label class="row"><input type="checkbox" id="s-hideText" style="width:auto"> 기본으로 문장 가리고 시작 (듣고 따라하기)</label>
-        <label class="row"><input type="checkbox" id="s-useBrowserSR" style="width:auto"> 브라우저 단어 인식 사용 (Safari·Chrome 내장)</label>
-        <p class="small muted">아이폰 Safari는 단어 인식을 지원하지만 기기에 따라 녹음과 동시에 쓰면 녹음이 비는 경우가 있어요. 그럴 땐 이 옵션을 끄면 억양·속도 비교가 되고, 단어·발음까지 함께 보려면 아래 정밀 평가를 쓰세요. 아이폰 Chrome은 단어 인식 기능이 없어요.</p>
         <label class="field">대체 음성(TTS) 속도 <span class="num" id="s-ttsRate-val"></span><input id="s-ttsRate" type="range" min="0.6" max="1.2" step="0.05"></label>
-        <p class="small muted">선생님 클립이 없는 문장은 기기 음성(TTS)으로 들려줘요. 이때는 억양 비교가 안 되고 단어 인식만 됩니다.</p>
+        <p class="small muted">선생님 클립이 없는 문장은 기기 음성(TTS)으로 들려줘요. 이때는 억양 비교가 안 되고 단어만 확인해요.</p>
       </div>
     </details>
     <details>
       <summary>정밀 발음 평가 (선택)</summary>
       <div class="inner">
-        <p class="small muted">Azure Speech 키를 넣으면 단어·음소 단위 정확도, 끊어 읽기, 억양(단조로움) 피드백이 정밀해져요. 무료 등급(F0)은 월 5시간까지. 비워두면 브라우저 음성 인식으로 단어 단위만 비교합니다.</p>
+        <p class="small muted">Azure Speech 키를 넣으면 단어·음소 단위 정확도가 정밀해져요. 무료 등급(F0)은 월 5시간까지. 녹음이 Azure로 전송돼요. 비워두면 폰 안 인식으로 단어 단위만 비교합니다.</p>
         <div class="grid2">
           <label class="field">Azure Speech 키<input id="s-azureKey" type="password" autocomplete="off"></label>
           <label class="field">리전<input id="s-azureRegion" placeholder="koreacentral" autocapitalize="off" autocomplete="off"></label>
@@ -503,7 +537,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.0 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.1 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -525,8 +559,11 @@ function addDays(ds,n){const [y,m,d]=ds.split('-').map(Number);return todayStr(n
 function dayDiff(a,b){const [y1,m1,d1]=a.split('-').map(Number),[y2,m2,d2]=b.split('-').map(Number);return Math.round((new Date(y2,m2-1,d2)-new Date(y1,m1-1,d1))/864e5)}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const median=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[s.length>>1]};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function toast(msg,ms=2400){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),ms)}
+function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),ms)}
+function wavg(pairs){let s=0,w=0;for(const [v,k] of pairs)if(v!=null&&!isNaN(v)){s+=v*k;w+=k}return w?s/w:null}
 const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const LS={progress:'bear.progress.v1',settings:'bear.settings.v1',log:'bear.log.v1',local:'bear.localItems.v1',sync:'bear.sync.v1',bankCache:'bear.bankCache.v1'};
@@ -549,8 +586,9 @@ const DEMO_BANK={version:1,demo:true,items:[
   {id:'demo-d2',text:"Sure, what's up?",ko:'그럼요, 무슨 일이에요?',tier:1,source:'데모',lesson:todayStr(),kind:'dialogue',group:'demo-dlg',role:'B',seq:2},
   {id:'demo-04',text:"I'm on the fence about it.",ko:'아직 결정을 못 했어요.',tier:2,source:'데모',lesson:'2026-08-13',kind:'sentence'}
 ]};
-const DEFAULTS={dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,useBrowserSR:true,ttsRate:0.95,azureKey:'',azureRegion:'koreacentral',ghOwner:'MJPark-8739',ghRepo:'english-review-data',ghBranch:'main',ghToken:''};
+const DEFAULTS={dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,ttsRate:0.95,asrMode:'device',asrConsent:false,azureKey:'',azureRegion:'koreacentral',ghOwner:'MJPark-8739',ghRepo:'english-review-data',ghBranch:'main',ghToken:''};
 const state={bank:{items:[],byId:{},tiers:DEFAULT_TIERS,demo:true,source:'demo'},progress:store.get(LS.progress,{}),log:store.get(LS.log,[]),localItems:store.get(LS.local,[]),settings:Object.assign({},DEFAULTS,store.get(LS.settings,{})),session:null,view:'today',bankPage:1};
+if(IS_IOS&&state.settings.asrMode==='browser')state.settings.asrMode='device';
 function saveProgress(){store.set(LS.progress,state.progress);store.set(LS.log,state.log.slice(-3000))}
 function saveSettings(){store.set(LS.settings,state.settings)}
 function P(id){return state.progress[id]}
@@ -598,6 +636,7 @@ function setStatus(kind,text){const el=$('#status');el.className='status '+(kind
 function clipKey(item,path){return 'clip:'+(state.bank.clipsVersion||'')+'#'+(item.clipRev||0)+':'+path}
 async function pruneClipCache(){try{const keep=new Set(state.bank.items.filter(i=>i.clip).map(i=>clipKey(i,clipPath(i))));for(const k of await idb.keys('clip:'))if(!keep.has(k))await idb.del(k)}catch(e){}}
 function clipPath(item){if(!item.clip)return null;if(/^https?:/.test(item.clip))return item.clip;if(state.bank.source==='local')return 'data/'+item.clip.replace(/^data\//,'');return item.clip.replace(/^data\//,'')}
+function clipType(path){return /\.wav$/i.test(path)?'audio/wav':/\.mp3$/i.test(path)?'audio/mpeg':/\.(ogg|opus)$/i.test(path)?'audio/ogg':/\.webm$/i.test(path)?'audio/webm':'audio/mp4'}
 
 /* ===================== scheduler ===================== */
 function gradeFromScore(s){return s>=90?4:s>=80?3:s>=65?2:1}
@@ -622,8 +661,8 @@ function applyGrade(id,grade,score){
 }
 function latestLesson(){const ls=state.bank.items.filter(i=>i.lesson&&/^\d{4}-\d{2}-\d{2}$/.test(i.lesson)).map(i=>i.lesson);return ls.length?ls.sort().pop():null}
 function latestWeekItems(){const L=latestLesson();if(!L)return[];return state.bank.items.filter(i=>/^\d{4}-\d{2}-\d{2}$/.test(i.lesson||'')&&dayDiff(i.lesson,L)>=0&&dayDiff(i.lesson,L)<=6)}
-function weekItems(){const cs=state.bank.currentSet;if(cs){const inSet=state.bank.items.filter(i=>i.sets&&i.sets.includes(cs));if(inSet.length)return inSet}const L=latestLesson();if(!L)return[];return state.bank.items.filter(i=>i.lesson&&dayDiff(i.lesson,L)>=0&&dayDiff(i.lesson,L)<=6)}
-function weekLabel(){const cs=state.bank.currentSet;if(cs&&weekItems().some(i=>i.sets.includes(cs)))return cs;const L=latestLesson();return L?`${L} 수업`:'수업 자료 없음'}
+function weekItems(){const cs=state.bank.currentSet;if(cs){const inSet=state.bank.items.filter(i=>i.sets&&i.sets.includes(cs));if(inSet.length)return inSet}return latestWeekItems()}
+function weekLabel(){const cs=state.bank.currentSet;if(cs&&weekItems().some(i=>i.sets&&i.sets.includes(cs)))return cs;const L=latestLesson();return L?`${L} 수업`:'수업 자료 없음'}
 function sortNew(a,b){if(a.tier!==b.tier)return a.tier-b.tier;if(a.tier<=3&&a.lesson!==b.lesson)return b.lesson<a.lesson?-1:1;if(a.lesson!==b.lesson)return a.lesson<b.lesson?-1:1;if((a.group||'')!==(b.group||''))return (a.group||'')<(b.group||'')?-1:1;return (a.seq||0)-(b.seq||0)}
 function expandGroup(item,pool,taken){if(!item.group)return[item];const g=pool.filter(x=>x.group===item.group&&!taken.has(x.id)).sort((a,b)=>(a.seq||0)-(b.seq||0));return g.length?g:[item]}
 function buildSession(){
@@ -645,20 +684,16 @@ function buildSession(){
   const sNew=items.filter(i=>cs.has(i.id)&&isNew(i)).sort(sortNew);
   const take=(list,key,cap,group)=>{for(const it of list){if(queue.length>=cap)break;for(const g of (group?expandGroup(it,list,taken):[it])){if(queue.length>=cap)break;if(push(g))breakdown[key]++}}};
   take(lDue,'week',weekCap,false);take(lNew,'week',weekCap,true);take(sDue,'set',weekCap,false);take(sNew,'set',weekCap,true);
-  // 2. overdue reviews (older), most overdue & weakest first
   const due=items.filter(i=>!wk.has(i.id)&&overdue(i)).sort((a,b)=>{const pa=P(a.id),pb=P(b.id);const oa=dayDiff(pa.due,today),ob=dayDiff(pb.due,today);if(oa!==ob)return ob-oa;return (pa.avg??100)-(pb.avg??100)});
   const dueCap=Math.max(0,N-queue.length);let d=0;
   for(const it of due){if(d>=dueCap)break;if(push(it)){breakdown.due++;d++}}
-  // 3. struggling not yet due
   const weakCap=Math.round(N*clamp(s.strugglePct,0,60)/100);
   const weak=items.filter(i=>{const p=P(i.id);return p&&p.reps>=2&&p.avg!=null&&p.avg<75&&!taken.has(i.id)}).sort((a,b)=>(P(a.id).last||'')<(P(b.id).last||'')?-1:1);
   let w=0;for(const it of weak){if(w>=weakCap)break;if(push(it)){breakdown.weak++;w++}}
-  // 4. new from the past, by tier (the daily cap counts items first seen today)
   const freshToday=items.filter(i=>!wk.has(i.id)&&P(i.id)&&P(i.id).first===today).length;
   const freshCap=Math.min(Math.max(0,clamp(s.newPerDay|0,0,40)-freshToday),Math.max(0,N-queue.length));
   const fresh=items.filter(i=>!wk.has(i.id)&&isNew(i)).sort(sortNew);
   let f=0;for(const it of fresh){if(f>=freshCap)break;for(const g of expandGroup(it,fresh,taken)){if(f>=freshCap)break;if(push(g)){breakdown.fresh++;f++}}}
-  // 5. fill with remaining due, then this week's rest
   take(lDue,'week',N,false);take(sDue,'set',N,false);
   for(const it of due){if(queue.length>=N)break;if(push(it))breakdown.due++}
   take(lNew,'week',N,true);take(sNew,'set',N,true);
@@ -666,24 +701,103 @@ function buildSession(){
 }
 function coverage(){const items=state.bank.items;const total=items.length;let started=0,mastered=0;for(const i of items){const p=P(i.id);if(p){started++;if(p.state==='mastered')mastered++}}return{total,started,mastered}}
 
-/* ===================== audio engine ===================== */
-const audio={ctx:null,ensure(){if(!this.ctx){const AC=window.AudioContext||window.webkitAudioContext;this.ctx=new AC()}if(this.ctx.state==='suspended')this.ctx.resume();return this.ctx}};
-let playing=null;
-function stopPlayback(){if(playing){try{playing.stop()}catch(e){}playing=null}try{speechSynthesis.cancel()}catch(e){}}
-function playBuffer(buf,s=0,e=null,onend){const ctx=audio.ensure();stopPlayback();const src=ctx.createBufferSource();src.buffer=buf;src.connect(ctx.destination);const dur=e!=null?Math.max(0.05,e-s):undefined;src.onended=()=>{if(playing===src)playing=null;onend&&onend()};src.start(0,s,dur);playing=src}
-function pcmToBuffer(pcm,sr){const ctx=audio.ensure();const b=ctx.createBuffer(1,pcm.length,sr);b.getChannelData(0).set(pcm);return b}
-function speak(text,onend){stopPlayback();if(!('speechSynthesis' in window)){toast('이 기기는 음성 합성을 지원하지 않아요');onend&&onend();return}const u=new SpeechSynthesisUtterance(text);u.lang='en-US';u.rate=state.settings.ttsRate||0.95;const vs=speechSynthesis.getVoices().filter(v=>/^en[-_]US/i.test(v.lang));const pref=vs.find(v=>/Samantha|Google US|Aria|Jenny|Natural/i.test(v.name))||vs[0];if(pref)u.voice=pref;u.onend=()=>onend&&onend();u.onerror=()=>onend&&onend();speechSynthesis.speak(u)}
-class Recorder{
-  constructor(){this.chunks=[];this.sr=16000;this.speech=false;this.silence=0;this.onlevel=null;this.onauto=null}
-  async start(){const ctx=audio.ensure();this.sr=ctx.sampleRate;this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:true}});this.src=ctx.createMediaStreamSource(this.stream);this.node=ctx.createScriptProcessor(4096,1,1);this.gain=ctx.createGain();this.gain.gain.value=0;this.chunks=[];this.speech=false;this.silence=0;this.t0=performance.now();
-    this.node.onaudioprocess=e=>{const d=e.inputBuffer.getChannelData(0);this.chunks.push(new Float32Array(d));let s=0;for(let i=0;i<d.length;i++)s+=d[i]*d[i];const rms=Math.sqrt(s/d.length),ms=d.length/this.sr*1000;if(rms>0.02){this.speech=true;this.silence=0}else if(this.speech)this.silence+=ms;this.onlevel&&this.onlevel(rms);const el=performance.now()-this.t0;if((this.speech&&this.silence>1300)||el>15000){const f=this.onauto;this.onauto=null;f&&f()}};
-    this.src.connect(this.node);this.node.connect(this.gain);this.gain.connect(ctx.destination)}
-  stop(){try{this.src&&this.src.disconnect();this.node&&this.node.disconnect();this.gain&&this.gain.disconnect()}catch(e){}if(this.node)this.node.onaudioprocess=null;this.stream&&this.stream.getTracks().forEach(t=>t.stop());let n=0;for(const c of this.chunks)n+=c.length;const out=new Float32Array(n);let o=0;for(const c of this.chunks){out.set(c,o);o+=c.length}return{pcm:out,sr:this.sr}}
-}
-function resample(pcm,sr,target=16000){if(sr===target)return pcm;const ratio=sr/target,n=Math.floor(pcm.length/ratio),out=new Float32Array(n);for(let i=0;i<n;i++){const a=Math.floor(i*ratio),b=Math.min(pcm.length,Math.floor((i+1)*ratio));let s=0;for(let j=a;j<b;j++)s+=pcm[j];out[i]=b>a?s/(b-a):0}return out}
+/* ===================== audio I/O (iPhone-safe) =====================
+   Playback goes through one <audio> element: it ignores the silent switch on iPhone,
+   unlike Web Audio. Recording uses MediaRecorder; Web Audio is only a best-effort level meter. */
+function setSession(type){try{const s=navigator.audioSession;if(s&&s.type!==type)s.type=type}catch(e){}}
+let decodeCtx=null;
+function getDecodeCtx(){if(!decodeCtx){const AC=window.AudioContext||window.webkitAudioContext;decodeCtx=new AC()}return decodeCtx}
+function decodeAudio(arr){return new Promise((res,rej)=>{let done=false;const ok=b=>{if(!done){done=true;res(b)}},bad=e=>{if(!done){done=true;rej(e instanceof Error?e:new Error('decode'))}};try{const p=getDecodeCtx().decodeAudioData(arr.slice(0),ok,bad);if(p&&p.then)p.then(ok,bad)}catch(e){bad(e)}})}
+async function blobToArrayBuffer(b){if(b.arrayBuffer)return await b.arrayBuffer();return await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsArrayBuffer(b)})}
+function resample(pcm,sr,target=16000){if(sr===target)return Float32Array.from(pcm);const ratio=sr/target,n=Math.floor(pcm.length/ratio),out=new Float32Array(n);for(let i=0;i<n;i++){const a=Math.floor(i*ratio),b=Math.min(pcm.length,Math.floor((i+1)*ratio));let s=0;for(let j=a;j<b;j++)s+=pcm[j];out[i]=b>a?s/(b-a):0}return out}
+async function blobToPcm16(blob){const buf=await decodeAudio(await blobToArrayBuffer(blob));return resample(buf.getChannelData(0),buf.sampleRate)}
 function toWav(pcm){const n=pcm.length,buf=new ArrayBuffer(44+n*2),v=new DataView(buf),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,16000,true);v.setUint32(28,32000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);let o=44;for(let i=0;i<n;i++,o+=2){const s=clamp(pcm[i],-1,1);v.setInt16(o,s<0?s*0x8000:s*0x7FFF,true)}return buf}
+function wavBlob(pcm){return new Blob([toWav(pcm)],{type:'audio/wav'})}
+const player=(()=>{
+  const el=document.createElement('audio');el.preload='auto';el.setAttribute('playsinline','');el.setAttribute('webkit-playsinline','');el.hidden=true;document.body.appendChild(el);
+  const urls=new Map();let endCb=null,doneCb=null,stopT=null,token=0;
+  const urlFor=(key,blob)=>{let u=urls.get(key);if(!u||u.blob!==blob){if(u)URL.revokeObjectURL(u.url);urls.delete(key);u={url:URL.createObjectURL(blob),blob};urls.set(key,u);if(urls.size>30){const [k0,u0]=urls.entries().next().value;if(u0.url!==el.getAttribute('src')){URL.revokeObjectURL(u0.url);urls.delete(k0)}}}return u.url};
+  const clearH=()=>{clearTimeout(stopT);stopT=null;el.ontimeupdate=null;el.onended=null;el.onplaying=null;el.onerror=null};
+  const fire=()=>{const cb=endCb;endCb=null;if(cb)try{cb()}catch(e){}};
+  function stop(){token++;clearH();doneCb=null;try{el.pause()}catch(e){}fire()}
+  function play(key,blob,opt){
+    opt=opt||{};stopSpeech();stop();setSession('playback');
+    const t=++token,start=Math.max(0,opt.start||0),end=opt.end==null?null:opt.end;endCb=opt.onend||null;doneCb=opt.ondone||null;
+    const finish=()=>{if(t!==token)return;token++;clearH();try{el.pause()}catch(e){}const d=doneCb;doneCb=null;fire();if(d)try{d()}catch(e){}};
+    const url=urlFor(key,blob);if(el.getAttribute('src')!==url)el.src=url;
+    const seek=()=>{try{if(Math.abs(el.currentTime-start)>0.03)el.currentTime=start}catch(e){}};
+    if(el.readyState>=1){seek();el.muted=false}else{el.muted=start>0.05;el.addEventListener('loadedmetadata',()=>{if(t===token)seek()},{once:true})}
+    const unmute=()=>{if(el.muted&&el.currentTime>=start-0.06)el.muted=false};
+    el.onplaying=()=>{if(t!==token)return;unmute();if(end!=null){clearTimeout(stopT);stopT=setTimeout(finish,Math.max(60,(end-Math.max(start,el.currentTime))*1000+80))}};
+    el.ontimeupdate=()=>{if(t!==token)return;unmute();if(end!=null&&el.currentTime>=end)finish()};
+    el.onended=finish;el.onerror=()=>{if(t!==token)return;finish();toast('소리를 재생하지 못했어요')};
+    let p=null;try{p=el.play()}catch(e){}
+    if(p&&p.catch)p.catch(err=>{if(t!==token)return;token++;clearH();doneCb=null;fire();if(err&&err.name==='NotAllowedError')toast('재생이 막혔어요. 버튼을 한 번 더 눌러 주세요.')});
+  }
+  return{play,stop,get busy(){return !el.paused&&!el.ended}};
+})();
+function speechBusy(){try{return 'speechSynthesis' in window&&(speechSynthesis.speaking||speechSynthesis.pending)}catch(e){return false}}
+function stopSpeech(){try{if(speechBusy())speechSynthesis.cancel()}catch(e){}}
+function stopAllAudio(){player.stop();stopSpeech()}
+function speak(text,onend){
+  player.stop();
+  if(!('speechSynthesis' in window)){toast('이 기기는 음성 합성을 지원하지 않아요');onend&&onend();return}
+  setSession('playback');stopSpeech();
+  const u=new SpeechSynthesisUtterance(text);u.lang='en-US';u.rate=state.settings.ttsRate||0.95;
+  let vs=[];try{vs=speechSynthesis.getVoices().filter(v=>/^en[-_]US/i.test(v.lang))}catch(e){}
+  const pref=vs.find(v=>/Samantha|Google US|Aria|Jenny|Natural/i.test(v.name))||vs[0];if(pref)u.voice=pref;
+  let fired=false;const end=()=>{if(!fired){fired=true;onend&&onend()}};u.onend=end;u.onerror=end;speechSynthesis.speak(u);
+}
+function pickMime(){if(!('MediaRecorder' in window))return null;for(const t of ['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus']){try{if(MediaRecorder.isTypeSupported(t))return t}catch(e){}}return ''}
+class Capture{
+  constructor(){this.onlevel=null;this.onauto=null;this.levelSeen=0;this.peak=0}
+  async start(){
+    setSession('play-and-record');
+    // the meter context is created inside the tap so iPhone lets it run
+    try{const AC=window.AudioContext||window.webkitAudioContext;this.ctx=new AC();if(this.ctx.state!=='running'&&this.ctx.resume)this.ctx.resume().catch(()=>{})}catch(e){this.ctx=null}
+    try{this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}})}
+    catch(e){try{this.ctx&&this.ctx.close()}catch(_){}setSession('auto');throw e}
+    const mime=pickMime();this.chunks=[];this.t0=performance.now();this.speech=false;this.lastSpeech=0;
+    if(mime!==null){try{this.mr=mime?new MediaRecorder(this.stream,{mimeType:mime}):new MediaRecorder(this.stream)}catch(e){this.mr=new MediaRecorder(this.stream)}this.mr.ondataavailable=e=>{if(e.data&&e.data.size)this.chunks.push(e.data)};this.mr.start()}
+    this._meter(mime===null);
+    this.maxT=setTimeout(()=>this._auto(),15000);
+  }
+  _meter(capturePcm){
+    if(!this.ctx)return;
+    try{
+      if(this.ctx.state!=='running'&&this.ctx.resume)this.ctx.resume().catch(()=>{});
+      const src=this.ctx.createMediaStreamSource(this.stream);const g=this.ctx.createGain();g.gain.value=0;g.connect(this.ctx.destination);
+      if(capturePcm){
+        this.sr=this.ctx.sampleRate;this.pcmChunks=[];const node=this.ctx.createScriptProcessor(4096,1,1);
+        node.onaudioprocess=e=>{const d=e.inputBuffer.getChannelData(0);this.pcmChunks.push(new Float32Array(d));let s=0;for(let i=0;i<d.length;i++)s+=d[i]*d[i];this._tick(Math.sqrt(s/d.length))};
+        src.connect(node);node.connect(g);this.node=node;
+      }else{
+        const an=this.ctx.createAnalyser();an.fftSize=2048;src.connect(an);an.connect(g);const buf=new Float32Array(an.fftSize),bb=new Uint8Array(an.fftSize);
+        this.meterT=setInterval(()=>{if(an.getFloatTimeDomainData)an.getFloatTimeDomainData(buf);else{an.getByteTimeDomainData(bb);for(let i=0;i<bb.length;i++)buf[i]=(bb[i]-128)/128}let s=0;for(let i=0;i<buf.length;i++)s+=buf[i]*buf[i];this._tick(Math.sqrt(s/buf.length))},60);
+      }
+    }catch(e){}
+  }
+  _tick(rms){const now=performance.now();if(rms>0.0005)this.levelSeen++;this.peak=Math.max(this.peak,rms);this.onlevel&&this.onlevel(rms);if(rms>0.02){this.speech=true;this.lastSpeech=now}if(this.speech&&now-this.lastSpeech>1300&&now-this.t0>1000)this._auto()}
+  _auto(){const f=this.onauto;this.onauto=null;if(f)f()}
+  get meterWorks(){return this.levelSeen>3}
+  stop(){return new Promise(res=>{
+    clearInterval(this.meterT);clearTimeout(this.maxT);this.onauto=null;
+    const finish=blob=>{try{this.stream&&this.stream.getTracks().forEach(t=>t.stop())}catch(e){}try{if(this.node){this.node.onaudioprocess=null;this.node.disconnect()}}catch(e){}try{this.ctx&&this.ctx.close&&this.ctx.close()}catch(e){}setSession('auto');res(blob)};
+    if(this.mr){const mk=()=>new Blob(this.chunks,{type:this.mr.mimeType||'audio/mp4'});if(this.mr.state==='inactive'){finish(mk());return}this.mr.onstop=()=>finish(mk());try{this.mr.stop()}catch(e){finish(mk())}}
+    else{let n=0;for(const c of this.pcmChunks||[])n+=c.length;const out=new Float32Array(n);let o=0;for(const c of this.pcmChunks||[]){out.set(c,o);o+=c.length}finish(wavBlob(resample(out,this.sr||48000)))}
+  })}
+}
+function micErrorText(e){
+  const n=(e&&e.name)||'';
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return '이 브라우저에서는 녹음을 할 수 없어요. 아이폰은 Safari로 열어 주세요.';
+  if(n==='NotAllowedError'||n==='SecurityError')return IS_IOS?'마이크 권한이 꺼져 있어요. Safari 주소창 왼쪽 "가가"(aA) 버튼 → 웹 사이트 설정 → 마이크 → 허용으로 바꾸고 새로고침하세요.':'마이크 권한이 꺼져 있어요. 주소창 왼쪽 자물쇠 → 마이크 → 허용으로 바꾸고 새로고침하세요.';
+  if(n==='NotFoundError'||n==='OverconstrainedError')return '마이크를 찾지 못했어요. 블루투스 이어폰을 빼고 다시 해보세요.';
+  if(n==='NotReadableError'||n==='AbortError')return '다른 앱이 마이크를 쓰고 있어요. 통화·녹음 앱을 닫고 다시 해보세요.';
+  return '마이크를 열지 못했어요 ('+(n||'오류')+'). 설정 → 마이크 테스트로 확인해 보세요.';
+}
+function micError(e){const t=micErrorText(e);if(state.view==='practice'){$('#mic-banner-text').textContent=t;$('#mic-banner').hidden=false}else toast(t,5000)}
 
-/* ===================== analysis: pitch, timing, contour ===================== */
+/* ===================== analysis: pitch, spectra, alignment ===================== */
 function trackPitch(x,sr){
   const frame=Math.round(sr*0.04),hop=Math.round(sr*0.01);
   const minLag=Math.floor(sr/400),maxLag=Math.min(Math.floor(sr/70),frame-2);
@@ -691,7 +805,7 @@ function trackPitch(x,sr){
   const f0=new Float32Array(n),rms=new Float32Array(n);let maxR=0;
   for(let i=0;i<n;i++){const o=i*hop;let s=0;for(let j=0;j<frame;j++){const v=x[o+j];s+=v*v}rms[i]=Math.sqrt(s/frame);if(rms[i]>maxR)maxR=rms[i]}
   const gate=Math.max(0.006,maxR*0.08);
-  const nsdf=new Float32Array(maxLag+2);
+  const nsdf=new Float32Array(maxLag+2);const cands=new Array(n);
   for(let i=0;i<n;i++){
     if(rms[i]<gate)continue;
     const o=i*hop;
@@ -699,55 +813,224 @@ function trackPitch(x,sr){
     let maxPeak=0;const peaks=[];
     for(let tau=minLag+1;tau<maxLag;tau++){if(nsdf[tau]>nsdf[tau-1]&&nsdf[tau]>=nsdf[tau+1]&&nsdf[tau]>0){peaks.push(tau);if(nsdf[tau]>maxPeak)maxPeak=nsdf[tau]}}
     if(maxPeak<0.55)continue;
-    let best=-1;for(const p of peaks){if(nsdf[p]>=0.85*maxPeak){best=p;break}}
-    if(best<0)continue;
-    const y0=nsdf[best-1],y1=nsdf[best],y2=nsdf[best+1],den=y0-2*y1+y2,shift=den!==0?0.5*(y0-y2)/den:0;
-    f0[i]=sr/(best+shift);
+    const cs=[];for(const p of peaks){if(nsdf[p]>=0.6*maxPeak){const y0=nsdf[p-1],y1=nsdf[p],y2=nsdf[p+1],den=y0-2*y1+y2,shift=den!==0?0.5*(y0-y2)/den:0;cs.push({f:sr/(p+shift),v:y1})}}
+    let best=null;for(const c of cs){if(c.v>=0.85*maxPeak){best=c;break}}
+    // octave check: if half the chosen period is also strongly periodic, the true pitch is the higher one
+    for(let k=0;best&&k<2;k++){const h=cs.find(c=>Math.abs(c.f/(2*best.f)-1)<0.08&&c.v>=0.7*best.v&&c.v>=0.5);if(h)best=h;else break}
+    if(best){f0[i]=best.f;cands[i]=cs}
   }
+  // second pass: choose among candidate periods with a preference for continuity and the speaker's
+  // own range, which removes octave (sub-harmonic) errors without flattening real intonation
+  const v1=[];for(let i=0;i<n;i++)if(f0[i]>0)v1.push(f0[i]);
+  if(v1.length>=6){v1.sort((a,b)=>a-b);const med=v1[v1.length>>1];let ref=0,refAge=99;
+    for(let i=0;i<n;i++){const cs=cands[i];if(!cs){refAge++;continue}let best=null;
+      if(refAge<=6&&ref>0){let bs=-1e9;for(const c of cs){const s=c.v-0.35*Math.abs(Math.log2(c.f/ref))-0.25*Math.max(0,Math.abs(Math.log2(c.f/med))-1);if(s>bs){bs=s;best=c}}}
+      else{best={f:f0[i]};if(Math.abs(Math.log2(best.f/med))>0.8){let mx=0;for(const c of cs)mx=Math.max(mx,c.v);let alt=null;for(const c of cs){if(c.v>=0.7*mx&&Math.abs(Math.log2(c.f/med))<=0.6&&(!alt||c.v>alt.v))alt=c}if(alt)best=alt}}
+      f0[i]=best.f;ref=best.f;refAge=0}}
   return{f0:cleanF0(f0),rms,hop,frame,sr,gate};
 }
 function cleanF0(f0){
   const n=f0.length,out=new Float32Array(n);
   for(let i=0;i<n;i++){if(!(f0[i]>0))continue;const w=[];for(let k=-2;k<=2;k++){const v=f0[i+k];if(v>0)w.push(v)}if(w.length<3)continue;w.sort((a,b)=>a-b);out[i]=w[Math.floor(w.length/2)]}
-  // drop voiced runs shorter than 3 frames
   let i=0;while(i<n){if(out[i]>0){let j=i;while(j<n&&out[j]>0)j++;if(j-i<3)for(let k=i;k<j;k++)out[k]=0;i=j}else i++}
-  // octave jump smoothing
   let prev=0;for(let k=0;k<n;k++){if(out[k]>0){if(prev>0){if(out[k]>1.8*prev)out[k]/=2;else if(out[k]<0.55*prev)out[k]*=2}prev=out[k]}}
   return out;
 }
-function speechSpan(rms,gate,hop,sr){let first=-1,last=-1;for(let i=0;i<rms.length;i++)if(rms[i]>gate){if(first<0)first=i;last=i}if(first<0)return null;const pauses=[];let run=0;for(let i=first;i<=last;i++){if(rms[i]<=gate*0.8)run++;else{if(run>=18)pauses.push({at:(i-run-first)/(last-first+1),len:run*hop/sr});run=0}}return{first,last,dur:(last-first+1)*hop/sr,pauses}}
-function makeContour(f0,span){
-  if(!span)return null;const idx=[],vals=[];for(let i=span.first;i<=span.last;i++)if(f0[i]>0){idx.push(i);vals.push(f0[i])}
-  if(vals.length<6)return null;
-  const sorted=[...vals].sort((a,b)=>a-b),med=sorted[Math.floor(sorted.length/2)];
-  const st=vals.map(v=>12*Math.log2(v/med));
-  const v0=idx[0],v1=idx[idx.length-1],out=new Float32Array(100);let k=0;
-  for(let t=0;t<100;t++){const pos=v0+(v1-v0)*t/99;while(k<idx.length-2&&idx[k+1]<=pos)k++;const x0=idx[k],x1=idx[Math.min(k+1,idx.length-1)];const f=x1===x0?0:clamp((pos-x0)/(x1-x0),0,1);out[t]=st[k]+(st[Math.min(k+1,st.length-1)]-st[k])*f}
-  return{pts:out,v0,v1,voiced:vals.length/(span.last-span.first+1),medHz:med};
+function speechSpan(rms,gate,hop,sr){let first=-1,last=-1;for(let i=0;i<rms.length;i++)if(rms[i]>gate){if(first<0)first=i;last=i}if(first<0)return null;return{first,last,dur:(last-first+1)*hop/sr}}
+function pauseRuns(rms,gate,a,b,minFrames=20){const runs=[];let s=-1;const th=gate*0.6;for(let i=a;i<=b;i++){if(rms[i]<=th){if(s<0)s=i}else{if(s>=0&&i-s>=minFrames)runs.push({a:s,b:i-1});s=-1}}return runs}
+function fft(re,im){const n=re.length;for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t}}
+  for(let len=2;len<=n;len<<=1){const ang=-2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang),half=len>>1;for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let k=0;k<half;k++){const p=i+k,q=p+half;const br=re[q]*cr-im[q]*ci,bi=re[q]*ci+im[q]*cr;re[q]=re[p]-br;im[q]=im[p]-bi;re[p]+=br;im[p]+=bi;const t=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=t}}}}
+const MF=(()=>{const sr=16000,N=512,frame=400,hop=160,nMel=24,nCep=13;const win=new Float32Array(frame);for(let i=0;i<frame;i++)win[i]=0.54-0.46*Math.cos(2*Math.PI*i/(frame-1));
+  const mel=f=>1127*Math.log(1+f/700),imel=m=>700*(Math.exp(m/1127)-1);const lo=mel(100),hi=mel(7600);const bins=[];for(let i=0;i<nMel+2;i++)bins.push(Math.floor((N+1)*imel(lo+(hi-lo)*i/(nMel+1))/sr));
+  const fb=[];for(let m=1;m<=nMel;m++){const ks=[],ws=[];for(let k=bins[m-1];k<=bins[m+1];k++){let w=0;if(k<bins[m])w=(k-bins[m-1])/Math.max(1,bins[m]-bins[m-1]);else w=(bins[m+1]-k)/Math.max(1,bins[m+1]-bins[m]);if(k===bins[m])w=1;if(w>0){ks.push(k);ws.push(w)}}fb.push({ks,ws})}
+  const dct=[];for(let c=1;c<nCep;c++){const row=new Float32Array(nMel);for(let m=0;m<nMel;m++)row[m]=Math.cos(Math.PI*c*(m+0.5)/nMel);dct.push(row)}
+  return{N,frame,hop,nMel,win,fb,dct}})();
+function mfcc(x){const {N,frame,hop,nMel,win,fb,dct}=MF;const n=Math.max(0,Math.floor((x.length-frame)/hop)+1);const out=new Array(n);const re=new Float32Array(N),im=new Float32Array(N),logE=new Float32Array(nMel),pw=new Float32Array(N/2+1);
+  for(let t=0;t<n;t++){re.fill(0);im.fill(0);const o=t*hop;let prev=o>0?x[o-1]:0;for(let i=0;i<frame;i++){const v=x[o+i];re[i]=(v-0.97*prev)*win[i];prev=v}fft(re,im);for(let k=0;k<=N/2;k++)pw[k]=re[k]*re[k]+im[k]*im[k];
+    for(let m=0;m<nMel;m++){const f=fb[m];let s=0;for(let q=0;q<f.ks.length;q++)s+=f.ws[q]*pw[f.ks[q]];logE[m]=Math.log(s+1e-10)}
+    const c=new Float32Array(dct.length);for(let q=0;q<dct.length;q++){const row=dct[q];let s=0;for(let m=0;m<nMel;m++)s+=row[m]*logE[m];c[q]=s}out[t]=c}
+  return out}
+function cmvn(frames){const n=frames.length;if(!n)return frames;const d=frames[0].length;for(let k=0;k<d;k++){let m=0;for(const f of frames)m+=f[k];m/=n;let v=0;for(const f of frames)v+=(f[k]-m)*(f[k]-m);const sd=Math.sqrt(v/n)||1;for(const f of frames)f[k]=(f[k]-m)/sd}return frames}
+function dtwAlign(A,B){
+  const n=A.length,m=B.length;if(n<2||m<2)return null;const W=m+1,INF=1e30,dim=A[0].length;
+  const D=new Float64Array((n+1)*W).fill(INF),Pm=new Uint8Array((n+1)*W);D[0]=0;
+  const r=m/n,band=Math.max(15,Math.round(0.35*Math.max(n,m)));
+  const dist=(a,b)=>{let s=0;for(let k=0;k<dim;k++){const t=a[k]-b[k];s+=t*t}return Math.sqrt(s)};
+  for(let i=1;i<=n;i++){const a=A[i-1],jc=Math.round(i*r),j0=Math.max(1,jc-band),j1=Math.min(m,jc+band);for(let j=j0;j<=j1;j++){const dg=D[(i-1)*W+j-1],up=D[(i-1)*W+j],lf=D[i*W+j-1];let best=dg,p=0;if(up<best){best=up;p=1}if(lf<best){best=lf;p=2}if(best>=INF)continue;D[i*W+j]=dist(a,B[j-1])+best;Pm[i*W+j]=p}}
+  if(D[n*W+m]>=INF)return null;
+  const lo=new Int32Array(n).fill(-1),hi=new Int32Array(n).fill(-1),cost=new Float32Array(n),cc=new Int32Array(n),invS=new Float64Array(m),invC=new Int32Array(m);
+  let i=n,j=m;while(i>0&&j>0){const ii=i-1,jj=j-1;if(lo[ii]<0||jj<lo[ii])lo[ii]=jj;if(jj>hi[ii])hi[ii]=jj;cost[ii]+=dist(A[ii],B[jj]);cc[ii]++;invS[jj]+=ii;invC[jj]++;const p=Pm[i*W+j];if(p===0){i--;j--}else if(p===1)i--;else j--}
+  for(let k=0;k<n;k++){if(lo[k]<0){lo[k]=k?lo[k-1]:0;hi[k]=lo[k]}cost[k]=cc[k]?cost[k]/cc[k]:0}
+  const inv=new Int32Array(m);for(let k=0;k<m;k++)inv[k]=invC[k]?Math.round(invS[k]/invC[k]):(k?inv[k-1]:0);
+  return{lo,hi,inv,cost};
 }
-function analyzeAudio(pcm,sr){const tr=trackPitch(pcm,sr);const span=speechSpan(tr.rms,tr.gate,tr.hop,sr);return{f0:tr.f0,rms:tr.rms,hop:tr.hop,sr,gate:tr.gate,span,contour:makeContour(tr.f0,span),dur:span?span.dur:0}}
+function linearAlign(n,m){const lo=new Int32Array(n),hi=new Int32Array(n),inv=new Int32Array(m);for(let i=0;i<n;i++){lo[i]=hi[i]=Math.round(i*(m-1)/Math.max(1,n-1))}for(let j=0;j<m;j++)inv[j]=Math.round(j*(n-1)/Math.max(1,m-1));return{lo,hi,inv,cost:new Float32Array(n)}}
+function analyzeVoice(pcm){
+  const tr=trackPitch(pcm,16000);const mf=mfcc(pcm);const n=Math.min(tr.f0.length,mf.length);
+  const span0=speechSpan(tr.rms,tr.gate,tr.hop,16000);const span=span0&&span0.first<n?{first:span0.first,last:Math.min(span0.last,n-1),dur:(Math.min(span0.last,n-1)-span0.first+1)/100}:null;
+  const st=new Float32Array(tr.f0.length).fill(NaN);let med=0;
+  if(span){const v=[];for(let i=span.first;i<=span.last;i++)if(tr.f0[i]>0)v.push(tr.f0[i]);if(v.length>=6){v.sort((a,b)=>a-b);med=v[v.length>>1];for(let i=0;i<tr.f0.length;i++)if(tr.f0[i]>0)st[i]=12*Math.log2(tr.f0[i]/med)}}
+  return{pcm,f0:tr.f0,rms:tr.rms,gate:tr.gate,span,st,med,mf,n,dur:span?span.dur:0,pauses:span?pauseRuns(tr.rms,tr.gate,span.first,span.last):[]};
+}
+function segFeat(an,a,b){
+  a=Math.max(0,a);b=Math.min(an.n-1,b);if(b<a)return null;
+  const vals=[];let e=0;for(let i=a;i<=b;i++){const v=an.st[i];if(!isNaN(v))vals.push(v);e+=an.rms[i]||0}
+  const f={a,b,dur:(b-a+1)/100,energy:20*Math.log10(e/(b-a+1)+1e-6),voiced:vals.length,series:an.st.slice(a,b+1),shape:'none'};
+  if(vals.length>=3){const s=[...vals].sort((x,y)=>x-y);f.level=s[s.length>>1];f.peak=s[Math.min(s.length-1,Math.floor(s.length*0.9))];const k=Math.max(1,Math.floor(vals.length*0.3));f.startP=mean(vals.slice(0,k));f.endP=mean(vals.slice(-k));f.slope=f.endP-f.startP;
+    f.shape=(vals.length>=6&&f.peak-Math.max(f.startP,f.endP)>=2.2&&f.peak-Math.min(f.startP,f.endP)>=3)?'hat':f.slope>=2?'rise':f.slope<=-2?'fall':'flat'}
+  return f;
+}
 function pearson(a,b){const n=Math.min(a.length,b.length);let ma=0,mb=0;for(let i=0;i<n;i++){ma+=a[i];mb+=b[i]}ma/=n;mb/=n;let num=0,da=0,db=0;for(let i=0;i<n;i++){const x=a[i]-ma,y=b[i]-mb;num+=x*y;da+=x*x;db+=y*y}return da>0&&db>0?num/Math.sqrt(da*db):0}
 function prange(a){const s=[...a].sort((x,y)=>x-y);return s[Math.floor(s.length*0.9)]-s[Math.floor(s.length*0.1)]}
-function endSlope(a){return mean([...a].slice(85,100))-mean([...a].slice(65,85))}
-function compareContours(me,te){const a=me.pts,b=te.pts;const r=pearson(a,b);const ra=prange(a),rb=prange(b);const rr=Math.max(ra,rb)>0?Math.min(ra,rb)/Math.max(ra,rb):0;return{r,rangeMe:ra,rangeTe:rb,rangeRatio:rr,endMe:endSlope(a),endTe:endSlope(b),score:clamp(Math.round(((r+1)/2)*70+rr*30),0,100)}}
+const ARROW={rise:'↗',fall:'↘',hat:'↗↘',flat:'→',none:'·'};
+const SHAPE_KO={rise:'올림',fall:'내림',hat:'올렸다 내림',flat:'평평',none:'높낮이 없음'};
+const SHAPE_FIX={rise:'끝을 올려 주세요',fall:'끝을 내려 주세요',hat:'올렸다가 내려 주세요'};
+const FUNC=new Set('a an the to of in on at for from by with and or but so as if than then is am are was were be been being do does did have has had will would can could should may might must i you he she it we they me him her us them my your his its our their this that these those there here just very also too some any'.split(' '));
+function syllables(w){w=String(w||'').toLowerCase().replace(/[^a-z]/g,'');if(!w)return 1;if(w.length<=3)return 1;w=w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/,'').replace(/^y/,'');const m=w.match(/[aeiouy]{1,2}/g);return Math.max(1,m?m.length:1)}
+function promScores(feats){const ok=feats.map(f=>!!(f&&f.voiced>=3));const P_=[],E=[],Dd=[];feats.forEach((f,i)=>{if(ok[i]){P_.push(f.peak);E.push(f.energy);Dd.push(Math.log(f.dur/f.syl))}});if(P_.length<2)return feats.map(()=>null);const zs=arr=>{const m=mean(arr),sd=Math.sqrt(mean(arr.map(x=>(x-m)*(x-m))))||1;return v=>(v-m)/sd};const zP=zs(P_),zE=zs(E),zD=zs(Dd);return feats.map((f,i)=>ok[i]?zP(f.peak)+0.7*zE(f.energy)+0.7*zD(Math.log(f.dur/f.syl)):null)}
 
-/* ===================== word alignment ===================== */
-const CONTR={"gonna":"going to","wanna":"want to","gotta":"got to","kinda":"kind of","gimme":"give me","lemme":"let me","dunno":"don't know","ya":"you","'cause":"because","cuz":"because"};
-function normWords(text){return text.toLowerCase().replace(/[’‘`]/g,"'").replace(/[^a-z0-9' ]+/g,' ').split(/\s+/).filter(Boolean).flatMap(w=>(CONTR[w]||w).split(' '))}
+/* Compare my take with the teacher clip word by word: align the two recordings (DTW on MFCCs with
+   per-utterance normalization, so mic and voice differences mostly cancel), then measure pitch shape,
+   level, length, pauses and stress inside each teacher word. Pitch is in semitones from each speaker's own median. */
+function compareWithTeacher(te,me,item){
+  if(!te||!te.span||!me||!me.span)return null;
+  const tA=te.span.first,tB=te.span.last,uA=me.span.first,uB=me.span.last;
+  if(tB-tA<8||uB-uA<8)return null;
+  if(!te._cm||te._cmKey!==tA+':'+tB){te._cm=cmvn(te.mf.slice(tA,tB+1).map(f=>Float32Array.from(f)));te._cmKey=tA+':'+tB}
+  const T=te._cm,U=cmvn(me.mf.slice(uA,uB+1).map(f=>Float32Array.from(f)));const nT=T.length,nU=U.length;
+  const al=dtwAlign(T,U)||linearAlign(nT,nU);
+  const teLine=new Float32Array(nT),meLine=new Float32Array(nT);
+  for(let i=0;i<nT;i++){teLine[i]=te.st[i+tA];let s=0,c=0;for(let j=al.lo[i];j<=al.hi[i];j++){const v=me.st[j+uA];if(!isNaN(v)){s+=v;c++}}meLine[i]=c?s/c:NaN}
+  const bi=[];for(let i=0;i<nT;i++)if(!isNaN(teLine[i])&&!isNaN(meLine[i]))bi.push(i);
+  const r=bi.length>=15?pearson(bi.map(i=>teLine[i]),bi.map(i=>meLine[i])):null;
+  const teV=[],meV=[];for(let i=tA;i<=tB;i++)if(!isNaN(te.st[i]))teV.push(te.st[i]);for(let j=uA;j<=uB;j++)if(!isNaN(me.st[j]))meV.push(me.st[j]);
+  const rT=teV.length>5?prange(teV):0,rM=meV.length>5?prange(meV):0;const rangeRatio=rT>0.5?rM/rT:1;
+  const speed=te.dur>0?me.dur/te.dur:1;
+  const hints=[];const res={nT,tA,uA,al,teLine,meLine,r,rangeRatio,speed,words:[],hints,into:null,rhythm:null,stress:null};
+  const tw=Array.isArray(item.words)&&item.words.length?item.words:null;
+  if(tw){
+    const words=tw.map((x,k)=>{let a=Math.round((+x.s||0)*100),b=Math.round((+x.e||0)*100)-1;if(b<a)b=a;a=clamp(a,tA,tB);b=clamp(b,a,tB);const ia=a-tA,ib=b-tA;const ua=al.lo[ia]+uA,ub=Math.max(al.hi[ib],al.lo[ia])+uA;const syl=syllables(x.w);const fT=segFeat(te,a,b),fM=segFeat(me,ua,ub);if(fT)fT.syl=syl;if(fM)fM.syl=syl;let cs=0;for(let i=ia;i<=ib;i++)cs+=al.cost[i];const lw=String(x.w||'').toLowerCase().replace(/’/g,"'").replace(/[^a-z']/g,'');return{k,w:String(x.w||''),s:+x.s||0,e:+x.e||0,ta:a,tb:b,ua,ub,te:fT,me:fM,cost:cs/(ib-ia+1),syl,func:FUNC.has(lw),notes:[]}});
+    res.words=words;
+    const pT=promScores(words.map(w=>w.te)),pM=promScores(words.map(w=>w.me));words.forEach((w,i)=>{w.promT=pT[i];w.promM=pM[i]});
+    // stress: the teacher's most prominent content words (high + loud + long)
+    const cand=words.filter(w=>!w.func&&w.promT!=null).sort((a,b)=>b.promT-a.promT);
+    let stressW=cand.filter(w=>w.promT>=1.0).slice(0,2);if(!stressW.length&&cand.length&&cand[0].promT>=0.6)stressW=[cand[0]];
+    stressW.forEach(w=>w.stressT=true);
+    const myTop=words.filter(w=>!w.func&&w.promM!=null).sort((a,b)=>b.promM-a.promM)[0]||null;
+    const sc=stressW.filter(w=>w.promM!=null).map(w=>w.promM>=0.8?100:w.promM>=0.2?70:35);res.stress=sc.length?Math.round(mean(sc)):null;
+    const miss=stressW.find(w=>w.promM!=null&&w.promM<0.2);
+    if(miss&&myTop&&myTop!==miss){hints.push({c:'',p:3,t:`선생님이 가장 강조한 단어: '${miss.w}' · 내가 가장 강조한 단어: '${myTop.w}' → '${miss.w}'에 힘을 주세요 (더 높고 길게)`});miss.notes.push({sev:1,t:'선생님은 이 단어를 강조해요 → 더 높고 길게'})}
+    // pitch shape / level / length per word
+    const shapeHints=[];
+    for(const w of words){
+      if(!(w.te&&w.me&&w.te.voiced>=3&&w.me.voiced>=3))continue;
+      const sT=w.te.shape,sM=w.me.shape;
+      if(SHAPE_FIX[sT]&&sM!==sT){const opp=(sT==='rise'&&sM==='fall')||(sT==='fall'&&sM==='rise');const soft=sT==='hat'&&(sM==='rise'||sM==='fall');if(!soft||w.stressT){const sev=opp?2:1;w.notes.push({sev,t:`선생님 ${ARROW[sT]} ${SHAPE_KO[sT]}, 나 ${ARROW[sM]} ${SHAPE_KO[sM]} → ${SHAPE_FIX[sT]}`});shapeHints.push({w,sev,sT,sM})}}
+      const dl=w.me.level-w.te.level;
+      // a gap of about an octave is almost always a pitch-tracking error, not a real difference
+      if(Math.abs(dl)>=3.5&&Math.abs(dl)<9&&Math.abs(w.te.level)>=1.5){w.notes.push({sev:1,t:dl<0?'선생님보다 많이 낮아요 → 더 높게':'선생님보다 많이 높아요 → 조금 낮게'});if(!shapeHints.find(h=>h.w===w))shapeHints.push({w,sev:1,level:dl})}
+      const relT=w.te.dur/Math.max(0.3,te.dur),relM=w.me.dur/Math.max(0.3,me.dur);w.durRatio=relM/Math.max(1e-3,relT);
+      if(!w.func&&w.durRatio<0.6&&(w.stressT||relT>0.08))w.notes.push({sev:1,t:'너무 짧아요 → 조금 더 길게 (강세)'});
+      else if(!w.func&&w.durRatio>1.9&&w.me.dur>0.25)w.notes.push({sev:1,t:'너무 길게 끌었어요'});
+    }
+    shapeHints.sort((a,b)=>(b.sev-a.sev)||((b.w.stressT?1:0)-(a.w.stressT?1:0)));
+    for(const h of shapeHints.slice(0,2)){if(h.sT)hints.push({c:h.sev>1?'bad':'',p:h.sev>1?4:2,t:`'${h.w.w}' — 선생님 ${ARROW[h.sT]} ${SHAPE_KO[h.sT]}, 나 ${ARROW[h.sM]} ${SHAPE_KO[h.sM]} → ${SHAPE_FIX[h.sT]}`});else hints.push({c:'',p:2,t:`'${h.w.w}' — ${h.level<0?'선생님보다 많이 낮아요 → 더 높게':'선생님보다 많이 높아요 → 조금 낮게'}`})}
+    // pauses where the teacher links words (연음), and pauses the teacher makes that I skipped
+    const gapAfter=k=>k+1<words.length?Math.max(0,(words[k+1].ta-words[k].tb-1)/100):0;
+    const pauseFlags=[];
+    for(const run of me.pauses){if(run.a<uA||run.b>uB)continue;const len=(run.b-run.a+1)/100;const j=clamp(Math.round((run.a+run.b)/2)-uA,0,nU-1);const ti=al.inv[j]+tA;let k=-1;for(let q=0;q<words.length;q++)if(words[q].ta<=ti)k=q;if(k<0)continue;const w=words[k];const nearEnd=ti>w.tb-Math.max(3,(w.tb-w.ta)*0.25);
+      if(nearEnd){if(k+1<words.length&&gapAfter(k)<0.1&&len>=0.2){words[k+1].notes.push({sev:1,t:`앞 단어와 ${len.toFixed(1)}초 끊겼어요 → 이어서 (연음)`});pauseFlags.push({k,len})}}
+      else if(len>=0.3){w.notes.push({sev:1,t:`단어 중간에서 ${len.toFixed(1)}초 끊겼어요 → 한 번에`});pauseFlags.push({k,len,mid:true})}}
+    pauseFlags.sort((a,b)=>b.len-a.len);
+    for(const f of pauseFlags.slice(0,2)){const w=words[f.k];hints.push({c:'',p:2,t:f.mid?`'${w.w}' 중간에서 ${f.len.toFixed(1)}초 끊겼어요 → 한 번에 이어서`:`'${w.w} ${words[f.k+1].w}' 사이에서 ${f.len.toFixed(1)}초 끊겼어요 → 선생님처럼 이어서 (연음)`})}
+    const missed=[];
+    for(let k=0;k+1<words.length;k++){const g=gapAfter(k);if(g<0.25)continue;const a=words[k].ub,b=words[k+1].ua;let sil=0;for(let q=a;q<=b;q++)if(me.rms[q]<=me.gate*0.6)sil++;if(sil<8){missed.push({k,g});words[k].notes.push({sev:1,t:`이 단어 뒤에서 살짝 쉬어 주세요 (선생님 ${g.toFixed(1)}초)`})}}
+    if(missed.length)hints.push({c:'',p:1,t:`'${words[missed[0].k].w}' 뒤에서 살짝 쉬어 주세요 (선생님은 ${missed[0].g.toFixed(1)}초 쉼)`});
+    // the word whose sound differs most from the teacher's (a "listen and compare" pointer, not a verdict)
+    const costs=[];for(let i=0;i<nT;i++)if(al.cost[i]>0)costs.push(al.cost[i]);const medC=costs.length?median(costs):0;
+    if(medC>0){const ranked=words.filter(w=>!w.func&&(w.tb-w.ta)>=6).map(w=>({w,ratio:w.cost/medC})).sort((a,b)=>b.ratio-a.ratio);if(ranked.length&&ranked[0].ratio>=1.6){const w=ranked[0].w;w.soundDiff=true;w.notes.push({sev:0,t:'소리가 선생님과 가장 달라요 → ▶ 비교로 들어보세요'});hints.push({c:'',p:1,t:`'${w.w}' — 소리가 선생님과 가장 달라요 → 단어를 눌러 ▶ 비교로 들어보세요`})}}
+    // scores
+    const comp=words.filter(w=>w.te&&w.me&&w.te.voiced>=3&&w.me.voiced>=3);let shapeS=null,levelS=null;
+    if(comp.length){shapeS=mean(comp.map(w=>{const a=w.te.shape,b=w.me.shape;if(a===b)return 1;if(a==='flat')return 0.75;if((a==='rise'&&b==='fall')||(a==='fall'&&b==='rise'))return 0;if(a==='hat'&&(b==='rise'||b==='fall'))return 0.6;return 0.4}))*100;levelS=mean(comp.map(w=>Math.max(0,1-Math.abs(w.me.level-w.te.level)/7)))*100}
+    const corrS=r==null?null:clamp((r+1)/2*100,0,100);
+    let into=wavg([[corrS,0.35],[shapeS,0.35],[levelS,0.3]]);if(into!=null&&rangeRatio<0.55)into-=(0.55-rangeRatio)*40;
+    // each flagged word costs points directly, so one wrong rise/fall can't hide behind an otherwise similar contour
+    if(into!=null)into-=Math.min(40,shapeHints.reduce((s,h)=>s+(h.sev>1?12:6),0));
+    res.into=into==null?null:clamp(Math.round(into),0,100);
+    const dws=words.filter(w=>w.durRatio!=null&&!w.func);const durErr=dws.length?mean(dws.map(w=>Math.abs(Math.log(clamp(w.durRatio,0.2,5))))):0;
+    res.rhythm=clamp(Math.round(100-Math.min(50,durErr*60)-Math.min(36,pauseFlags.length*12)-Math.min(16,missed.length*8)-((speed>1.45||speed<0.7)?10:0)),0,100);
+  }else{
+    const corrS=r==null?null:clamp((r+1)/2*100,0,100);
+    res.into=corrS==null?null:clamp(Math.round(corrS-(rangeRatio<0.55?(0.55-rangeRatio)*40:0)),0,100);
+    res.rhythm=clamp(Math.round(100-((speed>1.45||speed<0.7)?15:0)-Math.min(30,me.pauses.length*8)),0,100);
+  }
+  if(rangeRatio<0.55&&meV.length>5)hints.push({c:'',p:2,t:`억양 폭이 좁아요 (선생님의 약 ${Math.round(rangeRatio*100)}%) → 강조 단어는 더 높게, 문장 끝은 더 확실하게`});
+  res.lengthOff=speed>2.0||speed<0.6;
+  if(res.lengthOff)hints.push({c:'bad',p:5,t:'문장 길이가 선생님과 많이 달라요 — 같은 문장을 끝까지 말했는지 확인해 주세요'});
+  else if(speed>1.35)hints.push({c:'',p:1,t:`선생님보다 ${Math.round((speed-1)*100)}% 느려요 → 단어 사이를 끊지 말고 한 호흡으로`});
+  else if(speed<0.72)hints.push({c:'',p:1,t:`선생님보다 ${Math.round((1-speed)*100)}% 빨라요 → 강조 단어를 조금 길게`});
+  return res;
+}
+
+/* ===================== words: tokens and recognition diff ===================== */
+function baseTokens(text){return String(text||'').toLowerCase().replace(/[’‘`]/g,"'").replace(/[^a-z0-9' ]+/g,' ').split(/\s+/).filter(Boolean)}
 function displayTokens(text){return text.split(/\s+/).filter(Boolean)}
+function mapRefToDisplay(refText){const disp=displayTokens(refText);const map=[];for(let d=0;d<disp.length;d++){const k=baseTokens(disp[d]).length;for(let q=0;q<k;q++)map.push(d)}return{disp,map}}
+const EXPAND={"i'm":"i am","you're":"you are","we're":"we are","they're":"they are","he's":"he is","she's":"she is","it's":"it is","that's":"that is","there's":"there is","what's":"what is","who's":"who is","let's":"let us","i've":"i have","you've":"you have","we've":"we have","they've":"they have","i'll":"i will","you'll":"you will","we'll":"we will","they'll":"they will","he'll":"he will","she'll":"she will","it'll":"it will","i'd":"i would","you'd":"you would","we'd":"we would","he'd":"he would","she'd":"she would","they'd":"they would","don't":"do not","doesn't":"does not","didn't":"did not","can't":"can not","cannot":"can not","won't":"will not","wouldn't":"would not","couldn't":"could not","shouldn't":"should not","isn't":"is not","aren't":"are not","wasn't":"was not","weren't":"were not","haven't":"have not","hasn't":"has not","hadn't":"had not","gonna":"going to","wanna":"want to","gotta":"got to","kinda":"kind of","gimme":"give me","lemme":"let me","'cause":"because","cuz":"because","ok":"okay","alright":"all right"};
+const NUMW={"0":"zero","1":"one","2":"two","3":"three","4":"four","5":"five","6":"six","7":"seven","8":"eight","9":"nine","10":"ten","11":"eleven","12":"twelve","20":"twenty","30":"thirty","50":"fifty","100":"hundred"};
+function expandTok(t){t=NUMW[t]||t;return (EXPAND[t]||t).split(' ')}
 function alignWords(ref,hyp){
   const n=ref.length,m=hyp.length,dp=[];for(let i=0;i<=n;i++)dp.push(new Int16Array(m+1));
   for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)dp[i][j]=ref[i]===hyp[j]?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
   const status=new Array(n).fill('missing'),heard=new Array(n).fill(null),extras=[];let i=0,j=0;
   while(i<n&&j<m){if(ref[i]===hyp[j]){status[i]='ok';heard[i]=hyp[j];i++;j++}else if(dp[i+1][j]>=dp[i][j+1]){i++}else{extras.push({after:i-1,w:hyp[j]});j++}}
   while(j<m){extras.push({after:n-1,w:hyp[j]});j++}
-  // pair an extra with an adjacent missing ref word → substitution
   for(const ex of extras){for(const cand of [ex.after+1,ex.after]){if(cand>=0&&cand<n&&status[cand]==='missing'&&!heard[cand]){status[cand]='sub';heard[cand]=ex.w;ex.used=true;break}}}
   const matched=status.filter(s=>s==='ok').length;
   return{status,heard,extras:extras.filter(e=>!e.used),matched,n};
 }
-function bestAlignment(refText,transcripts){const ref=normWords(refText);let best=null;for(const t of transcripts){const a=alignWords(ref,normWords(t));a.transcript=t;if(!best||a.matched>best.matched||(a.matched===best.matched&&a.extras.length<best.extras.length))best=a}return best}
-function mapRefToDisplay(refText){const disp=displayTokens(refText);const map=[];for(let d=0;d<disp.length;d++){const k=normWords(disp[d]).length;for(let q=0;q<k;q++)map.push(d)}return{disp,map}}
+function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let prev=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(prev[j]+1,c[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=c}return prev[n]}
+function nearWord(a,b){if(!a||!b)return false;a=a.replace(/'/g,'');b=b.replace(/'/g,'');if(a===b)return true;if(a.length>=4&&b.length>=4&&a.slice(0,4)===b.slice(0,4))return true;return lev(a,b)<=(Math.max(a.length,b.length)>=6?2:1)}
+function asrCompare(refText,transcripts){
+  const base=baseTokens(refText);const refE=[],own=[];base.forEach((t,k)=>{for(const x of expandTok(t)){refE.push(x);own.push(k)}});
+  let best=null;for(const tr of transcripts){if(!tr)continue;const hypE=baseTokens(tr).flatMap(expandTok);const al=alignWords(refE,hypE);al.transcript=tr;if(!best||al.matched>best.matched||(al.matched===best.matched&&al.extras.length<best.extras.length))best=al}
+  if(!best)return null;
+  const status=new Array(base.length).fill('ok'),heard=new Array(base.length).fill(null);const rk={ok:0,near:1,sub:2,missing:3};
+  best.status.forEach((s,i)=>{const k=own[i];let st=s;if(s==='sub'&&best.heard[i]&&nearWord(refE[i],best.heard[i]))st='near';if(rk[st]>rk[status[k]]){status[k]=st;if(best.heard[i])heard[k]=best.heard[i]}});
+  let score=0;status.forEach(s=>{score+=s==='ok'?1:s==='near'?0.5:0});
+  return{status,heard,extras:best.extras.map(e=>e.w),accuracy:Math.round(score/Math.max(1,base.length)*100),transcript:best.transcript};
+}
+
+/* ===================== on-device word recognition (worker) ===================== */
+const asr={worker:null,ready:false,loading:null,pending:new Map(),seq:0,loaded:0,total:0,lastError:'',onchange:null,
+  text(){if(this.ready)return '단어 확인 중…';if(this.total>0&&this.loaded<this.total)return `단어 인식 모델 내려받는 중 ${Math.round(this.loaded/Math.max(1,this.total)*100)}% (처음 한 번만)`;return '단어 인식 준비 중… (처음 한 번만, Wi‑Fi 권장)'},
+  emit(){try{this.onchange&&this.onchange()}catch(e){}},
+  ensure(){
+    if(this.ready)return Promise.resolve();if(this.loading)return this.loading;
+    this.loading=new Promise((res,rej)=>{
+      let w;try{w=new Worker('asr-worker.js',{type:'module'})}catch(e){rej(new Error('이 브라우저는 폰 안 인식을 지원하지 않아요'));return}
+      this.worker=w;const fail=msg=>{this.lastError=msg;rej(new Error(msg));this.reset();this.emit()};
+      w.onmessage=e=>{const m=e.data||{};
+        if(m.type==='progress'){this.loaded=m.loaded||0;this.total=m.total||0;this.emit()}
+        else if(m.type==='ready'){this.ready=true;this.lastError='';this.emit();res()}
+        else if(m.type==='load-error')fail(m.error||'모델을 불러오지 못했어요');
+        else if(m.type==='result'||m.type==='error'){const p=this.pending.get(m.id);if(p){this.pending.delete(m.id);clearTimeout(p.t);m.type==='result'?p.res(m.text||''):p.rej(new Error(m.error||'인식 실패'))}}};
+      w.onerror=e=>{if(e&&e.preventDefault)e.preventDefault();fail((e&&e.message)||'인식 모듈을 불러오지 못했어요')};
+      w.postMessage({type:'load'});
+    });
+    this.emit();return this.loading;
+  },
+  reset(){try{this.worker&&this.worker.terminate()}catch(e){}this.worker=null;this.ready=false;this.loading=null;for(const [,p] of this.pending){clearTimeout(p.t);p.rej(new Error('중단됨'))}this.pending.clear()},
+  async run(pcm){await this.ensure();const id=++this.seq;return await new Promise((res,rej)=>{const t=setTimeout(()=>{if(this.pending.has(id)){this.pending.delete(id);rej(new Error('시간 초과'))}},45000);this.pending.set(id,{res,rej,t});const copy=new Float32Array(pcm);this.worker.postMessage({type:'run',id,audio:copy},[copy.buffer])})}
+};
+function asrInput(me){const p=me.pcm;let a=0,b=p.length;if(me.span){a=Math.max(0,me.span.first*160-4800);b=Math.min(p.length,me.span.last*160+640+4800)}const seg=p.subarray(a,b);let pk=0;for(let i=0;i<seg.length;i++)pk=Math.max(pk,Math.abs(seg[i]));const g=pk>0&&pk<0.3?0.6/pk:1;const out=new Float32Array(Math.max(Math.round(16000*2.2),seg.length+6400));for(let i=0;i<seg.length;i++)out[i]=seg[i]*g;return out}
+function startRecognition(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;
+  const r=new SR();r.lang='en-US';r.interimResults=false;r.maxAlternatives=5;r.continuous=true;const out={transcripts:[],ended:false,error:null};
+  r.onresult=e=>{for(let i=0;i<e.results.length;i++){const res=e.results[i];for(let k=0;k<res.length;k++){const t=res[k].transcript;if(t)out.transcripts.push(t)}}};
+  r.onerror=e=>{out.error=e.error};r.onend=()=>{out.ended=true};
+  try{r.start()}catch(e){return null}out.rec=r;return out;
+}
 
 /* ===================== Azure pronunciation assessment (optional) ===================== */
 let sdkPromise=null;
@@ -763,28 +1046,36 @@ async function azureAssess(pcm16,refText){
   const rec=new S.SpeechRecognizer(cfg,ac);pa.applyTo(rec);
   return new Promise((res,rej)=>{rec.recognizeOnceAsync(r=>{let json=null;try{json=r.properties.getProperty(S.PropertyId.SpeechServiceResponse_JsonResult)}catch(e){}try{rec.close()}catch(e){}if(r.reason===S.ResultReason.RecognizedSpeech&&json)res(JSON.parse(json));else rej(new Error(r.errorDetails||'음성을 인식하지 못했어요'))},e=>{try{rec.close()}catch(_){}rej(new Error(String(e)))})});
 }
-function parseAzure(j){const nb=(j.NBest||[])[0];if(!nb)return null;const pa=nb.PronunciationAssessment||{};const words=(nb.Words||[]).map(w=>{const a=w.PronunciationAssessment||{};return{w:w.Word,acc:a.AccuracyScore,err:a.ErrorType||'None',offset:(w.Offset||0)/1e7,dur:(w.Duration||0)/1e7,phonemes:(w.Phonemes||[]).map(p=>({p:p.Phoneme,acc:(p.PronunciationAssessment||{}).AccuracyScore})),prosody:(a.Feedback||{}).Prosody||null}});return{acc:pa.AccuracyScore,flu:pa.FluencyScore,comp:pa.CompletenessScore,pros:pa.ProsodyScore,pron:pa.PronScore,words,text:nb.Display||''}}
+function parseAzure(j){const nb=(j.NBest||[])[0];if(!nb)return null;const pa=nb.PronunciationAssessment||{};const words=(nb.Words||[]).map(w=>{const a=w.PronunciationAssessment||{};return{w:w.Word,acc:a.AccuracyScore,err:a.ErrorType||'None',phonemes:(w.Phonemes||[]).map(p=>({p:p.Phoneme,acc:(p.PronunciationAssessment||{}).AccuracyScore}))}});return{acc:pa.AccuracyScore,flu:pa.FluencyScore,comp:pa.CompletenessScore,pros:pa.ProsodyScore,pron:pa.PronScore,words,text:nb.Display||''}}
 
 /* ===================== practice flow ===================== */
 const teacherCache={};
-let cur=null,rec=null,recognizer=null,srBroken=false;
+let cur=null,cap=null,capT=null,recognizer=null,recTimer=null;
 async function getTeacher(item){
   if(item.id in teacherCache)return teacherCache[item.id];
-  let arr=null,local=false;
+  let arr=null,local=false,type='audio/mp4';
   const saved=await idb.get('local:'+item.id);
-  if(saved&&saved.wav){arr=saved.wav;local=true}
-  else{const path=clipPath(item);if(path){const ck=clipKey(item,path);const cached=await idb.get(ck);if(cached&&cached.buf)arr=cached.buf;else{try{let r=null;if(state.bank.source==='github'||state.bank.source==='github-cache'){r=await gh.raw(path)}else{r=await fetch(path);if(!r.ok)r=null}if(r){arr=await r.arrayBuffer();idb.set(ck,{buf:arr,at:Date.now()})}}catch(e){}}}}
-  if(!arr){teacherCache[item.id]=null;return null}
-  try{const ctx=audio.ensure();const buf=await ctx.decodeAudioData(arr.slice(0));const pcm=resample(buf.getChannelData(0),buf.sampleRate);const t={buffer:buf,pcm,an:analyzeAudio(pcm,16000),local};teacherCache[item.id]=t;return t}catch(e){teacherCache[item.id]=null;return null}
+  if(saved&&saved.wav){arr=saved.wav;local=true;type='audio/wav'}
+  else{const path=clipPath(item);if(!path){teacherCache[item.id]=null;return null}
+    type=clipType(path);const ck=clipKey(item,path);const cached=await idb.get(ck);
+    if(cached&&cached.buf)arr=cached.buf;
+    else{try{let r=null;if(state.bank.source==='github'||state.bank.source==='github-cache'){r=await gh.raw(path)}else{r=await fetch(path);if(!r.ok)r=null}if(r){arr=await r.arrayBuffer();idb.set(ck,{buf:arr,at:Date.now()})}}catch(e){}}
+    if(!arr)return null;}
+  try{const buf=await decodeAudio(arr);const pcm=resample(buf.getChannelData(0),buf.sampleRate);const t={blob:new Blob([arr],{type}),pcm,an:analyzeVoice(pcm),local};teacherCache[item.id]=t;return t}
+  catch(e){teacherCache[item.id]=null;return null}
 }
+function teacherLabel(){const t=cur&&cur.teacher;return t?(t.local?'▶ 선생님(내 녹음)':'▶ 선생님'):t===null?'▶ 대체음성':'▶ 선생님'}
 function startSession(ids,label){if(!ids.length){toast('연습할 문장이 없어요');return}state.session={queue:ids.slice(),idx:0,results:[],again:{},label:label||''};showView('practice');renderCard()}
 function tierClass(t){return t<=2?'t1':t<=4?'t2':'t3'}
 function kindLabel(k){return k==='dialogue'?'대화':k==='script'?'스크립트':'문장'}
+function resetRecUI(){const b=$('#btn-rec');b.textContent='● 녹음';b.classList.remove('on');b.disabled=false;$('#level').hidden=true;stopRecTimer()}
+function startRecTimer(){const el=$('#rec-time');el.hidden=false;const t0=Date.now();el.textContent='0.0초';clearInterval(recTimer);recTimer=setInterval(()=>{el.textContent=((Date.now()-t0)/1000).toFixed(1)+'초'},100)}
+function stopRecTimer(){clearInterval(recTimer);recTimer=null;const el=$('#rec-time');if(el)el.hidden=true}
 async function renderCard(){
   const S=state.session,id=S.queue[S.idx],item=state.bank.byId[id];
   if(!item){nextCard();return}
-  stopPlayback();if(rec){try{rec.stop()}catch(e){}rec=null}
-  cur={item,teacher:undefined,attempts:[],best:null,grade:null,hidden:state.settings.hideText};
+  stopAllAudio();if(cap){const c=cap;cap=null;c.stop()}
+  cur={item,teacher:undefined,attempts:[],best:null,grade:null,gradeManual:false,hidden:state.settings.hideText,current:null,sel:null,lastBlob:null};
   $('#prac-count').textContent=`${S.idx+1}/${S.queue.length}`;$('#prac-bar').style.width=(S.idx/S.queue.length*100)+'%';
   const T=state.bank.tiers[item.tier]||{short:item.tier+'순위'};
   const tierEl=$('#c-tier');tierEl.textContent=T.short;tierEl.className='chip '+tierClass(item.tier);
@@ -795,189 +1086,204 @@ async function renderCard(){
   $('#c-note').textContent=item.note||'';$('#c-note').hidden=!item.note;
   const ctxEl=$('#c-context');ctxEl.hidden=true;
   if(item.group){const g=state.bank.items.filter(x=>x.group===item.group&&(x.seq||0)<(item.seq||0)).sort((a,b)=>(b.seq||0)-(a.seq||0))[0];if(g){ctxEl.innerHTML=`<span class="muted">앞 대사${g.role?' ('+esc(g.role)+')':''}: </span><b>${esc(g.text)}</b>`;ctxEl.hidden=false}}
-  $('#result').hidden=true;$('#btn-me').disabled=true;$('#rec-msg').textContent='선생님 소리를 듣고, 녹음을 누른 뒤 따라 말하세요.';$('#level').hidden=true;
-  $('#btn-teacher').textContent='▶ 선생님';$('#btn-teacher').disabled=false;
-  const t=await getTeacher(item);
-  if(cur&&cur.item.id===item.id){cur.teacher=t;$('#btn-teacher').textContent=t?'▶ 선생님'+(t.local?' (내 녹음)':''):'▶ 대체음성'}
+  $('#mic-banner').hidden=true;$('#result').hidden=true;$('#word-detail').hidden=true;$('#btn-me').disabled=true;$('#btn-me').textContent='▶ 내 소리';
+  $('#rec-msg').textContent='선생님 소리를 듣고, ● 녹음을 누른 뒤 따라 말하세요.';resetRecUI();
+  $('#btn-teacher').textContent='▶ 선생님';
+  const c=cur;const t=await getTeacher(item);if(cur===c){c.teacher=t;$('#btn-teacher').textContent=teacherLabel()}
 }
-function playTeacher(){if(!cur)return;const b=$('#btn-teacher');if(playing||('speechSynthesis' in window&&speechSynthesis.speaking)){stopPlayback();return}if(cur.teacher){b.textContent='■ 정지';playBuffer(cur.teacher.buffer,0,null,()=>{b.textContent='▶ 선생님'+(cur.teacher.local?' (내 녹음)':'')})}else if(cur.teacher===null){b.textContent='■ 정지';speak(cur.item.text,()=>{b.textContent='▶ 대체음성'})}else{toast('선생님 음성을 불러오는 중이에요')}}
-function startRecognition(){
-  if(srBroken||state.settings.useBrowserSR===false)return null;const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;
-  const r=new SR();r.lang='en-US';r.interimResults=false;r.maxAlternatives=5;r.continuous=true;const out={transcripts:[],ended:false,error:null};
-  r.onresult=e=>{for(let i=0;i<e.results.length;i++){const res=e.results[i];for(let k=0;k<res.length;k++){const t=res[k].transcript;if(t)out.transcripts.push(t)}}};
-  r.onerror=e=>{out.error=e.error;if(e.error==='audio-capture'||e.error==='not-allowed'||e.error==='service-not-allowed')srBroken=true};
-  r.onend=()=>{out.ended=true};
-  try{r.start()}catch(e){return null}out.rec=r;return out;
+function playTeacher(){
+  if(!cur||cap)return;const b=$('#btn-teacher');
+  if(player.busy||speechBusy()){stopAllAudio();b.textContent=teacherLabel();return}
+  if(cur.teacher){b.textContent='■ 정지';player.play('t:'+cur.item.id,cur.teacher.blob,{onend:()=>{b.textContent=teacherLabel()}})}
+  else if(cur.teacher===null){b.textContent='■ 정지';speak(cur.item.text,()=>{b.textContent=teacherLabel()})}
+  else toast('선생님 음성을 불러오는 중이에요');
+}
+function playMine(){
+  const b=$('#btn-me');if(!cur||!cur.lastBlob)return;
+  if(player.busy){player.stop();return}
+  b.textContent='■ 정지';player.play('m:'+(cur.current?cur.current.id:'x'),cur.lastBlob,{onend:()=>{b.textContent='▶ 내 소리'}});
 }
 async function toggleRecord(){
-  if(!cur)return;const btn=$('#btn-rec');
-  if(rec){await stopRecording();return}
-  stopPlayback();
-  try{rec=new Recorder();await rec.start()}catch(e){rec=null;toast('마이크를 쓸 수 없어요. 브라우저의 마이크 권한을 확인해 주세요.');return}
-  recognizer=startRecognition();
-  btn.textContent='■ 멈춤';btn.classList.add('on');$('#result').hidden=true;$('#level').hidden=false;$('#rec-msg').textContent='말하세요… (말이 끝나면 자동으로 멈춰요)';
-  const lv=$('#level i');rec.onlevel=v=>{lv.style.width=clamp(v*500,2,100)+'%'};
-  rec.onauto=()=>stopRecording();
+  if(!cur)return;if(cap){await stopRecording();return}
+  if(capT){toast('선생님 음성 녹음을 먼저 끝내 주세요');return}
+  stopAllAudio();$('#btn-teacher').textContent=teacherLabel();$('#btn-me').textContent='▶ 내 소리';
+  const btn=$('#btn-rec');btn.disabled=true;const c=new Capture();
+  try{await c.start()}catch(e){btn.disabled=false;micError(e);return}
+  if(!cur){c.stop();return}
+  cap=c;$('#mic-banner').hidden=true;btn.disabled=false;btn.textContent='■ 멈춤';btn.classList.add('on');$('#result').hidden=true;$('#level').hidden=false;
+  $('#rec-msg').textContent='말하세요… (말이 끝나면 자동으로 멈춰요)';startRecTimer();
+  const lv=$('#level i');c.onlevel=v=>{lv.style.width=clamp(v*500,2,100)+'%'};c.onauto=()=>stopRecording();
+  recognizer=(state.settings.asrMode==='browser'&&!IS_IOS&&!state.settings.azureKey)?startRecognition():null;
+  setTimeout(()=>{if(cap===c&&!c.meterWorks){$('#rec-msg').textContent='말이 끝나면 ■ 멈춤을 눌러 주세요.';$('#level').hidden=true}},1800);
 }
 async function stopRecording(){
-  if(!rec)return;const btn=$('#btn-rec');btn.textContent='● 녹음';btn.classList.remove('on');
-  const {pcm,sr}=rec.stop();rec=null;$('#level').hidden=true;
-  const rz=recognizer;recognizer=null;
-  if(rz&&rz.rec){try{rz.rec.stop()}catch(e){}}
+  const c=cap;if(!c)return;cap=null;resetRecUI();
+  const rz=recognizer;recognizer=null;if(rz&&rz.rec){try{rz.rec.stop()}catch(e){}}
   $('#rec-msg').textContent='분석 중…';
-  // give the recognizer a moment to deliver its final result
-  if(rz){const t0=Date.now();while(!rz.ended&&Date.now()-t0<3000)await new Promise(r=>setTimeout(r,100))}
-  const transcripts=rz?rz.transcripts:[];
-  await analyzeAttempt(pcm,sr,transcripts);
+  const blob=await c.stop();
+  if(rz){const t0=Date.now();while(!rz.ended&&Date.now()-t0<3000)await sleep(100)}
+  await analyzeAttempt(blob,rz&&rz.transcripts.length?rz.transcripts:null);
 }
-async function analyzeAttempt(pcm,sr,transcripts){
-  const item=cur.item;const pcm16=resample(pcm,sr);const my=analyzeAudio(pcm16,16000);
-  cur.lastPcm=pcm;cur.lastSr=sr;$('#btn-me').disabled=false;
-  const silent=!my.span||my.dur<0.25;
-  if(silent&&!transcripts.length){$('#rec-msg').textContent='소리가 거의 안 잡혔어요. 마이크에 조금 더 가까이, 다시 녹음해 보세요.';return}
-  if(silent&&transcripts.length){cur.srConflict=true}
-  if(cur.hidden){cur.hidden=false;$('#c-text').classList.remove('hidden-text');$('#prac-hide').textContent='가리기'}
-  let az=null;
-  if(state.settings.azureKey&&state.settings.azureKey.trim()){$('#rec-msg').textContent='정밀 평가 중…';try{az=parseAzure(await azureAssess(pcm16,item.text))}catch(e){toast('정밀 평가 실패: '+e.message+' — 기본 비교로 보여드려요')}}
-  const te=cur.teacher||null;
-  const ct=(!silent&&te&&te.an.contour&&my.contour)?compareContours(my.contour,te.an.contour):null;
-  const timing={ratio:!silent&&te&&te.an.dur?my.dur/te.an.dur:null,myDur:my.dur,teDur:te?te.an.dur:null,myPauses:my.span?my.span.pauses.length:0,tePauses:te&&te.an.span?te.an.span.pauses.length:null};
-  // words
-  const {disp,map}=mapRefToDisplay(item.text);
-  let wordView=null,acc=null,wordSource='none';
-  if(az){
-    const ref=normWords(item.text);const st=new Array(disp.length).fill('unknown'),det=new Array(disp.length).fill(null),extras=[];let ri=0;
-    for(const w of az.words){if(w.err==='Insertion'){extras.push(w.w);continue}const di=map[Math.min(ri,map.length-1)];ri++;if(di==null)continue;const cls=w.err==='Omission'?'missing':(w.acc==null?'unknown':w.acc>=80?'ok':w.acc>=60?'warn':'bad');if(st[di]==='unknown'||cls==='bad'||(cls==='warn'&&st[di]==='ok')||cls==='missing')st[di]=cls;det[di]=det[di]||[];det[di].push(w)}
-    wordView={st,det,extras};acc=az.acc;wordSource='azure';
-  }else if(transcripts.length){
-    const al=bestAlignment(item.text,transcripts);const st=new Array(disp.length).fill('unknown'),det=new Array(disp.length).fill(null);
-    for(let k=0;k<al.status.length;k++){const di=map[k];if(di==null)continue;const s=al.status[k]==='ok'?'ok':al.status[k]==='sub'?'bad':'missing';if(st[di]==='unknown'||s!=='ok')st[di]=s;if(al.heard[k]&&al.status[k]!=='ok'){det[di]=det[di]||[];det[di].push({heard:al.heard[k]})}}
-    wordView={st,det,extras:al.extras.map(e=>e.w),transcript:al.transcript};acc=Math.round(al.matched/al.n*100);wordSource='browser';
-  }
-  // scores
-  const into=ct?ct.score:null;
-  let timingScore=null;
-  if(timing.ratio!=null){timingScore=clamp(Math.round(100-Math.min(70,Math.abs(Math.log(timing.ratio))*80)-12*Math.max(0,timing.myPauses-(timing.tePauses||0))),0,100)}
-  let overall=null,parts=[];
-  if(az){overall=Math.round(az.pron??az.acc);parts=[['정확도',az.acc],['유창성',az.flu],['완성도',az.comp],['억양·리듬',az.pros!=null?az.pros:into]]}
-  else{const ws=[];if(acc!=null)ws.push([acc,0.5]);if(into!=null)ws.push([into,0.3]);if(timingScore!=null)ws.push([timingScore,0.2]);if(ws.length){const tw=ws.reduce((a,b)=>a+b[1],0);overall=Math.round(ws.reduce((a,b)=>a+b[0]*b[1],0)/tw)}parts=[['단어 정확도',acc],['억양 유사도',into],['속도·끊김',timingScore],['억양 폭',ct?Math.round(clamp(ct.rangeRatio,0,1)*100):null]]}
-  const hints=makeHints({item,az,wordView,ct,timing,acc,wordSource,overall});
-  if(cur.srConflict)hints.unshift({c:'info',t:'이 기기에서는 단어 인식이 켜져 있으면 녹음 소리가 안 잡혀요. 억양 비교를 보려면 설정 → 표시·소리에서 "브라우저 단어 인식"을 끄세요. (둘 다 보려면 정밀 평가 키 필요)'});
-  const attempt={overall,parts,wordView,ct,timing,az,my,te,hints,wordSource,disp};
-  cur.attempts.push(attempt);if(overall!=null)cur.best=Math.max(cur.best??0,overall);
-  renderResult(attempt);
+async function analyzeAttempt(blob,transcripts){
+  const c=cur;if(!c)return;const item=c.item;let pcm16;
+  try{pcm16=await blobToPcm16(blob)}catch(e){$('#rec-msg').textContent='녹음 파일을 읽지 못했어요. 다시 녹음해 주세요.';return}
+  if(cur!==c)return;
+  c.lastBlob=blob;$('#btn-me').disabled=false;
+  const me=analyzeVoice(pcm16);
+  if(!me.span||me.dur<0.3){$('#rec-msg').textContent='소리가 거의 안 잡혔어요. 폰 아래쪽 마이크를 가리지 않았는지, 블루투스 이어폰이 연결돼 있지 않은지 확인하고 다시 녹음해 주세요.';return}
+  if(c.hidden){c.hidden=false;$('#c-text').classList.remove('hidden-text');$('#prac-hide').textContent='가리기'}
+  if(c.teacher===undefined)c.teacher=await getTeacher(item);
+  const te=c.teacher||null;
+  const att={id:Date.now(),item,blob,me,te,cmp:te&&te.an?compareWithTeacher(te.an,me,item):null,asr:null,asrState:null,azure:null};
+  if(state.settings.azureKey&&state.settings.azureKey.trim()){$('#rec-msg').textContent='정밀 평가 중…';try{att.azure=parseAzure(await azureAssess(pcm16,item.text))}catch(e){toast('정밀 평가 실패: '+e.message)}}
+  if(!att.azure&&transcripts)att.asr=asrCompare(item.text,transcripts);
+  if(cur!==c)return;
+  c.attempts.push(att);c.current=att;finalizeAttempt(att);renderResult(att);
+  if(!att.azure&&!att.asr&&state.settings.asrMode==='device')runDeviceAsr(att);
 }
-function makeHints(o){
-  const h=[];const {item,az,wordView,ct,timing,wordSource}=o;
-  if(az){
-    const ws=az.words.filter(w=>w.err!=='Insertion');
-    const bad=ws.filter(w=>w.err==='Mispronunciation'||(w.acc!=null&&w.acc<60)).slice(0,4);
-    for(const w of bad){const ph=(w.phonemes||[]).filter(p=>p.acc!=null&&p.acc<60).map(p=>p.p);h.push({c:'bad',t:`'${w.w}' 발음 ${w.acc!=null?Math.round(w.acc)+'점':''}${ph.length?' — 특히 /'+ph.join(' ')+'/ 소리':''}. 단어를 눌러 선생님 발음을 다시 들어보세요.`})}
-    for(const w of ws.filter(w=>w.err==='Omission').slice(0,3))h.push({c:'bad',t:`'${w.w}'를 빠뜨렸어요.`});
-    const ins=az.words.filter(w=>w.err==='Insertion').slice(0,3);if(ins.length)h.push({c:'',t:`문장에 없는 말이 들어갔어요: ${ins.map(w=>"'"+w.w+"'").join(', ')}`});
-    let prev=null;for(const w of ws){const p=w.prosody;if(p&&p.Break&&Array.isArray(p.Break.ErrorTypes)){if(p.Break.ErrorTypes.includes('UnexpectedBreak')&&prev)h.push({c:'',t:`'${prev.w} ${w.w}' 사이가 끊겼어요 → 붙여서 한 호흡으로(연음).`});if(p.Break.ErrorTypes.includes('MissingBreak'))h.push({c:'',t:`'${w.w}' 앞에서 잠깐 끊어 주세요.`})}if(p&&p.Intonation&&Array.isArray(p.Intonation.ErrorTypes)&&p.Intonation.ErrorTypes.includes('Monotone')&&!h.some(x=>x.t.startsWith('억양이 평탄')))h.push({c:'',t:'억양이 평탄해요 — 강세 단어에서 올렸다가 내려주세요.'});prev=w}
-  }else if(wordView&&wordSource==='browser'){
-    const disp=o.item.text.split(/\s+/).filter(Boolean);
-    disp.forEach((w0,i)=>{const w=w0.replace(/^[^A-Za-z0-9']+|[^A-Za-z0-9']+$/g,'');const s=wordView.st[i];if(s==='missing')h.push({c:'bad',t:`'${w}' 인식 안 됨 — 발음·강세를 다시 확인하세요.`});else if(s==='bad'){const heard=(wordView.det[i]||[]).map(d=>d.heard).filter(Boolean)[0];h.push({c:'bad',t:`'${w}' → '${heard||'?'}'로 들렸어요.`})}});
-    if(wordView.extras.length)h.push({c:'',t:`문장에 없는 말이 들어갔어요: ${wordView.extras.slice(0,3).map(w=>"'"+w+"'").join(', ')}`});
-    if(h.length>5)h.length=5;
-  }else if(wordSource==='none'){
-    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(o.item&&state.settings.useBrowserSR===false)h.push({c:'info',t:'단어 인식이 꺼져 있어요(설정 → 표시·소리). 억양·속도만 비교했어요.'});
-    else if(!SR)h.push({c:'info',t:IS_IOS?'이 브라우저에는 단어 인식 기능이 없어요. 아이폰은 Safari로 열면 단어 인식이 되고, 정밀 평가(Azure 키)를 쓰면 발음까지 비교돼요. 지금은 억양·속도만 비교했어요.':'이 브라우저에는 단어 인식 기능이 없어요. 억양·속도만 비교했어요.'});
-    else h.push({c:'info',t:'단어 인식 결과가 없어요(권한 거부 또는 인식 실패). 억양·속도만 비교했어요. 들어보고 직접 평가해 주세요.'});
-  }
-  if(ct){
-    if(ct.r<0.3)h.push({c:'',t:'억양 흐름이 선생님과 달라요. 아래 그래프에서 올라가고 내려가는 자리를 맞춰보세요.'});
-    const dirMe=ct.endMe>0.8?'올림':ct.endMe<-0.8?'내림':'평탄',dirTe=ct.endTe>0.8?'올림':ct.endTe<-0.8?'내림':'평탄';
-    if(dirMe!==dirTe&&(dirTe!=='평탄'||dirMe!=='평탄'))h.push({c:'',t:`문장 끝을 ${dirMe}으로 말했어요 — 선생님은 ${dirTe}이에요.`});
-    if(ct.rangeRatio<0.5&&ct.rangeMe<ct.rangeTe)h.push({c:'',t:'억양 폭이 좁아요(단조로움). 강세 단어는 더 높게, 끝은 더 확실하게.'});
-    if(ct.r>=0.6&&ct.rangeRatio>=0.6)h.push({c:'good',t:'억양 흐름이 선생님과 잘 맞아요.'});
-  }
-  if(timing.ratio!=null){
-    if(timing.ratio>1.3)h.push({c:'',t:`선생님보다 ${Math.round((timing.ratio-1)*100)}% 느려요. 단어 사이를 끊지 말고 한 호흡으로.`});
-    else if(timing.ratio<0.72)h.push({c:'',t:`선생님보다 ${Math.round((1-timing.ratio)*100)}% 빨라요. 강세 단어를 조금 길게.`});
-    if(timing.tePauses!=null&&timing.myPauses>timing.tePauses)h.push({c:'',t:`중간에 ${timing.myPauses}번 멈췄어요 (선생님 ${timing.tePauses}번). 멈춘 자리를 이어서 말해보세요.`});
-  }
-  if(!h.length)h.push({c:'good',t:'좋아요. 한 번 더 들어보고 똑같이 따라 해보세요.'});
-  return h;
+async function runDeviceAsr(att){
+  if(!state.settings.asrConsent){att.asrState='ask';renderAsrBox(att);return}
+  att.asrState='running';renderAsrBox(att);
+  try{const text=await asr.run(asrInput(att.me));att.asr=asrCompare(att.item.text,[text])||{status:baseTokens(att.item.text).map(()=>'missing'),heard:[],extras:[],accuracy:0,transcript:text};att.asrState='done'}
+  catch(e){att.asrState='error';att.asrError=e.message}
+  if(cur&&cur.current===att){finalizeAttempt(att);renderResult(att)}
+}
+function finalizeAttempt(att){
+  const item=att.item,cmp=att.cmp;const {disp,map}=mapRefToDisplay(item.text);const nBase=baseTokens(item.text).length;
+  const toks=disp.map(t=>({text:t,status:'unknown',notes:[],ws:[],heard:null,az:null}));
+  const rank={unknown:0,ok:1,warn:2,bad:3,missing:4};const worse=(a,b)=>rank[b]>rank[a]?b:a;
+  if(cmp&&cmp.words.length){const okMap=cmp.words.length===nBase;cmp.words.forEach((w,k)=>{const d=okMap?map[k]:Math.min(k,disp.length-1);if(d==null)return;const tk=toks[d];tk.ws.push(w);const sev=w.notes.reduce((m,n)=>Math.max(m,n.sev),0);tk.status=worse(tk.status,sev>=2?'bad':sev===1?'warn':(w.te&&w.me)?'ok':'unknown');for(const n of w.notes)tk.notes.push(n.t)})}
+  const extras=[];
+  if(att.azure){let ri=0;for(const w of att.azure.words){if(w.err==='Insertion'){extras.push(w.w);continue}const d=map[Math.min(ri,nBase-1)];ri++;if(d==null)continue;const tk=toks[d];tk.az=(tk.az||[]).concat([w]);const s=w.err==='Omission'?'missing':w.acc==null?null:w.acc>=80?'ok':w.acc>=60?'warn':'bad';if(s){tk.status=worse(tk.status,s);if(s==='missing')tk.notes.unshift('빠뜨렸어요');else if(s!=='ok')tk.notes.unshift(`발음 정확도 ${Math.round(w.acc)}점`)}}}
+  else if(att.asr){const A=att.asr;A.status.forEach((s,k)=>{const d=map[k];if(d==null)return;const tk=toks[d];if(s==='missing'){tk.status=worse(tk.status,'missing');tk.notes.unshift('인식 안 됨 — 빠뜨렸거나 발음이 약했어요')}else if(s==='sub'){tk.status=worse(tk.status,'bad');tk.heard=A.heard[k];tk.notes.unshift(`'${A.heard[k]}'로 들렸어요`)}else if(s==='near'){tk.status=worse(tk.status,'warn');tk.heard=A.heard[k];tk.notes.unshift(`'${A.heard[k]}'에 가깝게 들렸어요`)}else if(tk.status==='unknown')tk.status='ok'});extras.push(...A.extras)}
+  const wordsScore=att.azure?att.azure.acc:att.asr?att.asr.accuracy:null;
+  const parts=[['단어',wordsScore],['억양',cmp?cmp.into:null],['리듬·연음',cmp?cmp.rhythm:null],['강세',cmp?cmp.stress:null]];
+  let overall=att.azure&&att.azure.pron!=null?wavg([[att.azure.pron,0.6],[cmp?cmp.into:null,0.25],[cmp?cmp.rhythm:null,0.15]]):wavg([[wordsScore,0.35],[cmp?cmp.into:null,0.3],[cmp?cmp.rhythm:null,0.2],[cmp?cmp.stress:null,0.15]]);
+  // flagged words pull the score down (and therefore bring the sentence back sooner)
+  if(overall!=null){const nBad=toks.filter(t=>t.status==='bad'||t.status==='missing').length,nWarn=toks.filter(t=>t.status==='warn').length;
+    overall-=4*nBad+2*nWarn;if(nBad+nWarn>=1)overall=Math.min(overall,89);if(nBad>=1)overall=Math.min(overall,84);if(nBad+nWarn>=3)overall=Math.min(overall,79);overall=Math.max(0,overall)}
+  if(overall!=null&&cmp&&cmp.lengthOff&&!att.asr&&!att.azure)overall=Math.min(overall,55);
+  overall=overall==null?null:Math.round(overall);
+  const hints=[];const ref=baseTokens(item.text);
+  if(att.asr&&!att.azure){let m=0,s=0;att.asr.status.forEach((st,k)=>{if(st==='missing'&&m<2){hints.push({c:'bad',p:6,t:`'${ref[k]}' — 인식 안 됨 (빠뜨렸거나 발음이 약했어요)`});m++}else if(st==='sub'&&s<2){hints.push({c:'bad',p:5,t:`'${ref[k]}' → '${att.asr.heard[k]}'로 들렸어요`});s++}});if(att.asr.extras.length)hints.push({c:'',p:1,t:`문장에 없는 말: ${att.asr.extras.slice(0,3).map(w=>"'"+w+"'").join(', ')}`})}
+  if(att.azure){const bad=att.azure.words.filter(w=>w.err==='Mispronunciation'||(w.acc!=null&&w.acc<60)).slice(0,3);for(const w of bad){const ph=(w.phonemes||[]).filter(p=>p.acc!=null&&p.acc<60).map(p=>p.p);hints.push({c:'bad',p:5,t:`'${w.w}' 발음 ${w.acc!=null?Math.round(w.acc)+'점':''}${ph.length?' — 특히 /'+ph.join(' ')+'/':''}`})}for(const w of att.azure.words.filter(w=>w.err==='Omission').slice(0,2))hints.push({c:'bad',p:6,t:`'${w.w}'를 빠뜨렸어요`})}
+  if(cmp)hints.push(...cmp.hints);
+  else if(!att.te)hints.push({c:'info',p:0,t:'이 문장은 선생님 녹음이 없어서 억양·리듬 비교는 못 해요.'});
+  else hints.push({c:'info',p:0,t:'선생님 소리나 내 소리가 너무 짧아서 비교하지 못했어요.'});
+  hints.sort((a,b)=>b.p-a.p);
+  if(!hints.some(h=>h.c!=='info'))hints.unshift({c:'good',p:9,t:cmp?'억양·리듬이 선생님과 잘 맞아요. 한 번 더 들어보고 똑같이 따라 해보세요.':'좋아요. 한 번 더 따라 해보세요.'});
+  att.view={toks,extras,parts,overall,hints:hints.slice(0,5)};
+  if(cur){const vals=cur.attempts.map(a=>a.view&&a.view.overall).filter(v=>v!=null);cur.best=vals.length?Math.max(...vals):null}
 }
 function scoreClass(s){return s==null?'none':s>=80?'ok':s>=65?'warn':'bad'}
-function scoreColor(s){return s==null?getVar('--muted'):s>=80?getVar('--good'):s>=65?getVar('--warn'):getVar('--bad')}
 function getVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
-function renderResult(a){
-  $('#rec-msg').textContent=a.wordSource==='azure'?'정밀 평가 결과':a.wordSource==='browser'?'브라우저 인식 + 억양 비교':'억양·속도 비교';
-  $('#result').hidden=false;
-  // ring
-  const c=$('#ring'),g=c.getContext('2d');g.clearRect(0,0,192,192);g.lineWidth=14;g.lineCap='round';g.strokeStyle=getVar('--surface-2');g.beginPath();g.arc(96,96,80,0,Math.PI*2);g.stroke();
-  if(a.overall!=null){g.strokeStyle=scoreColor(a.overall);g.beginPath();g.arc(96,96,80,-Math.PI/2,-Math.PI/2+Math.PI*2*a.overall/100);g.stroke()}
-  $('#score-num').textContent=a.overall==null?'—':a.overall;$('#score-num').style.color=a.overall==null?getVar('--muted'):scoreColor(a.overall);
-  $('#subs').innerHTML=a.parts.map(([k,v])=>`<div class="sub"><span>${esc(k)}</span><b>${v==null?'—':Math.round(v)}</b><div class="bar"><i style="width:${v==null?0:clamp(v,0,100)}%;background:${v==null?'transparent':scoreColor(v)}"></i></div></div>`).join('');
-  // words
-  const wEl=$('#words');wEl.innerHTML='';$('#word-detail').hidden=true;
-  a.disp.forEach((w,i)=>{const s=a.wordView?a.wordView.st[i]:'unknown';const b=document.createElement('button');b.className='w '+s;b.textContent=w;b.type='button';b.addEventListener('click',()=>showWord(a,i,b));wEl.appendChild(b)});
-  if(a.wordView&&a.wordView.extras&&a.wordView.extras.length){const x=document.createElement('span');x.className='w extra';x.textContent='+ '+a.wordView.extras.join(' ');wEl.appendChild(x)}
-  drawContour(a);
-  $('#hints').innerHTML=a.hints.map(h=>`<li class="${h.c}">${esc(h.t)}</li>`).join('');
-  const auto=a.overall!=null?gradeFromScore(cur.best??a.overall):null;cur.grade=auto;
-  $$('.grade-row .g').forEach(b=>b.classList.toggle('sel',auto!=null&&parseInt(b.dataset.g)===auto));
+function scoreColor(s){return s==null?getVar('--muted'):s>=80?getVar('--good'):s>=65?getVar('--warn'):getVar('--bad')}
+function drawRing(score){const c=$('#ring'),g=c.getContext('2d');g.clearRect(0,0,192,192);g.lineWidth=14;g.lineCap='round';g.strokeStyle=getVar('--surface-2');g.beginPath();g.arc(96,96,80,0,Math.PI*2);g.stroke();if(score!=null){g.strokeStyle=scoreColor(score);g.beginPath();g.arc(96,96,80,-Math.PI/2,-Math.PI/2+Math.PI*2*score/100);g.stroke()}const n=$('#score-num');n.textContent=score==null?'—':score;n.style.color=score==null?getVar('--muted'):scoreColor(score)}
+function renderResult(att){
+  if(!cur||cur.current!==att)return;const v=att.view;
+  $('#rec-msg').textContent=att.cmp?'선생님 녹음과 단어별로 맞춰 비교했어요.':att.te?'비교할 소리가 부족했어요.':'선생님 녹음이 없어 내 소리만 분석했어요.';
+  $('#result').hidden=false;drawRing(v.overall);
+  $('#subs').innerHTML=v.parts.map(([k,val])=>`<div class="sub"><span>${esc(k)}</span><b>${val==null?'—':Math.round(val)}</b><div class="bar"><i style="width:${val==null?0:clamp(val,0,100)}%;background:${val==null?'transparent':scoreColor(val)}"></i></div></div>`).join('');
+  renderChips(att);
+  if(cur.sel!=null&&v.toks[cur.sel])showTokenDetail(att,cur.sel);else $('#word-detail').hidden=true;
+  renderAsrBox(att);
+  $('#hints').innerHTML=v.hints.map(h=>`<li class="${h.c}">${esc(h.t)}</li>`).join('');
+  if($('#graph-wrap').open)drawAligned(att);
+  if(!cur.gradeManual)cur.grade=cur.best!=null?gradeFromScore(cur.best):null;
+  $$('.grade-row .g').forEach(b=>b.classList.toggle('sel',cur.grade!=null&&parseInt(b.dataset.g)===cur.grade));
 }
-function showWord(a,i,btn){
-  $$('.w').forEach(x=>x.classList.remove('sel'));btn.classList.add('sel');
-  const d=$('#word-detail');const w=a.disp[i];const det=a.wordView?a.wordView.det[i]:null;let html=`<div class="row between"><b style="font-family:var(--font-en);font-size:16px">${esc(w)}</b><span class="row" style="gap:6px"></span></div>`;
-  if(det&&det.length&&det[0].phonemes){html+=det.map(x=>`<div class="phs">${(x.phonemes||[]).map(p=>`<span class="ph ${p.acc==null?'':p.acc>=80?'ok':p.acc>=60?'warn':'bad'}">${esc(p.p)}<small class="muted"> ${p.acc==null?'':Math.round(p.acc)}</small></span>`).join('')}</div>${x.err&&x.err!=='None'?`<div class="small muted">${esc({Mispronunciation:'발음 부정확',Omission:'빠뜨림',UnexpectedBreak:'끊어 읽음',MissingBreak:'끊어야 하는 곳'}[x.err]||x.err)}</div>`:''}`).join('')}
-  else if(det&&det.length&&det[0].heard){html+=`<div class="small">이렇게 들렸어요: <b>${esc(det[0].heard)}</b></div>`}
-  else if(a.wordView&&a.wordView.st[i]==='missing'){html+=`<div class="small">이 단어가 인식되지 않았어요.</div>`}
-  else{html+=`<div class="small muted">${a.wordView?'문제 없음':'단어 비교 결과가 없어요'}</div>`}
-  d.innerHTML=html;
-  const bar=d.querySelector('.row span');
-  if(a.te&&cur.item.words){const tw=teacherWordSpan(cur.item,i);if(tw){const b=document.createElement('button');b.className='btn small teacher';b.textContent='▶ 선생님';b.addEventListener('click',()=>playBuffer(a.te.buffer,Math.max(0,tw.s-0.08),tw.e+0.12));bar.appendChild(b)}}
-  if(det&&det.length&&det[0].offset!=null&&cur.lastPcm){const x=det[0];const b=document.createElement('button');b.className='btn small me';b.textContent='▶ 나';b.addEventListener('click',()=>{const buf=pcmToBuffer(cur.lastPcm,cur.lastSr);playBuffer(buf,Math.max(0,x.offset-0.08),x.offset+x.dur+0.12)});bar.appendChild(b)}
-  d.hidden=false;
+function sparkPath(series,W,H){if(!series||series.length<2)return '';const lo=-8,hi=8,n=series.length;let d='',pen=false;for(let i=0;i<n;i++){const v=series[i];if(isNaN(v)){pen=false;continue}const x=(i/(n-1))*W,y=H-2-((clamp(v,lo,hi)-lo)/(hi-lo))*(H-4);d+=(pen?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);pen=true}return d}
+function chipHtml(tk,d,sel){
+  const w=tk.ws[0];const W=60,H=26;let svg='';
+  if(w&&(w.te||w.me)){const pT=w.te?sparkPath(w.te.series,W,H):'',pM=w.me?sparkPath(w.me.series,W,H):'';svg=`<span class="spbox"><svg class="sp" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><line class="mid" vector-effect="non-scaling-stroke" x1="0" y1="${H/2}" x2="${W}" y2="${H/2}"></line>${pT?`<path class="te" vector-effect="non-scaling-stroke" d="${pT}"></path>`:''}${pM?`<path class="me" vector-effect="non-scaling-stroke" d="${pM}"></path>`:''}</svg></span>`}
+  const arr=w&&(w.te||w.me)?`<span class="wa"><b class="te">${ARROW[w.te?w.te.shape:'none']}</b><b class="me">${ARROW[w.me?w.me.shape:'none']}</b></span>`:'';
+  const stress=tk.ws.some(x=>x.stressT);
+  return `<button type="button" class="wc ${tk.status}${stress?' stress':''}${sel?' sel':''}" data-d="${d}">${svg}<span class="wt">${esc(tk.text)}</span>${arr}</button>`;
 }
-function teacherWordSpan(item,dispIndex){const ws=item.words;if(!ws||!ws.length)return null;const disp=displayTokens(item.text);const target=normWords(disp[dispIndex]).join(' ');// match by order first
-  const norm=ws.map(w=>normWords(w.w||'').join(' '));let hits=[];for(let k=0;k<ws.length;k++)if(norm[k]===target)hits.push(k);if(!hits.length)return null;const pick=hits.reduce((b,k)=>Math.abs(k-dispIndex)<Math.abs(b-dispIndex)?k:b,hits[0]);return{s:+ws[pick].s||0,e:+ws[pick].e||(+ws[pick].s+0.4)}}
-function drawContour(a){
-  const c=$('#contour');const W=c.clientWidth||320,H=150,dpr=window.devicePixelRatio||1;c.width=W*dpr;c.height=H*dpr;const g=c.getContext('2d');g.scale(dpr,dpr);g.clearRect(0,0,W,H);
-  const padL=8,padR=8,padT=14,padB=22,iw=W-padL-padR,ih=H-padT-padB;
-  const te=a.te&&a.te.an.contour?a.te.an.contour.pts:null,me=a.my.contour?a.my.contour.pts:null;
-  $('#contour-note').textContent=!te&&!me?'억양을 잡지 못했어요':!te?'선생님 클립 없음 — 내 억양만 표시':'';
-  const all=[];if(te)all.push(...te);if(me)all.push(...me);
-  const lo=Math.min(-4,...all.map(v=>Math.floor(v))),hi=Math.max(4,...all.map(v=>Math.ceil(v)));
-  const y=v=>padT+ih*(1-(v-lo)/(hi-lo)),x=t=>padL+iw*t/99;
-  g.strokeStyle=getVar('--line');g.lineWidth=1;g.setLineDash([3,4]);
-  for(const v of [lo,0,hi]){g.beginPath();g.moveTo(padL,y(v));g.lineTo(W-padR,y(v));g.stroke()}g.setLineDash([]);
-  g.fillStyle=getVar('--muted');g.font='11px '+getVar('--font-ui');g.textAlign='left';g.fillText('높음',padL,padT-3);g.fillText('낮음',padL,H-padB+12);g.textAlign='right';g.fillText('문장 시작 → 끝 (시간 정규화)',W-padR,H-padB+12);
-  // word boundaries from teacher timings
-  if(te&&cur.item.words&&a.te.an.span){const sp=a.te.an.span,ct=a.te.an.contour;const t0=ct.v0*a.te.an.hop/16000,t1=ct.v1*a.te.an.hop/16000;g.fillStyle=getVar('--muted');g.font='10px '+getVar('--font-en');g.textAlign='center';for(const w of cur.item.words){const f=(w.s-t0)/Math.max(0.01,t1-t0);if(f<0||f>1)continue;const xx=padL+iw*f;g.strokeStyle=getVar('--line');g.beginPath();g.moveTo(xx,padT);g.lineTo(xx,padT+ih);g.stroke();if(cur.item.words.length<=10)g.fillText(w.w,Math.min(W-14,Math.max(14,xx+2)),padT+ih+10)}}
-  const line=(pts,col,wdt)=>{g.strokeStyle=col;g.lineWidth=wdt;g.lineJoin='round';g.beginPath();pts.forEach((v,i)=>{i?g.lineTo(x(i),y(v)):g.moveTo(x(i),y(v))});g.stroke()};
-  if(te)line(te,getVar('--teacher'),2.5);if(me)line(me,getVar('--me'),2.5);
+function renderChips(att){
+  const v=att.view,box=$('#wchips');
+  box.innerHTML=v.toks.map((tk,d)=>chipHtml(tk,d,cur.sel===d)).join('')+v.extras.map(w=>`<span class="wc extra" title="문장에 없는 말"><span class="wt">+ ${esc(w)}</span></span>`).join('');
+  box.querySelectorAll('button.wc').forEach(b=>b.addEventListener('click',()=>{const d=+b.dataset.d;cur.sel=cur.sel===d?null:d;box.querySelectorAll('button.wc').forEach(x=>x.classList.toggle('sel',+x.dataset.d===cur.sel));if(cur.sel==null)$('#word-detail').hidden=true;else showTokenDetail(att,d);if($('#graph-wrap').open)drawAligned(att)}));
+}
+function featText(f){if(!f)return '—';if(f.voiced<3)return '높낮이 거의 없음 (짧거나 무성음)';const lv=f.level>=2?'높게':f.level<=-2?'낮게':'보통 높이';return `${ARROW[f.shape]} ${SHAPE_KO[f.shape]} · ${lv}`}
+function showTokenDetail(att,d){
+  const tk=att.view.toks[d],box=$('#word-detail');if(!tk){box.hidden=true;return}
+  const w=tk.ws[0],wl=tk.ws[tk.ws.length-1];
+  let html=`<div class="row between"><b style="font-family:var(--font-en);font-size:17px">${esc(tk.text)}</b><span class="row" id="wd-btns" style="gap:6px"></span></div>`;
+  if(w&&(w.te||w.me)){const dur=w.durRatio==null?'':w.durRatio<0.75?' · 짧게':w.durRatio>1.35?' · 길게':'';html+=`<div class="dl"><b class="te">선생님</b><span>${featText(w.te)}${w.stressT?' · 강조':''}</span><b class="me">나</b><span>${featText(w.me)}${dur}</span></div>`}
+  const notes=[...new Set(tk.notes)];
+  if(notes.length)html+=`<ul class="hints">${notes.slice(0,4).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
+  else if(w&&w.te&&w.me)html+=`<div class="small muted">선생님과 비슷해요.</div>`;
+  if(tk.az&&tk.az.length)html+=tk.az.map(x=>`<div class="phs">${(x.phonemes||[]).map(p=>`<span class="ph ${p.acc==null?'':p.acc>=80?'ok':p.acc>=60?'warn':'bad'}">${esc(p.p)}</span>`).join('')}</div>`).join('');
+  box.innerHTML=html;box.hidden=false;
+  const bar=box.querySelector('#wd-btns');const te=cur.teacher;
+  const tSpan=w&&te&&te.blob?[Math.max(0,w.s-0.06),wl.e+0.08]:null;
+  const mSpan=w&&att.blob?[Math.max(0,w.ua/100-0.06),(wl.ub+1)/100+0.1]:null;
+  const add=(label,cls,fn)=>{const b=document.createElement('button');b.type='button';b.className='btn small '+cls;b.textContent=label;b.addEventListener('click',fn);bar.appendChild(b)};
+  if(tSpan)add('▶ 선생님','teacher',()=>player.play('t:'+cur.item.id,te.blob,{start:tSpan[0],end:tSpan[1]}));
+  if(mSpan)add('▶ 나','me',()=>player.play('m:'+att.id,att.blob,{start:mSpan[0],end:mSpan[1]}));
+  if(tSpan&&mSpan)add('▶ 비교','',()=>player.play('t:'+cur.item.id,te.blob,{start:tSpan[0],end:tSpan[1],ondone:()=>setTimeout(()=>player.play('m:'+att.id,att.blob,{start:mSpan[0],end:mSpan[1]}),250)}));
+}
+function renderAsrBox(att){
+  const box=$('#asr-box');if(!cur||cur.current!==att)return;
+  const mode=state.settings.asrMode;
+  if(att.azure||mode==='off'||(mode==='browser'&&!att.asr)){box.hidden=true;return}
+  if(att.asrState==='ask'){box.hidden=false;box.innerHTML=`<span>단어까지 확인할까요? 폰 안에서 인식하는 모델을 처음 한 번 내려받아요 (약 90MB, Wi‑Fi 권장). 녹음은 밖으로 나가지 않아요.</span><div class="row"><button class="btn small primary" id="asr-yes">단어 인식 켜기</button><button class="btn small ghost" id="asr-no">안 함</button></div>`;
+    $('#asr-yes').onclick=()=>{state.settings.asrConsent=true;saveSettings();runDeviceAsr(att)};$('#asr-no').onclick=()=>{state.settings.asrMode='off';saveSettings();box.hidden=true;toast('단어 인식을 껐어요. 설정에서 다시 켤 수 있어요.')};return}
+  if(att.asrState==='running'){box.hidden=false;box.innerHTML=`<span class="muted">${esc(asr.text())}</span>`;return}
+  if(att.asrState==='error'){box.hidden=false;box.innerHTML=`<span class="muted">단어 인식을 못 했어요 (${esc(att.asrError||'')}).</span><div class="row"><button class="btn small" id="asr-retry">다시 시도</button></div>`;$('#asr-retry').onclick=()=>runDeviceAsr(att);return}
+  if(att.asr){box.hidden=false;box.innerHTML=`<span><span class="muted">이렇게 들렸어요:</span> <span class="heard">${esc(att.asr.transcript||'(없음)')}</span></span>`;return}
+  box.hidden=true;
+}
+function drawAligned(att){
+  const cv=$('#contour');if(!cv||!att)return;const W=cv.clientWidth||320,H=160,dpr=window.devicePixelRatio||1;cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
+  const padL=30,padR=8,padT=10,padB=24,iw=W-padL-padR,ih=H-padT-padB,lo=-8,hi=8;const y=v=>padT+ih*(1-(clamp(v,lo,hi)-lo)/(hi-lo));
+  g.font='11px '+getVar('--font-ui');g.fillStyle=getVar('--muted');g.textAlign='left';g.fillText('높게',2,padT+9);g.fillText('낮게',2,padT+ih);
+  g.strokeStyle=getVar('--line');g.lineWidth=1;g.setLineDash([3,4]);g.beginPath();g.moveTo(padL,y(0));g.lineTo(W-padR,y(0));g.stroke();g.setLineDash([]);g.fillText('평소',2,y(0)+4);
+  const smooth=arr=>{const n=arr.length,out=new Float32Array(n).fill(NaN);for(let i=0;i<n;i++){if(isNaN(arr[i]))continue;const w=[];for(let k=-3;k<=3;k++){const v=arr[i+k];if(v!==undefined&&!isNaN(v))w.push(v)}w.sort((a,b)=>a-b);out[i]=w[w.length>>1]}return out};
+  const line=(arr0,x,col)=>{const arr=smooth(arr0);g.strokeStyle=col;g.lineWidth=2.5;g.lineJoin='round';g.lineCap='round';g.beginPath();let pen=false,run=0;for(let i=0;i<arr.length;i++){const v=arr[i];if(isNaN(v)){pen=false;continue}if(pen)g.lineTo(x(i),y(v));else g.moveTo(x(i),y(v));pen=true}g.stroke()};
+  const cmp=att.cmp;
+  if(!cmp){const a=att.me.span?att.me.span.first:0,b=att.me.span?att.me.span.last:att.me.st.length-1;const arr=att.me.st.slice(a,b+1);line(arr,i=>padL+iw*i/Math.max(1,arr.length-1),getVar('--me'));g.fillStyle=getVar('--muted');g.textAlign='right';g.fillText('선생님 녹음 없음 — 내 억양만',W-padR,H-6);return}
+  const n=cmp.nT,x=i=>padL+iw*i/Math.max(1,n-1);
+  const selWords=cur&&cur.sel!=null&&att.view.toks[cur.sel]?new Set(att.view.toks[cur.sel].ws.map(w=>w.k)):new Set();
+  cmp.words.forEach((w,k)=>{const x0=x(w.ta-cmp.tA),x1=x(w.tb-cmp.tA);if(selWords.has(k)){g.fillStyle=getVar('--teacher-soft');g.fillRect(x0,padT,Math.max(2,x1-x0),ih)}else if(k%2){g.fillStyle=getVar('--surface');g.globalAlpha=0.55;g.fillRect(x0,padT,Math.max(1,x1-x0),ih);g.globalAlpha=1}});
+  g.font='10px '+getVar('--font-en');g.textAlign='center';
+  // label words only where they fit, and always the selected word; the cards above carry every word
+  const labels=cmp.words.map((w,k)=>({k,w,label:w.w.replace(/[.,!?;:]+$/,''),x0:x(w.ta-cmp.tA),x1:x(w.tb-cmp.tA)}));
+  const prio=L=>(selWords.has(L.k)?2:0)+(L.w.stressT?1:0);
+  const placed=[];for(const L of [...labels].sort((a,b)=>prio(b)-prio(a)||a.k-b.k)){const tw=g.measureText(L.label).width;const cx=clamp((L.x0+L.x1)/2,padL+tw/2,W-padR-tw/2);if(!prio(L)&&tw+4>L.x1-L.x0)continue;const a=cx-tw/2-3,b=cx+tw/2+3;if(placed.some(p=>!(b<p[0]||a>p[1])))continue;placed.push([a,b]);g.fillStyle=selWords.has(L.k)?getVar('--fg'):L.w.stressT?getVar('--teacher'):getVar('--muted');g.fillText(L.label,cx,H-8)}
+  line(cmp.teLine,x,getVar('--teacher'));line(cmp.meLine,x,getVar('--me'));
 }
 function finishCard(){
-  if(!cur)return;const S=state.session,id=cur.item.id;const score=cur.best;const grade=cur.grade??(score!=null?gradeFromScore(score):3);
+  if(!cur)return;const S=state.session,id=cur.item.id;
+  stopAllAudio();
+  if(!cur.attempts.length&&!cur.gradeManual){S.results.push({id,score:null,grade:null,skipped:true});nextCard();return}
+  const score=cur.best;const grade=cur.grade??(score!=null?gradeFromScore(score):3);
   applyGrade(id,grade,score);S.results.push({id,score,grade});
   if(grade===1&&(S.again[id]||0)<2){S.again[id]=(S.again[id]||0)+1;S.queue.push(id)}
   nextCard();
 }
 function nextCard(){const S=state.session;S.idx++;if(S.idx>=S.queue.length)endSession();else renderCard()}
 function endSession(){
-  const S=state.session;stopPlayback();if(rec){try{rec.stop()}catch(e){}rec=null}
-  const scored=S.results.filter(r=>r.score!=null);const avg=scored.length?Math.round(mean(scored.map(r=>r.score))):null;
-  $('#sum-count').textContent=S.results.length;$('#sum-avg').textContent=avg==null?'—':avg;
-  const byId={};for(const r of S.results)byId[r.id]=r;const low=Object.values(byId).filter(r=>r.score!=null?r.score<80:r.grade<=2).sort((a,b)=>(a.score??0)-(b.score??0));
+  const S=state.session;stopAllAudio();if(cap){const c=cap;cap=null;c.stop()}
+  const done=S.results.filter(r=>!r.skipped);
+  const scored=done.filter(r=>r.score!=null);const avg=scored.length?Math.round(mean(scored.map(r=>r.score))):null;
+  $('#sum-count').textContent=done.length;$('#sum-avg').textContent=avg==null?'—':avg;
+  const byId={};for(const r of done)byId[r.id]=r;const low=Object.values(byId).filter(r=>r.score!=null?r.score<80:r.grade<=2).sort((a,b)=>(a.score??0)-(b.score??0));
   $('#sum-low').innerHTML=low.length?low.map(r=>`<div class="s"><span class="en">${esc(state.bank.byId[r.id]?state.bank.byId[r.id].text:r.id)}</span><span class="score-pill ${scoreClass(r.score)}">${r.score==null?'—':r.score}</span></div>`).join(''):'<p class="small muted">모두 80점 이상이에요.</p>';
   $('#sum-note').textContent=low.length?`${low.length}문장은 더 짧은 간격으로 다시 나와요.`:'간격이 늘어나요. 내일 또 봐요.';
   $('#btn-sum-redo').hidden=!low.length;$('#btn-sum-redo').onclick=()=>startSession(low.map(r=>r.id),'다시');
-  state.session=null;showView('summary');syncIfReady(true);
+  state.session=null;cur=null;showView('summary');syncIfReady(true);
 }
 
 /* ===================== capture teacher audio from phone mic ===================== */
-let capRec=null;
 async function toggleCapture(){
   const b=$('#btn-capture');if(!cur)return;
-  if(capRec){const {pcm,sr}=capRec.stop();capRec=null;b.textContent='선생님 음성 직접 녹음';const pcm16=resample(pcm,sr);if(pcm16.length<16000*0.3){toast('너무 짧아요');return}const wav=toWav(pcm16);await idb.set('local:'+cur.item.id,{wav,at:Date.now()});delete teacherCache[cur.item.id];const t=await getTeacher(cur.item);cur.teacher=t;$('#btn-teacher').textContent='▶ 선생님 (내 녹음)';toast('이 기기에 선생님 음성을 저장했어요');return}
-  if(rec){toast('내 녹음을 먼저 멈춰주세요');return}
-  try{capRec=new Recorder();await capRec.start();capRec.onauto=null;b.textContent='■ 선생님 음성 저장';toast('영상을 틀고 선생님이 이 문장을 말하는 동안 녹음하세요. 끝나면 다시 누르기.',3500)}catch(e){capRec=null;toast('마이크를 쓸 수 없어요')}
+  if(capT){const c=capT;capT=null;b.textContent='선생님 음성 직접 녹음';const blob=await c.stop();let pcm;try{pcm=trimSilence(await blobToPcm16(blob))}catch(e){toast('녹음을 읽지 못했어요');return}if(pcm.length<16000*0.3){toast('너무 짧아요');return}await idb.set('local:'+cur.item.id,{wav:toWav(pcm),at:Date.now()});delete teacherCache[cur.item.id];cur.teacher=await getTeacher(cur.item);$('#btn-teacher').textContent=teacherLabel();toast('이 기기에 선생님 음성을 저장했어요');return}
+  if(cap){toast('내 녹음을 먼저 멈춰 주세요');return}
+  stopAllAudio();const c=new Capture();try{await c.start()}catch(e){micError(e);return}
+  c.onauto=null;clearTimeout(c.maxT);c.maxT=setTimeout(()=>{if(capT===c)toggleCapture()},30000);capT=c;b.textContent='■ 선생님 음성 저장';
+  toast('영상을 틀고 선생님이 이 문장을 말하는 동안 녹음하세요. 끝나면 다시 누르기.',3500);
 }
 
 /* ===================== sync (progress.json in the private repo) ===================== */
@@ -1005,7 +1311,19 @@ async function syncIfReady(silent){
 }
 
 /* ===================== views ===================== */
-function showView(v){state.view=v;$$('.view').forEach(s=>s.hidden=true);$('#view-'+v).hidden=false;$$('.tabbar button').forEach(b=>b.classList.toggle('active',b.dataset.view===v||(['practice','summary','homework'].includes(v)&&b.dataset.view==='today')));window.scrollTo(0,0);if(v==='today')renderToday();if(v==='bank')renderBank();if(v==='stats')renderStats();if(v==='settings')renderSettings();if(v!=='practice'){stopPlayback();if(rec){try{rec.stop()}catch(e){}rec=null;$('#btn-rec').textContent='● 녹음';$('#btn-rec').classList.remove('on')}}if(v!=='homework'&&hwRec){try{hwRec.stop()}catch(e){}hwRec=null;$('#hw-rec').textContent='● 녹음';$('#hw-rec').classList.remove('on')}}
+function stopCaptures(){
+  if(cap){const c=cap;cap=null;c.stop();resetRecUI()}
+  if(capT){const c=capT;capT=null;c.stop();$('#btn-capture').textContent='선생님 음성 직접 녹음'}
+  if(hwCap){const c=hwCap;hwCap=null;c.stop();$('#hw-rec').textContent='● 녹음';$('#hw-rec').classList.remove('on');$('#hw-level').hidden=true}
+}
+function showView(v){
+  state.view=v;$$('.view').forEach(s=>s.hidden=true);$('#view-'+v).hidden=false;
+  $$('.tabbar button').forEach(b=>b.classList.toggle('active',b.dataset.view===v||(['practice','summary','homework'].includes(v)&&b.dataset.view==='today')));
+  window.scrollTo(0,0);stopAllAudio();
+  if(v!=='practice'&&(cap||capT))stopCaptures();
+  if(v!=='homework'&&hwCap)stopCaptures();
+  if(v==='today')renderToday();if(v==='bank')renderBank();if(v==='stats')renderStats();if(v==='settings')renderSettings();
+}
 function renderToday(){
   const d=new Date();$('#today-date').textContent=`${d.getMonth()+1}월 ${d.getDate()}일 (${'일월화수목금토'[d.getDay()]})`;
   $('#demo-banner').hidden=!(state.bank.demo||state.bank.source==='demo');
@@ -1019,7 +1337,7 @@ function renderToday(){
   const cv=coverage();const pct=cv.total?Math.round(cv.started/cv.total*100):0;$('#cov-pct').textContent=pct+'%';$('#cov-bar').style.width=pct+'%';$('#cov-sub').textContent=`${cv.started}/${cv.total} 시작 · 숙달 ${cv.mastered}`;
   const td=state.settings.targetDate;const daysLeft=td?Math.max(0,dayDiff(todayStr(),td)):null;$('#goal-date').textContent=td?`목표일 ${td}`:'';
   const unstarted=cv.total-cv.started;const perDay=daysLeft?Math.ceil(unstarted/Math.max(1,daysLeft)):null;
-  $('#goal-text').textContent=daysLeft==null?'설정에서 목표일을 정하면 하루에 몇 개씩 새로 봐야 하는지 알려드려요.':unstarted===0?'모든 문장을 한 번 이상 연습했어요. 이제 점수를 올리는 단계예요.':`${daysLeft}일 남음. 아직 안 본 문장 ${unstarted}개 → 하루 ${perDay}개씩 새로 보면 목표일에 맞아요 (지금 설정: 하루 ${state.settings.newPerDay}개 + 현재 세트).`;
+  $('#goal-text').textContent=daysLeft==null?'설정에서 목표일을 정하면 하루에 몇 개씩 새로 봐야 하는지 알려드려요.':unstarted===0?'모든 문장을 한 번 이상 연습했어요. 이제 점수를 올리는 단계예요.':`${daysLeft}일 남음. 아직 안 본 문장 ${unstarted}개 → 하루 ${perDay}개씩 새로 보면 목표일에 맞아요 (지금 설정: 하루 ${state.settings.newPerDay}개 + 최신 수업·세트).`;
   const since=addDays(todayStr(),-6);const recent=state.log.filter(e=>e.t.slice(0,10)>=since);$('#w7-attempts').textContent=recent.length;const sc=recent.filter(e=>e.score!=null).map(e=>e.score);$('#w7-avg').textContent=sc.length?Math.round(mean(sc)):'—';
   const days=new Set(state.log.map(e=>e.t.slice(0,10)));let streak=0,dd=todayStr();if(!days.has(dd))dd=addDays(dd,-1);while(days.has(dd)){streak++;dd=addDays(dd,-1)}$('#streak').textContent=streak?`${streak}일 연속`:'';
   const ls=store.get(LS.sync,null);$('#sync-state').textContent=!gh.ready()?'미연결':ls?ls.slice(5,16).replace('T',' '):'아직 안 함';
@@ -1035,7 +1353,7 @@ function renderBank(){
   const list=state.bank.items.filter(i=>(bankFilter.tier===0||i.tier===bankFilter.tier)&&(!bankFilter.lesson||i.lesson===bankFilter.lesson)&&(!q||i.text.toLowerCase().includes(q)||(i.ko||'').includes(q))).sort((a,b)=>{if(a.lesson!==b.lesson)return a.lesson<b.lesson?1:-1;return (a.seq||0)-(b.seq||0)||(a.id<b.id?-1:1)});
   $('#bank-count').textContent=`${list.length}문장`;
   const page=state.bankPage*40;const shown=list.slice(0,page);
-  $('#bank-list').innerHTML=shown.map(i=>{const p=P(i.id);const sc=p?p.avg:null;return`<div class="item"><div class="t"><div class="en">${esc(i.text)}</div>${i.ko?`<div class="k">${esc(i.ko)}</div>`:''}<div class="m"><span class="chip ${tierClass(i.tier)}">${esc((state.bank.tiers[i.tier]||{}).short||i.tier)}</span><span>${esc(i.lesson)}</span>${i.kind!=='sentence'?`<span>${kindLabel(i.kind)}</span>`:''}${i.clip||i.local?'':''}<span class="score-pill ${scoreClass(sc)}">${sc==null?'미학습':sc}</span>${p&&p.due?`<span>다음 ${esc(p.due.slice(5))}</span>`:''}</div></div><button class="btn small" data-id="${esc(i.id)}">연습</button></div>`}).join('')||'<p class="small muted">문장이 없어요.</p>';
+  $('#bank-list').innerHTML=shown.map(i=>{const p=P(i.id);const sc=p?p.avg:null;return`<div class="item"><div class="t"><div class="en">${esc(i.text)}</div>${i.ko?`<div class="k">${esc(i.ko)}</div>`:''}<div class="m"><span class="chip ${tierClass(i.tier)}">${esc((state.bank.tiers[i.tier]||{}).short||i.tier)}</span><span>${esc(i.lesson)}</span>${i.kind!=='sentence'?`<span>${kindLabel(i.kind)}</span>`:''}${i.clip?'':'<span>음성 없음</span>'}<span class="score-pill ${scoreClass(sc)}">${sc==null?'미학습':sc}</span>${p&&p.due?`<span>다음 ${esc(p.due.slice(5))}</span>`:''}</div></div><button class="btn small" data-id="${esc(i.id)}">연습</button></div>`}).join('')||'<p class="small muted">문장이 없어요.</p>';
   $('#bank-list').querySelectorAll('button[data-id]').forEach(b=>b.addEventListener('click',()=>startSession([b.dataset.id],'단일')));
   $('#btn-bank-more').hidden=shown.length>=list.length;$('#btn-bank-more').onclick=()=>{state.bankPage++;renderBank()};
   $('#btn-bank-practice').onclick=()=>startSession(list.slice(0,40).map(i=>i.id),'목록');
@@ -1044,8 +1362,7 @@ function renderBank(){
 function renderStats(){
   const items=state.bank.items,tiers=state.bank.tiers;$('#stats-total').textContent=`${items.length}문장`;
   $('#tier-cov').innerHTML=Object.keys(tiers).sort().map(k=>{const its=items.filter(i=>i.tier===+k);if(!its.length)return'';const st=its.filter(i=>P(i.id)).length,ms=its.filter(i=>P(i.id)&&P(i.id).state==='mastered').length;return`<div class="tier-row"><span>${esc(tiers[k].short)} · ${esc(tiers[k].name)}</span><span class="num muted">${st}/${its.length} · 숙달 ${ms}</span><div class="bar"><i style="width:${st/its.length*100}%"></i></div></div>`}).join('')||'<p class="small muted">자료가 없어요.</p>';
-  // trend
-  const c=$('#trend');const W=c.clientWidth||320,H=160,dpr=window.devicePixelRatio||1;c.width=W*dpr;c.height=H*dpr;const g=c.getContext('2d');g.scale(dpr,dpr);g.clearRect(0,0,W,H);
+  const c=$('#trend');const W=c.clientWidth||320,H=160,dpr=window.devicePixelRatio||1;c.width=W*dpr;c.height=H*dpr;const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
   const days=[];for(let k=13;k>=0;k--)days.push(addDays(todayStr(),-k));
   const per=days.map(d=>{const s=state.log.filter(e=>e.t.slice(0,10)===d&&e.score!=null).map(e=>e.score);return{d,avg:s.length?mean(s):null,n:s.length}});
   const padL=28,padR=8,padT=10,padB=22,iw=W-padL-padR,ih=H-padT-padB;const y=v=>padT+ih*(1-v/100),x=i=>padL+iw*(i+0.5)/14;
@@ -1055,19 +1372,40 @@ function renderStats(){
   const maxN=Math.max(1,...per.map(p=>p.n));g.fillStyle=getVar('--teacher-soft');per.forEach((p,i)=>{if(p.n){const h=ih*0.5*p.n/maxN;g.fillRect(x(i)-iw/14*0.3,padT+ih-h,iw/14*0.6,h)}});
   g.strokeStyle=getVar('--me');g.lineWidth=2.5;g.lineJoin='round';g.beginPath();let started=false;per.forEach((p,i)=>{if(p.avg==null)return;if(!started){g.moveTo(x(i),y(p.avg));started=true}else g.lineTo(x(i),y(p.avg))});g.stroke();
   g.fillStyle=getVar('--me');per.forEach((p,i)=>{if(p.avg!=null){g.beginPath();g.arc(x(i),y(p.avg),3,0,Math.PI*2);g.fill()}});
-  // forecast
   const today=todayStr();$('#forecast').innerHTML=[0,1,2,3,4,5,6].map(k=>{const d=addDays(today,k);const n=items.filter(i=>{const p=P(i.id);return p&&p.due&&(k===0?p.due<=d:p.due===d)}).length;return`<div class="d ${k===0?'today':''}">${k===0?'오늘':d.slice(5).replace('-','/')}<b>${n}</b></div>`}).join('');
   const weak=items.filter(i=>{const p=P(i.id);return p&&p.reps>=1&&p.avg!=null&&p.avg<75}).sort((a,b)=>P(a.id).avg-P(b.id).avg).slice(0,15);
   $('#weak-list').innerHTML=weak.map(i=>`<div class="item"><div class="t"><div class="en">${esc(i.text)}</div><div class="m"><span>${esc(i.lesson)}</span><span class="score-pill ${scoreClass(P(i.id).avg)}">${P(i.id).avg}</span><span>${P(i.id).reps}회</span></div></div><button class="btn small" data-id="${esc(i.id)}">연습</button></div>`).join('')||'<p class="small muted">아직 취약 문장이 없어요.</p>';
   $('#weak-list').querySelectorAll('button[data-id]').forEach(b=>b.addEventListener('click',()=>startSession([b.dataset.id],'단일')));
   if(weak.length){const b=document.createElement('button');b.className='btn wide';b.textContent='취약 문장 전체 연습';b.addEventListener('click',()=>startSession(weak.map(i=>i.id),'취약'));$('#weak-list').appendChild(b)}
 }
+function renderAsrState(){
+  const el=$('#asr-state');if(!el)return;const s=state.settings;
+  el.textContent=s.asrMode!=='device'?'':asr.ready?'모델 준비됨':asr.loading?asr.text():asr.lastError?('실패: '+asr.lastError):s.asrConsent?'첫 녹음 때 내려받아요':'아직 안 받음';
+  $('#btn-asr-load').hidden=s.asrMode!=='device'||asr.ready;
+}
 function renderSettings(){
   const s=state.settings;for(const k of ['ghOwner','ghRepo','ghBranch','ghToken','dailyTarget','newPerDay','weekShare','strugglePct','targetDate','azureKey','azureRegion','ttsRate']){const el=$('#s-'+k);if(el&&document.activeElement!==el)el.value=s[k]??''}
-  $('#s-showKo').checked=!!s.showKo;$('#s-hideText').checked=!!s.hideText;$('#s-useBrowserSR').checked=s.useBrowserSR!==false;$('#s-ttsRate-val').textContent=(+s.ttsRate).toFixed(2)+'×';
+  $('#s-showKo').checked=!!s.showKo;$('#s-hideText').checked=!!s.hideText;$('#s-ttsRate-val').textContent=(+s.ttsRate).toFixed(2)+'×';
+  const am=$('#s-asrMode');am.value=s.asrMode||'device';am.querySelector('option[value="browser"]').disabled=IS_IOS||!(window.SpeechRecognition||window.webkitSpeechRecognition);
+  renderAsrState();
   const sel=$('#add-tier');if(!sel.options.length){sel.innerHTML=Object.keys(state.bank.tiers).sort().map(k=>`<option value="${k}">${esc(state.bank.tiers[k].short)} · ${esc(state.bank.tiers[k].name)}</option>`).join('')}
   if(!$('#add-lesson').value)$('#add-lesson').value=todayStr();
   $('#gh-status').textContent=gh.ready()?`연결 설정됨 · 자료 출처: ${state.bank.source==='github'?'저장소':state.bank.source}`:'아직 연결 안 됨';
+}
+let micTestCap=null,micTestBlob=null;
+async function micTest(){
+  const b=$('#btn-mictest'),msg=$('#mictest-msg'),lv=$('#mictest-level');if(micTestCap)return;
+  stopAllAudio();b.disabled=true;$('#btn-mictest-play').hidden=true;const c=new Capture();
+  try{await c.start()}catch(e){b.disabled=false;msg.textContent=micErrorText(e);return}
+  micTestCap=c;lv.hidden=false;c.onlevel=v=>{lv.querySelector('i').style.width=clamp(v*500,2,100)+'%'};c.onauto=null;
+  msg.textContent='3초 동안 아무 문장이나 말해 보세요…';await sleep(3200);
+  const blob=await c.stop();micTestCap=null;b.disabled=false;lv.hidden=true;micTestBlob=blob;$('#btn-mictest-play').hidden=false;
+  let pcm=null;try{pcm=await blobToPcm16(blob)}catch(e){msg.textContent='녹음 파일을 읽지 못했어요 ('+((e&&e.name)||'오류')+'). 이 브라우저에서 녹음이 안 될 수 있어요.';return}
+  const an=analyzeVoice(pcm);let pk=0;for(let i=0;i<pcm.length;i++)pk=Math.max(pk,Math.abs(pcm[i]));
+  if(!an.span){msg.textContent='소리가 안 잡혔어요. 마이크 권한, 폰 아래쪽 마이크 구멍, 블루투스 이어폰 연결을 확인해 주세요.';return}
+  let v=0;for(let i=an.span.first;i<=an.span.last;i++)if(!isNaN(an.st[i]))v++;const voiced=v/(an.span.last-an.span.first+1);
+  const level=pk<0.05?'작아요 (폰을 입에 조금 더 가까이)':pk>0.98?'너무 커요 (조금 떨어져서)':'좋아요';
+  msg.textContent=`소리 크기: ${level} · 높낮이 인식: 말한 구간의 ${Math.round(voiced*100)}% ${voiced<0.35?'(낮음 — 조용한 곳에서, 조금 더 크게)':'(좋음 — 억양 비교 가능)'}${c.meterWorks?'':' · 자동 멈춤은 이 기기에서 안 될 수 있어요(■ 멈춤 사용)'}`;
 }
 function bindSettings(){
   const num=['dailyTarget','newPerDay','weekShare','strugglePct'];
@@ -1075,7 +1413,10 @@ function bindSettings(){
   $('#s-ttsRate').addEventListener('input',()=>{$('#s-ttsRate-val').textContent=(+$('#s-ttsRate').value).toFixed(2)+'×'});
   $('#s-showKo').addEventListener('change',e=>{state.settings.showKo=e.target.checked;saveSettings()});
   $('#s-hideText').addEventListener('change',e=>{state.settings.hideText=e.target.checked;saveSettings()});
-  $('#s-useBrowserSR').addEventListener('change',e=>{state.settings.useBrowserSR=e.target.checked;srBroken=false;saveSettings()});
+  $('#s-asrMode').addEventListener('change',e=>{state.settings.asrMode=e.target.value;saveSettings();renderAsrState()});
+  $('#btn-asr-load').addEventListener('click',()=>{state.settings.asrConsent=true;saveSettings();asr.ensure().then(()=>toast('단어 인식 모델이 준비됐어요')).catch(e=>toast('모델을 받지 못했어요: '+e.message,4000));renderAsrState()});
+  $('#btn-mictest').addEventListener('click',micTest);
+  $('#btn-mictest-play').addEventListener('click',()=>{if(micTestBlob)player.play('mictest',micTestBlob)});
   $('#btn-gh-test').addEventListener('click',async()=>{if(!gh.ready()){toast('사용자명·저장소·토큰을 모두 입력하세요');return}$('#gh-status').textContent='확인 중…';try{const r=await gh.raw('bank.json');$('#gh-status').textContent=r?'연결 성공 · bank.json 확인됨':'연결은 됐지만 bank.json이 아직 없어요'}catch(e){$('#gh-status').textContent='실패: '+e.message+(String(e.message).includes('401')?' (토큰 확인)':String(e.message).includes('404')?' (저장소 이름 또는 토큰 권한 확인)':'')}});
   $('#btn-reload').addEventListener('click',async()=>{await loadBank();renderSettings();toast(`${state.bank.items.length}문장 불러옴`)});
   $('#btn-sync').addEventListener('click',()=>syncIfReady(false));
@@ -1087,14 +1428,13 @@ function bindSettings(){
 }
 
 /* ===================== homework recording (submit one file) ===================== */
-let hw=null,hwRec=null;
+let hw=null,hwCap=null;
 function loadScriptAny(urls){return(async()=>{for(const u of urls){try{await new Promise((res,rej)=>{const s=document.createElement('script');s.src=u;s.onload=res;s.onerror=rej;document.head.appendChild(s)});return true}catch(e){}}return false})()}
 function hwKey(id){return 'hw:'+hw.id+':'+id}
 async function startHomework(ids,label){
   if(!ids.length){toast('녹음할 문장이 없어요');return}
   const key=todayStr()+'|'+label;
-  hw={id:key,ids:ids.slice(),idx:0,takes:{},label,blob:null,ext:'mp3'};
-  // resume takes saved on this device
+  hw={id:key,ids:ids.slice(),idx:0,takes:{},wavs:{},label,blob:null,ext:'mp3'};
   const keys=await idb.keys('hw:'+key+':');
   for(const k of keys){const id=k.slice(('hw:'+key+':').length);const v=await idb.get(k);if(v&&v.pcm&&hw.ids.includes(id))hw.takes[id]=new Float32Array(v.pcm)}
   const firstMissing=hw.ids.findIndex(id=>!hw.takes[id]);hw.idx=firstMissing<0?0:firstMissing;
@@ -1103,11 +1443,11 @@ async function startHomework(ids,label){
   if(keys.length)toast(`저장된 녹음 ${Object.keys(hw.takes).length}개를 불러왔어요`);
 }
 function renderHw(){
-  const id=hw.ids[hw.idx],item=state.bank.byId[id];if(!item){return}
-  stopPlayback();
+  const id=hw.ids[hw.idx],item=state.bank.byId[id];if(!item)return;
+  stopAllAudio();
   $('#hw-count').textContent=`${hw.idx+1}/${hw.ids.length}`;$('#hw-bar').style.width=(Object.keys(hw.takes).length/hw.ids.length*100)+'%';
   $('#hw-label').textContent=hw.label;$('#hw-text').textContent=item.text;$('#hw-ko').textContent=item.ko||'';$('#hw-ko').hidden=!item.ko;$('#hw-note').textContent=item.note||'';$('#hw-note').hidden=!item.note;
-  const has=!!hw.takes[id];$('#hw-me').disabled=!has;$('#hw-msg').textContent=has?'녹음돼 있어요. 다시 녹음하면 덮어써요.':'녹음을 누르고 문장을 읽으세요. 말이 끝나면 자동으로 멈춰요.';
+  const has=!!hw.takes[id];$('#hw-me').disabled=!has;$('#hw-me').textContent='▶ 내 소리';$('#hw-msg').textContent=has?'녹음돼 있어요. 다시 녹음하면 덮어써요.':'녹음을 누르고 문장을 읽으세요. 말이 끝나면 자동으로 멈춰요.';
   $('#hw-prev').disabled=hw.idx===0;$('#hw-next').textContent=hw.idx>=hw.ids.length-1?'목록으로':'다음 →';
   const done=Object.keys(hw.takes).filter(k=>hw.ids.includes(k)).length;$('#hw-done').textContent=`${done}/${hw.ids.length}`;
   $('#hw-list').innerHTML=hw.ids.map((x,i)=>{const it=state.bank.byId[x];return`<button data-i="${i}" class="${i===hw.idx?'cur':''}"><span class="n">${i+1}</span><span class="tx">${esc(it?it.text:x)}</span><span class="st ${hw.takes[x]?'done':''}"></span></button>`}).join('');
@@ -1116,29 +1456,38 @@ function renderHw(){
   $('#hw-teacher').textContent='▶ 듣기';getTeacher(item);
 }
 async function hwToggleRecord(){
-  const btn=$('#hw-rec');
-  if(hwRec){await hwStopRecord();return}
-  stopPlayback();
-  try{hwRec=new Recorder();await hwRec.start()}catch(e){hwRec=null;toast('마이크를 쓸 수 없어요. 브라우저의 마이크 권한을 확인해 주세요.');return}
-  btn.textContent='■ 멈춤';btn.classList.add('on');$('#hw-level').hidden=false;$('#hw-msg').textContent='읽으세요… (말이 끝나면 자동으로 멈춰요)';
-  const lv=$('#hw-level i');hwRec.onlevel=v=>{lv.style.width=clamp(v*500,2,100)+'%'};hwRec.onauto=()=>hwStopRecord();
+  const btn=$('#hw-rec');if(hwCap){await hwStopRecord();return}
+  stopAllAudio();btn.disabled=true;const c=new Capture();
+  try{await c.start()}catch(e){btn.disabled=false;micError(e);return}
+  hwCap=c;btn.disabled=false;btn.textContent='■ 멈춤';btn.classList.add('on');$('#hw-level').hidden=false;$('#hw-msg').textContent='읽으세요… (말이 끝나면 자동으로 멈춰요)';
+  const lv=$('#hw-level i');c.onlevel=v=>{lv.style.width=clamp(v*500,2,100)+'%'};c.onauto=()=>hwStopRecord();
+  setTimeout(()=>{if(hwCap===c&&!c.meterWorks){$('#hw-msg').textContent='다 읽으면 ■ 멈춤을 눌러 주세요.';$('#hw-level').hidden=true}},1800);
 }
 async function hwStopRecord(){
-  if(!hwRec)return;const btn=$('#hw-rec');btn.textContent='● 녹음';btn.classList.remove('on');$('#hw-level').hidden=true;
-  const {pcm,sr}=hwRec.stop();hwRec=null;
-  const pcm16=trimSilence(resample(pcm,sr));
+  const c=hwCap;if(!c)return;hwCap=null;const btn=$('#hw-rec');btn.textContent='● 녹음';btn.classList.remove('on');$('#hw-level').hidden=true;$('#hw-msg').textContent='저장 중…';
+  const blob=await c.stop();let pcm16;
+  try{pcm16=trimSilence(await blobToPcm16(blob))}catch(e){$('#hw-msg').textContent='녹음을 읽지 못했어요. 다시 녹음해 주세요.';return}
   if(pcm16.length<16000*0.3){$('#hw-msg').textContent='소리가 거의 안 잡혔어요. 다시 녹음해 주세요.';return}
-  const id=hw.ids[hw.idx];hw.takes[id]=pcm16;hw.blob=null;
+  const id=hw.ids[hw.idx];hw.takes[id]=pcm16;delete hw.wavs[id];hw.blob=null;
   await idb.set(hwKey(id),{pcm:pcm16.buffer,at:Date.now()});
   renderHw();$('#hw-msg').textContent='저장됐어요. ▶ 내 소리로 확인하고, 괜찮으면 다음으로.';
 }
 function trimSilence(pcm){const frame=160;let maxR=0;const n=Math.floor(pcm.length/frame);const r=new Float32Array(n);for(let i=0;i<n;i++){let s=0;for(let j=0;j<frame;j++){const v=pcm[i*frame+j];s+=v*v}r[i]=Math.sqrt(s/frame);if(r[i]>maxR)maxR=r[i]}const gate=Math.max(0.004,maxR*0.06);let a=0,b=n-1;while(a<n&&r[a]<gate)a++;while(b>a&&r[b]<gate)b--;const s=Math.max(0,(a-15)*frame),e=Math.min(pcm.length,(b+16)*frame);return pcm.slice(s,e)}
-function hwPlayMine(){const id=hw.ids[hw.idx];const t=hw.takes[id];if(!t)return;if(playing){stopPlayback();return}playBuffer(pcmToBuffer(t,16000))}
-async function hwPlayTeacher(){const item=state.bank.byId[hw.ids[hw.idx]];const b=$('#hw-teacher');if(playing||('speechSynthesis' in window&&speechSynthesis.speaking)){stopPlayback();return}const t=await getTeacher(item);b.textContent='■ 정지';if(t){playBuffer(t.buffer,0,null,()=>{b.textContent='▶ 듣기'})}else{speak(item.text,()=>{b.textContent='▶ 듣기'})}}
+function hwPlayMine(){
+  const id=hw.ids[hw.idx];const t=hw.takes[id];if(!t)return;const b=$('#hw-me');
+  if(player.busy){player.stop();return}
+  if(!hw.wavs[id])hw.wavs[id]=wavBlob(t);b.textContent='■ 정지';player.play(hwKey(id),hw.wavs[id],{onend:()=>{b.textContent='▶ 내 소리'}});
+}
+function hwPlayTeacher(){
+  const item=state.bank.byId[hw.ids[hw.idx]];const b=$('#hw-teacher');
+  if(player.busy||speechBusy()){stopAllAudio();b.textContent='▶ 듣기';return}
+  const go=t=>{b.textContent='■ 정지';if(t)player.play('t:'+item.id,t.blob,{onend:()=>{b.textContent='▶ 듣기'}});else speak(item.text,()=>{b.textContent='▶ 듣기'})};
+  if(item.id in teacherCache)go(teacherCache[item.id]);else getTeacher(item).then(go);
+}
 async function hwBuild(){
   const ids=hw.ids.filter(id=>hw.takes[id]);if(!ids.length){toast('녹음된 문장이 없어요');return}
   const gap=new Float32Array(Math.round(16000*0.7));let total=0;const parts=[];
-  for(const id of ids){let t=hw.takes[id];let peak=0;for(let i=0;i<t.length;i++)peak=Math.max(peak,Math.abs(t[i]));const g=peak>0?Math.min(4,0.89/peak):1;const u=new Float32Array(t.length);for(let i=0;i<t.length;i++)u[i]=t[i]*g;parts.push(u,gap);total+=u.length+gap.length}
+  for(const id of ids){const t=hw.takes[id];let peak=0;for(let i=0;i<t.length;i++)peak=Math.max(peak,Math.abs(t[i]));const g=peak>0?Math.min(4,0.89/peak):1;const u=new Float32Array(t.length);for(let i=0;i<t.length;i++)u[i]=t[i]*g;parts.push(u,gap);total+=u.length+gap.length}
   const all=new Float32Array(total);let o=0;for(const p of parts){all.set(p,o);o+=p.length}
   $('#hw-build').disabled=true;$('#hw-build').textContent='만드는 중…';
   let blob=null,ext='mp3';
@@ -1158,12 +1507,12 @@ function hwShare(){
   else{toast('이 브라우저는 파일 공유 시트를 지원하지 않아요. 다운로드 버튼을 쓰세요.')}
 }
 function hwCopyList(){const txt=hw.ids.filter(id=>hw.takes[id]).map((id,i)=>`${i+1}. ${state.bank.byId[id].text}`).join('\n');navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>toast('문장 목록을 복사했어요')).catch(()=>toast('복사가 막혀 있어요'))}
-async function hwClear(){if(!hw)return;for(const id of hw.ids)await idb.del(hwKey(id));hw.takes={};hw.blob=null;renderHw();toast('이 숙제 녹음을 지웠어요')}
+async function hwClear(){if(!hw)return;for(const id of hw.ids)await idb.del(hwKey(id));hw.takes={};hw.wavs={};hw.blob=null;renderHw();toast('이 숙제 녹음을 지웠어요')}
 function bindHomework(){
   $('#btn-hw-set').addEventListener('click',()=>startHomework(weekItems().sort(sortNew).map(i=>i.id),weekLabel()));
   $('#btn-hw-lesson').addEventListener('click',()=>{const L=latestLesson();const ids=state.bank.items.filter(i=>i.lesson===L).sort(sortNew).map(i=>i.id);startHomework(ids,L?L+' 수업':'최신 수업')});
   $('#btn-hw-resume').addEventListener('click',()=>{const l=store.get('bear.hw.last',null);if(l)startHomework(l.ids,l.label)});
-  $('#hw-exit').addEventListener('click',()=>{if(hwRec){try{hwRec.stop()}catch(e){}hwRec=null}showView('today')});
+  $('#hw-exit').addEventListener('click',()=>showView('today'));
   $('#hw-rec').addEventListener('click',hwToggleRecord);
   $('#hw-me').addEventListener('click',hwPlayMine);
   $('#hw-teacher').addEventListener('click',hwPlayTeacher);
@@ -1181,22 +1530,24 @@ function bind(){
   $$('.tabbar button').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
   $('#btn-weak').addEventListener('click',()=>{const w=state.bank.items.filter(i=>{const p=P(i.id);return p&&p.avg!=null&&p.avg<75}).sort((a,b)=>P(a.id).avg-P(b.id).avg).slice(0,10);if(!w.length){toast('아직 취약 문장이 없어요');return}startSession(w.map(i=>i.id),'취약')});
   $('#btn-random').addEventListener('click',()=>{const a=state.bank.items.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}startSession(a.slice(0,10).map(i=>i.id),'랜덤')});
-  $('#btn-week').addEventListener('click',()=>{const w=weekItems().sort(sortNew);startSession(w.map(i=>i.id),'이번 주')});
-  $('#prac-exit').addEventListener('click',()=>{if(state.session&&state.session.results.length){endSession()}else{state.session=null;showView('today')}});
+  $('#btn-week').addEventListener('click',()=>{const w=weekItems().sort(sortNew);startSession(w.map(i=>i.id),'현재 세트')});
+  $('#prac-exit').addEventListener('click',()=>{if(state.session&&state.session.results.some(r=>!r.skipped)){endSession()}else{state.session=null;cur=null;showView('today')}});
   $('#prac-hide').addEventListener('click',()=>{if(!cur)return;cur.hidden=!cur.hidden;$('#c-text').classList.toggle('hidden-text',cur.hidden);$('#prac-hide').textContent=cur.hidden?'보기':'가리기'});
   $('#btn-teacher').addEventListener('click',playTeacher);
   $('#btn-rec').addEventListener('click',toggleRecord);
-  $('#btn-me').addEventListener('click',()=>{if(!cur||!cur.lastPcm)return;if(playing){stopPlayback();return}playBuffer(pcmToBuffer(cur.lastPcm,cur.lastSr))});
-  $('#btn-retry').addEventListener('click',()=>{$('#result').hidden=true;toggleRecord()});
+  $('#btn-me').addEventListener('click',playMine);
+  $('#btn-retry').addEventListener('click',()=>{toggleRecord()});
   $('#btn-next').addEventListener('click',finishCard);
-  $$('.grade-row .g').forEach(b=>b.addEventListener('click',()=>{cur.grade=parseInt(b.dataset.g);$$('.grade-row .g').forEach(x=>x.classList.toggle('sel',x===b))}));
+  $$('.grade-row .g').forEach(b=>b.addEventListener('click',()=>{if(!cur)return;cur.grade=parseInt(b.dataset.g);cur.gradeManual=true;$$('.grade-row .g').forEach(x=>x.classList.toggle('sel',x===b))}));
+  $('#graph-wrap').addEventListener('toggle',()=>{if($('#graph-wrap').open&&cur&&cur.current)drawAligned(cur.current)});
   $('#btn-capture').addEventListener('click',toggleCapture);
   $('#btn-sum-home').addEventListener('click',()=>showView('today'));
   $('#bank-q').addEventListener('input',e=>{bankFilter.q=e.target.value;state.bankPage=1;renderBank()});
   $('#bank-lesson').addEventListener('change',e=>{bankFilter.lesson=e.target.value;state.bankPage=1;renderBank()});
   bindSettings();
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){stopPlayback()}});
-  if('speechSynthesis' in window){speechSynthesis.onvoiceschanged=()=>{}}
+  asr.onchange=()=>{if(cur&&cur.current&&cur.current.asrState==='running')renderAsrBox(cur.current);if(state.view==='settings')renderAsrState()};
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){stopAllAudio();if(cap||capT||hwCap){stopCaptures();if(state.view==='practice')$('#rec-msg').textContent='앱을 벗어나서 녹음을 멈췄어요. 다시 녹음해 주세요.'}}});
+  window.addEventListener('resize',()=>{if(cur&&cur.current&&$('#graph-wrap').open)drawAligned(cur.current)});
 }
 async function init(){
   bind();
