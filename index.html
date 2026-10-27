@@ -568,9 +568,9 @@ const gh={
 
 /* ===================== bank ===================== */
 function normalizeBank(j,source){
-  const items=(j.items||[]).filter(x=>x&&x.text&&x.id).map(x=>({id:String(x.id),text:String(x.text).trim(),ko:x.ko||'',tier:clamp(parseInt(x.tier)||3,1,6),source:x.source||'',lesson:x.lesson||'',kind:x.kind||'sentence',group:x.group||null,role:x.role||null,seq:x.seq||0,clip:x.clip||null,words:Array.isArray(x.words)?x.words:null,note:x.note||'',sets:Array.isArray(x.sets)?x.sets.map(String):[]}));
+  const items=(j.items||[]).filter(x=>x&&x.text&&x.id).map(x=>({id:String(x.id),text:String(x.text).trim(),ko:x.ko||'',tier:clamp(parseInt(x.tier)||3,1,6),source:x.source||'',lesson:x.lesson||'',kind:x.kind||'sentence',group:x.group||null,role:x.role||null,seq:x.seq||0,clip:x.clip||null,words:Array.isArray(x.words)?x.words:null,note:x.note||'',sets:Array.isArray(x.sets)?x.sets.map(String):[],stitched:!!x.stitched,clipRev:x.clipRev||0}));
   const tiers=Object.assign({},DEFAULT_TIERS);if(j.tiers)for(const k of Object.keys(j.tiers)){tiers[k]=Object.assign({},tiers[k]||{},j.tiers[k])}
-  return{items,tiers,demo:!!(j.demo||j.sample),source,generatedAt:j.generatedAt||null,version:j.version||1,currentSet:j.currentSet?String(j.currentSet):null};
+  return{items,tiers,demo:!!(j.demo||j.sample),source,generatedAt:j.generatedAt||null,version:j.version||1,currentSet:j.currentSet?String(j.currentSet):null,clipsVersion:j.clipsVersion?String(j.clipsVersion):''};
 }
 function finalizeBank(b){
   const all=b.items.concat(state.localItems.map(x=>Object.assign({},x,{local:true})));
@@ -763,7 +763,7 @@ async function getTeacher(item){
   let arr=null,local=false;
   const saved=await idb.get('local:'+item.id);
   if(saved&&saved.wav){arr=saved.wav;local=true}
-  else{const path=clipPath(item);if(path){const cached=await idb.get('clip:'+path);if(cached&&cached.buf)arr=cached.buf;else{try{let r=null;if(state.bank.source==='github'||state.bank.source==='github-cache'){r=await gh.raw(path)}else{r=await fetch(path);if(!r.ok)r=null}if(r){arr=await r.arrayBuffer();idb.set('clip:'+path,{buf:arr,at:Date.now()})}}catch(e){}}}}
+  else{const path=clipPath(item);if(path){const ck='clip:'+(item.clipRev||state.bank.clipsVersion||'')+':'+path;const cached=await idb.get(ck);if(cached&&cached.buf)arr=cached.buf;else{try{let r=null;if(state.bank.source==='github'||state.bank.source==='github-cache'){r=await gh.raw(path)}else{r=await fetch(path);if(!r.ok)r=null}if(r){arr=await r.arrayBuffer();idb.set(ck,{buf:arr,at:Date.now()})}}catch(e){}}}}
   if(!arr){teacherCache[item.id]=null;return null}
   try{const ctx=audio.ensure();const buf=await ctx.decodeAudioData(arr.slice(0));const pcm=resample(buf.getChannelData(0),buf.sampleRate);const t={buffer:buf,pcm,an:analyzeAudio(pcm,16000),local};teacherCache[item.id]=t;return t}catch(e){teacherCache[item.id]=null;return null}
 }
@@ -779,7 +779,7 @@ async function renderCard(){
   const T=state.bank.tiers[item.tier]||{short:item.tier+'순위'};
   const tierEl=$('#c-tier');tierEl.textContent=T.short;tierEl.className='chip '+tierClass(item.tier);
   $('#c-source').textContent=(item.lesson&&item.lesson!=='office'?item.lesson+' · ':'')+(item.source||'');
-  $('#c-kind').textContent=kindLabel(item.kind)+(item.role?' '+item.role:'');
+  $('#c-kind').textContent=kindLabel(item.kind)+(item.role?' '+item.role:'')+(item.stitched?' · 이어붙인 클립':'');
   const textEl=$('#c-text');textEl.textContent=item.text;textEl.classList.toggle('hidden-text',cur.hidden);$('#prac-hide').textContent=cur.hidden?'보기':'가리기';
   $('#c-ko').textContent=state.settings.showKo?item.ko:'';$('#c-ko').hidden=!(state.settings.showKo&&item.ko);
   $('#c-note').textContent=item.note||'';$('#c-note').hidden=!item.note;
