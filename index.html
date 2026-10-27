@@ -190,6 +190,31 @@ details.graph-wrap summary{padding:4px 0;font-weight:500;font-size:13px;color:va
 .grade-row .g{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:13px;cursor:pointer;font-weight:500}
 .grade-row .g.sel{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .next-row{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+details.melody-card{border:0;padding:14px 16px;background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow)}
+details.melody-card summary{padding:0;font-size:14px;font-weight:700;color:var(--muted);gap:10px}
+details.melody-card summary .sum{flex:1;min-width:0;font-weight:500;color:var(--teacher);font-size:13px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.melody-body{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.mchips{display:flex;flex-wrap:wrap;gap:6px}
+.mc{display:inline-flex;flex-direction:column;align-items:stretch;gap:2px;min-width:40px;padding:4px 6px 5px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;font:inherit;color:inherit;text-align:center}
+.mc .spbox{position:relative;display:block;height:30px}
+.mc .sp{position:absolute;inset:0;display:block;width:100%;height:100%}
+.mc .sp path{fill:none;stroke:var(--teacher);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.mc .sp line.mid{stroke:var(--line);stroke-width:1;stroke-dasharray:2 3}
+.mc .wt{font-family:var(--font-en);font-weight:700;font-size:16px;line-height:1.2;white-space:nowrap}
+.mc .dur{display:block;height:4px;border-radius:2px;background:var(--surface-2);overflow:hidden}
+.mc .dur i{display:block;height:100%;background:var(--teacher);opacity:.6;border-radius:2px}
+.mc .wa{font-size:12px;font-weight:700;line-height:1.1;color:var(--teacher)}
+.mc.stress{border-color:var(--teacher);background:var(--teacher-soft)}
+.mc.stress .wt{text-decoration:underline;text-decoration-color:var(--teacher);text-decoration-thickness:3px;text-underline-offset:3px}
+.mc.weak .wt{font-weight:400;font-size:14px;color:var(--muted)}
+.mc.pick{outline:2px solid var(--me);outline-offset:1px}
+.coach{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.coach li{display:flex;gap:8px;font-size:14px;line-height:1.45;align-items:flex-start}
+.coach li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--teacher);flex:none;margin-top:7px}
+.chunk-pick{display:flex;flex-direction:column;gap:8px;background:var(--surface-2);border-radius:10px;padding:10px 12px}
+details.howto{border:0;padding:0;background:transparent}
+details.howto summary{padding:4px 0;font-weight:500;font-size:13px;color:var(--muted)}
+.howto ol{margin:4px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:1.5}
 
 /* bank list */
 .list{display:flex;flex-direction:column;gap:8px}
@@ -308,6 +333,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <button class="btn small" id="prac-hide" title="문장 가리기">가리기</button>
     </div>
     <div class="banner bad" id="mic-banner" hidden><b>마이크</b><span id="mic-banner-text"></span></div>
+    <div class="banner info" id="chunk-banner" hidden><b>구간</b><span id="chunk-label" style="flex:1;min-width:0"></span><button class="btn small" id="chunk-exit">← 전체 문장</button></div>
     <div class="sentence-card">
       <div class="meta"><span class="chip t1" id="c-tier"></span><span id="c-source"></span><span class="chip" id="c-kind"></span></div>
       <div class="context" id="c-context" hidden></div>
@@ -315,6 +341,29 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <p class="ko" id="c-ko"></p>
       <p class="note" id="c-note" hidden></p>
     </div>
+    <details class="melody-card" id="melody" hidden open>
+      <summary><span>선생님 멜로디</span><span class="sum" id="melody-sum"></span></summary>
+      <div class="melody-body">
+        <div class="row" style="gap:6px"><button class="btn small teacher" id="btn-slow">▶ 느리게</button><button class="btn small teacher" id="btn-hum">▶ 허밍</button><button class="btn small" id="btn-chunk">구간 연습</button></div>
+        <div class="mchips" id="mchips"></div>
+        <div class="legend"><span>위로 = 높게</span><span>막대 = 길이</span><span><u>밑줄</u> = 강조</span><span>단어를 누르면 그 단어만 들려요</span></div>
+        <ul class="coach" id="coach"></ul>
+        <div class="chunk-pick" id="chunk-pick" hidden>
+          <div class="small muted">짧은 구간부터 연습하고 점점 늘려 보세요.</div>
+          <div class="row" id="chunk-sugs" style="gap:6px"></div>
+          <div class="small muted" id="chunk-help"></div>
+          <div class="row" style="gap:6px"><button class="btn small primary" id="chunk-go" hidden></button><button class="btn small ghost" id="chunk-cancel">닫기</button></div>
+        </div>
+        <details class="howto"><summary>강세·억양 만드는 법</summary>
+          <ol>
+            <li><b>강세 = 높이 + 길이 + 크기.</b> 그중 높이(올리기)와 길이(끌기)가 가장 중요해요. 크게만 말하면 강세로 안 들려요.</li>
+            <li><b>약한 단어</b>(some, a, the, in, you, it…)는 낮고 짧고 작게. 모음은 '어'처럼 흐리게: some → 섬(s'm).</li>
+            <li><b>계단 만들기:</b> 강조할 단어 바로 앞에서 한 번 내려놔야, 다음 단어에서 올라가는 게 들려요.</li>
+            <li><b>연습 순서:</b> ① ▶ 허밍으로 멜로디만 따라 하기 → ② 강조 단어에서 손을 위로 올리며 과장해서 말하기 → ③ 구간 연습으로 짧은 구간부터 늘리기 → ④ 과장을 조금씩 줄이기</li>
+          </ol>
+        </details>
+      </div>
+    </details>
     <div class="controls">
       <button class="btn teacher" id="btn-teacher">▶ 선생님</button>
       <button class="btn rec" id="btn-rec">● 녹음</button>
@@ -500,6 +549,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <div class="inner">
         <label class="row"><input type="checkbox" id="s-showKo" style="width:auto"> 한국어 뜻 보이기</label>
         <label class="row"><input type="checkbox" id="s-hideText" style="width:auto"> 기본으로 문장 가리고 시작 (듣고 따라하기)</label>
+        <label class="row"><input type="checkbox" id="s-showMelody" style="width:auto"> 선생님 멜로디·코칭 보이기</label>
         <label class="field">대체 음성(TTS) 속도 <span class="num" id="s-ttsRate-val"></span><input id="s-ttsRate" type="range" min="0.6" max="1.2" step="0.05"></label>
         <p class="small muted">선생님 클립이 없는 문장은 기기 음성(TTS)으로 들려줘요. 이때는 억양 비교가 안 되고 단어만 확인해요.</p>
       </div>
@@ -537,7 +587,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.1 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.2 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -586,7 +636,7 @@ const DEMO_BANK={version:1,demo:true,items:[
   {id:'demo-d2',text:"Sure, what's up?",ko:'그럼요, 무슨 일이에요?',tier:1,source:'데모',lesson:todayStr(),kind:'dialogue',group:'demo-dlg',role:'B',seq:2},
   {id:'demo-04',text:"I'm on the fence about it.",ko:'아직 결정을 못 했어요.',tier:2,source:'데모',lesson:'2026-08-13',kind:'sentence'}
 ]};
-const DEFAULTS={dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,ttsRate:0.95,asrMode:'device',asrConsent:false,azureKey:'',azureRegion:'koreacentral',ghOwner:'MJPark-8739',ghRepo:'english-review-data',ghBranch:'main',ghToken:''};
+const DEFAULTS={dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,showMelody:true,melodyOpen:true,ttsRate:0.95,asrMode:'device',asrConsent:false,azureKey:'',azureRegion:'koreacentral',ghOwner:'MJPark-8739',ghRepo:'english-review-data',ghBranch:'main',ghToken:''};
 const state={bank:{items:[],byId:{},tiers:DEFAULT_TIERS,demo:true,source:'demo'},progress:store.get(LS.progress,{}),log:store.get(LS.log,[]),localItems:store.get(LS.local,[]),settings:Object.assign({},DEFAULTS,store.get(LS.settings,{})),session:null,view:'today',bankPage:1};
 if(IS_IOS&&state.settings.asrMode==='browser')state.settings.asrMode='device';
 function saveProgress(){store.set(LS.progress,state.progress);store.set(LS.log,state.log.slice(-3000))}
@@ -709,7 +759,13 @@ let decodeCtx=null;
 function getDecodeCtx(){if(!decodeCtx){const AC=window.AudioContext||window.webkitAudioContext;decodeCtx=new AC()}return decodeCtx}
 function decodeAudio(arr){return new Promise((res,rej)=>{let done=false;const ok=b=>{if(!done){done=true;res(b)}},bad=e=>{if(!done){done=true;rej(e instanceof Error?e:new Error('decode'))}};try{const p=getDecodeCtx().decodeAudioData(arr.slice(0),ok,bad);if(p&&p.then)p.then(ok,bad)}catch(e){bad(e)}})}
 async function blobToArrayBuffer(b){if(b.arrayBuffer)return await b.arrayBuffer();return await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsArrayBuffer(b)})}
-function resample(pcm,sr,target=16000){if(sr===target)return Float32Array.from(pcm);const ratio=sr/target,n=Math.floor(pcm.length/ratio),out=new Float32Array(n);for(let i=0;i<n;i++){const a=Math.floor(i*ratio),b=Math.min(pcm.length,Math.floor((i+1)*ratio));let s=0;for(let j=a;j<b;j++)s+=pcm[j];out[i]=b>a?s/(b-a):0}return out}
+// band-limited resampling (windowed sinc, table lookup): devices decode at 44.1/48 kHz, analysis runs at 16 kHz
+const RSK={};
+function rsKernel(ratio){const key=ratio.toFixed(6);if(RSK[key])return RSK[key];const fc=0.92/Math.max(1,ratio),W=Math.ceil(6*Math.max(1,ratio)),Q=64,tab=new Float32Array(2*W*Q+2);
+  for(let k=0;k<tab.length;k++){const d=k/Q-W,x=Math.PI*d*fc;tab[k]=(x===0?1:Math.sin(x)/x)*(Math.abs(d)<W?0.5+0.5*Math.cos(Math.PI*d/W):0)}return RSK[key]={W,Q,tab}}
+function resample(pcm,sr,target=16000){if(sr===target)return Float32Array.from(pcm);const ratio=sr/target,n=Math.floor(pcm.length/ratio),out=new Float32Array(n);const {W,Q,tab}=rsKernel(ratio);
+  for(let i=0;i<n;i++){const t=i*ratio,c=Math.floor(t),j0=Math.max(0,c-W+1),j1=Math.min(pcm.length-1,c+W);let s=0,ws=0;for(let j=j0;j<=j1;j++){const u=(t-j+W)*Q,k=Math.floor(u),h=tab[k]+(tab[k+1]-tab[k])*(u-k);s+=pcm[j]*h;ws+=h}out[i]=ws?s/ws:0}
+  return out}
 async function blobToPcm16(blob){const buf=await decodeAudio(await blobToArrayBuffer(blob));return resample(buf.getChannelData(0),buf.sampleRate)}
 function toWav(pcm){const n=pcm.length,buf=new ArrayBuffer(44+n*2),v=new DataView(buf),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,16000,true);v.setUint32(28,32000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);let o=44;for(let i=0;i<n;i++,o+=2){const s=clamp(pcm[i],-1,1);v.setInt16(o,s<0?s*0x8000:s*0x7FFF,true)}return buf}
 function wavBlob(pcm){return new Blob([toWav(pcm)],{type:'audio/wav'})}
@@ -724,11 +780,12 @@ const player=(()=>{
     opt=opt||{};stopSpeech();stop();setSession('playback');
     const t=++token,start=Math.max(0,opt.start||0),end=opt.end==null?null:opt.end;endCb=opt.onend||null;doneCb=opt.ondone||null;
     const finish=()=>{if(t!==token)return;token++;clearH();try{el.pause()}catch(e){}const d=doneCb;doneCb=null;fire();if(d)try{d()}catch(e){}};
-    const url=urlFor(key,blob);if(el.getAttribute('src')!==url)el.src=url;
+    const rate=opt.rate||1;const setRate=()=>{try{el.defaultPlaybackRate=rate;el.playbackRate=rate;el.preservesPitch=true;el.webkitPreservesPitch=true}catch(e){}};
+    const url=urlFor(key,blob);if(el.getAttribute('src')!==url)el.src=url;setRate();
     const seek=()=>{try{if(Math.abs(el.currentTime-start)>0.03)el.currentTime=start}catch(e){}};
-    if(el.readyState>=1){seek();el.muted=false}else{el.muted=start>0.05;el.addEventListener('loadedmetadata',()=>{if(t===token)seek()},{once:true})}
+    if(el.readyState>=1){seek();el.muted=false}else{el.muted=start>0.05;el.addEventListener('loadedmetadata',()=>{if(t===token){seek();setRate()}},{once:true})}
     const unmute=()=>{if(el.muted&&el.currentTime>=start-0.06)el.muted=false};
-    el.onplaying=()=>{if(t!==token)return;unmute();if(end!=null){clearTimeout(stopT);stopT=setTimeout(finish,Math.max(60,(end-Math.max(start,el.currentTime))*1000+80))}};
+    el.onplaying=()=>{if(t!==token)return;unmute();if(end!=null){clearTimeout(stopT);stopT=setTimeout(finish,Math.max(60,(end-Math.max(start,el.currentTime))*1000/rate+80))}};
     el.ontimeupdate=()=>{if(t!==token)return;unmute();if(end!=null&&el.currentTime>=end)finish()};
     el.onended=finish;el.onerror=()=>{if(t!==token)return;finish();toast('소리를 재생하지 못했어요')};
     let p=null;try{p=el.play()}catch(e){}
@@ -798,6 +855,19 @@ function micErrorText(e){
 function micError(e){const t=micErrorText(e);if(state.view==='practice'){$('#mic-banner-text').textContent=t;$('#mic-banner').hidden=false}else toast(t,5000)}
 
 /* ===================== analysis: pitch, spectra, alignment ===================== */
+/* Pitch tracking. Pass 1: NSDF (McLeod) candidate periods per 10 ms frame, plus their octave neighbours, each scored
+   with a harmonic template (first + prime harmonics on a sqrt-magnitude spectrum, as in SWIPE'), which tells the
+   real pitch from half or double of it. Pass 2: Viterbi over the candidates — strong peaks, smooth movement between
+   frames (looser across pauses) and the speaker's own range — so one bad frame can't drag a word into the wrong octave. */
+const SP=(()=>{const N=2048,L=1024;const win=new Float32Array(L);for(let i=0;i<L;i++)win[i]=0.5-0.5*Math.cos(2*Math.PI*i/(L-1));const rev=new Uint16Array(N);for(let i=0,j=0;i<N;i++){rev[i]=j;let bit=N>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit}
+  const cs=new Float32Array(N/2),sn=new Float32Array(N/2);for(let k=0;k<N/2;k++){cs[k]=Math.cos(-2*Math.PI*k/N);sn[k]=Math.sin(-2*Math.PI*k/N)}
+  const pr=new Uint8Array(200);pr[1]=1;for(let k=2;k<200;k++){let p=1;for(let d=2;d*d<=k;d++)if(k%d===0){p=0;break}pr[k]=p}return{N,L,win,rev,cs,sn,pr}})();
+function sqrtSpec(x,c){const {N,L,win,rev,cs,sn}=SP;const re=new Float32Array(N),im=new Float32Array(N);const o=c-(L>>1);for(let i=0;i<L;i++){const v=x[o+i];if(v!==undefined)re[rev[i]]=v*win[i]}
+  for(let len=2;len<=N;len<<=1){const h=len>>1,st=N/len;for(let i=0;i<N;i+=len)for(let k=0;k<h;k++){const wr=cs[k*st],wi=sn[k*st],p=i+k,q=p+h;const br=re[q]*wr-im[q]*wi,bi=re[q]*wi+im[q]*wr;re[q]=re[p]-br;im[q]=im[p]-bi;re[p]+=br;im[p]+=bi}}
+  const m=new Float32Array(N/2);for(let k=0;k<N/2;k++)m[k]=Math.sqrt(Math.hypot(re[k],im[k]));return m}
+function harmScore(m,p,sr){const df=sr/SP.N,fmax=Math.min(3500,sr/2-p);let s=0,kn=0,mn=0;const k1=Math.max(1,Math.floor(0.25*p/df)),k2=Math.min(m.length-1,Math.floor(fmax/df));
+  for(let k=k1;k<=k2;k++){const f=k*df,q=f/p,h=Math.round(q);if(!SP.pr[h])continue;const ad=Math.abs(q-h);let w;if(ad<0.25)w=Math.cos(2*Math.PI*q);else if(ad<0.75)w=Math.cos(2*Math.PI*q)/2;else continue;w/=Math.sqrt(f);s+=w*m[k];if(w>0)kn+=w*w;mn+=m[k]*m[k]}
+  return kn>0&&mn>0?s/Math.sqrt(kn*mn):0}
 function trackPitch(x,sr){
   const frame=Math.round(sr*0.04),hop=Math.round(sr*0.01);
   const minLag=Math.floor(sr/400),maxLag=Math.min(Math.floor(sr/70),frame-2);
@@ -806,6 +876,7 @@ function trackPitch(x,sr){
   for(let i=0;i<n;i++){const o=i*hop;let s=0;for(let j=0;j<frame;j++){const v=x[o+j];s+=v*v}rms[i]=Math.sqrt(s/frame);if(rms[i]>maxR)maxR=rms[i]}
   const gate=Math.max(0.006,maxR*0.08);
   const nsdf=new Float32Array(maxLag+2);const cands=new Array(n);
+  const at=t=>{if(t<minLag||t>maxLag)return 0;const a=Math.floor(t),u=t-a;return Math.max(0,nsdf[a]*(1-u)+nsdf[Math.min(maxLag,a+1)]*u)};
   for(let i=0;i<n;i++){
     if(rms[i]<gate)continue;
     const o=i*hop;
@@ -817,23 +888,35 @@ function trackPitch(x,sr){
     let best=null;for(const c of cs){if(c.v>=0.85*maxPeak){best=c;break}}
     // octave check: if half the chosen period is also strongly periodic, the true pitch is the higher one
     for(let k=0;best&&k<2;k++){const h=cs.find(c=>Math.abs(c.f/(2*best.f)-1)<0.08&&c.v>=0.7*best.v&&c.v>=0.5);if(h)best=h;else break}
-    if(best){f0[i]=best.f;cands[i]=cs}
+    if(!best)continue;
+    const base=cs.slice();for(const c of base){for(const r of [2,0.5]){const f=c.f*r;if(f<70||f>400)continue;if(!cs.some(d=>Math.abs(Math.log2(d.f/f))<0.06))cs.push({f,v:at(sr/f)})}}
+    const m=sqrtSpec(x,o+(frame>>1));for(const c of cs)c.t=harmScore(m,c.f,sr);
+    f0[i]=best.f;cands[i]=cs;
   }
-  // second pass: choose among candidate periods with a preference for continuity and the speaker's
-  // own range, which removes octave (sub-harmonic) errors without flattening real intonation
-  const v1=[];for(let i=0;i<n;i++)if(f0[i]>0)v1.push(f0[i]);
-  if(v1.length>=6){v1.sort((a,b)=>a-b);const med=v1[v1.length>>1];let ref=0,refAge=99;
-    for(let i=0;i<n;i++){const cs=cands[i];if(!cs){refAge++;continue}let best=null;
-      if(refAge<=6&&ref>0){let bs=-1e9;for(const c of cs){const s=c.v-0.35*Math.abs(Math.log2(c.f/ref))-0.25*Math.max(0,Math.abs(Math.log2(c.f/med))-1);if(s>bs){bs=s;best=c}}}
-      else{best={f:f0[i]};if(Math.abs(Math.log2(best.f/med))>0.8){let mx=0;for(const c of cs)mx=Math.max(mx,c.v);let alt=null;for(const c of cs){if(c.v>=0.7*mx&&Math.abs(Math.log2(c.f/med))<=0.6&&(!alt||c.v>alt.v))alt=c}if(alt)best=alt}}
-      f0[i]=best.f;ref=best.f;refAge=0}}
+  // only voiced runs of 3+ frames (1-frame holes allowed) take part: lone frames in consonants must not steer the path
+  const keep=new Uint8Array(n);
+  for(let i=0;i<n;){if(!cands[i]){i++;continue}let last=i,cnt=1,j=i+1;while(j<n){if(cands[j]){last=j;cnt++;j++}else if(j===last+1&&j+1<n&&cands[j+1])j++;else break}if(cnt>=3)for(let k=i;k<=last;k++)if(cands[k])keep[k]=1;i=last+1}
+  const idx=[];for(let i=0;i<n;i++)if(keep[i])idx.push(i);
+  if(idx.length>=6){
+    const BETA=1.5,LAMB=0.7,em=c=>c.v+BETA*c.t;
+    const top=idx.map(i=>{let b=cands[i][0];for(const c of cands[i])if(em(c)>em(b))b=c;return b.f}).sort((a,b)=>a-b),lmed=Math.log2(top[top.length>>1]);
+    const back=[];let prev=null;
+    for(let q=0;q<idx.length;q++){const i=idx[q],cs=cands[i],m=cs.length;const sc=new Float64Array(m),bp=new Int16Array(m);
+      const g=q?i-idx[q-1]:1,lam=LAMB*Math.max(0.15,1-(g-1)/20);const pc=q?cands[idx[q-1]]:null;
+      for(let s=0;s<m;s++){const c=cs[s];const e=em(c)-0.25*Math.max(0,Math.abs(Math.log2(c.f)-lmed)-0.75);
+        if(!q){sc[s]=e;bp[s]=-1;continue}
+        let bs=-1e18,bk=0;for(let r=0;r<pc.length;r++){const v=prev[r]-lam*Math.abs(Math.log2(c.f/pc[r].f));if(v>bs){bs=v;bk=r}}sc[s]=bs+e;bp[s]=bk}
+      back.push(bp);prev=sc}
+    let s=0;for(let r=1;r<prev.length;r++)if(prev[r]>prev[s])s=r;
+    for(let q=idx.length-1;q>=0;q--){const i=idx[q];f0[i]=cands[i][s].f;s=back[q][s]}
+  }
+  for(let i=0;i<n;i++)if(!keep[i])f0[i]=0;
   return{f0:cleanF0(f0),rms,hop,frame,sr,gate};
 }
 function cleanF0(f0){
   const n=f0.length,out=new Float32Array(n);
   for(let i=0;i<n;i++){if(!(f0[i]>0))continue;const w=[];for(let k=-2;k<=2;k++){const v=f0[i+k];if(v>0)w.push(v)}if(w.length<3)continue;w.sort((a,b)=>a-b);out[i]=w[Math.floor(w.length/2)]}
   let i=0;while(i<n){if(out[i]>0){let j=i;while(j<n&&out[j]>0)j++;if(j-i<3)for(let k=i;k<j;k++)out[k]=0;i=j}else i++}
-  let prev=0;for(let k=0;k<n;k++){if(out[k]>0){if(prev>0){if(out[k]>1.8*prev)out[k]/=2;else if(out[k]<0.55*prev)out[k]*=2}prev=out[k]}}
   return out;
 }
 function speechSpan(rms,gate,hop,sr){let first=-1,last=-1;for(let i=0;i<rms.length;i++)if(rms[i]>gate){if(first<0)first=i;last=i}if(first<0)return null;return{first,last,dur:(last-first+1)*hop/sr}}
@@ -889,10 +972,73 @@ const FUNC=new Set('a an the to of in on at for from by with and or but so as if
 function syllables(w){w=String(w||'').toLowerCase().replace(/[^a-z]/g,'');if(!w)return 1;if(w.length<=3)return 1;w=w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/,'').replace(/^y/,'');const m=w.match(/[aeiouy]{1,2}/g);return Math.max(1,m?m.length:1)}
 function promScores(feats){const ok=feats.map(f=>!!(f&&f.voiced>=3));const P_=[],E=[],Dd=[];feats.forEach((f,i)=>{if(ok[i]){P_.push(f.peak);E.push(f.energy);Dd.push(Math.log(f.dur/f.syl))}});if(P_.length<2)return feats.map(()=>null);const zs=arr=>{const m=mean(arr),sd=Math.sqrt(mean(arr.map(x=>(x-m)*(x-m))))||1;return v=>(v-m)/sd};const zP=zs(P_),zE=zs(E),zD=zs(Dd);return feats.map((f,i)=>ok[i]?zP(f.peak)+0.7*zE(f.energy)+0.7*zD(Math.log(f.dur/f.syl)):null)}
 
+function normWord(w){return String(w||'').toLowerCase().replace(/’/g,"'").replace(/[^a-z']/g,'')}
+/* The teacher's melody for one sentence: pitch shape/level/length per word and which words carry the stress.
+   Words may carry an explicit `stress` flag (used for chunks so they keep the full sentence's stress). */
+function teacherProfile(te,words){
+  if(!te||!te.span||!Array.isArray(words)||!words.length)return null;
+  const tA=te.span.first,tB=te.span.last;
+  const ws=words.map((x,k)=>{let a=Math.round((+x.s||0)*100),b=Math.round((+x.e||0)*100)-1;if(b<a)b=a;a=clamp(a,tA,tB);b=clamp(b,a,tB);const f=segFeat(te,a,b);const syl=syllables(x.w);if(f)f.syl=syl;return{k,w:String(x.w||''),s:+x.s||0,e:+x.e||0,a,b,f,syl,func:FUNC.has(normWord(x.w)),stress:false,prom:null}});
+  const pr=promScores(ws.map(w=>w.f));ws.forEach((w,i)=>{w.prom=pr[i]});
+  if(words.some(x=>x.stress!==undefined))ws.forEach((w,i)=>{w.stress=!!words[i].stress});
+  else{const cand=ws.filter(w=>!w.func&&w.prom!=null).sort((a,b)=>b.prom-a.prom);let sw=cand.filter(w=>w.prom>=1.0).slice(0,2);if(!sw.length&&cand.length&&cand[0].prom>=0.6)sw=[cand[0]];sw.forEach(w=>{w.stress=true})}
+  const vals=[];for(let i=tA;i<=tB;i++)if(!isNaN(te.st[i]))vals.push(te.st[i]);vals.sort((a,b)=>a-b);
+  const lo=vals.length>8?Math.min(-6,vals[Math.floor(vals.length*0.03)]-1):-8,hi=vals.length>8?Math.max(6,vals[Math.floor(vals.length*0.97)]+1):8;
+  const prof={ws,lo,hi,maxDur:Math.max(0.1,...ws.map(w=>w.e-w.s))};prof.coach=coachLines(ws);return prof;
+}
+// Turn the teacher's melody into short "say it like this" lines in Korean.
+function coachLines(ws){
+  const out=[],used=new Set();const V=w=>!!(w&&w.f&&w.f.voiced>=3);
+  const totDur=ws.reduce((s,x)=>s+(x.e-x.s),0),totSyl=ws.reduce((s,x)=>s+x.syl,0)||1;const relLen=w=>((w.e-w.s)/w.syl)/Math.max(1e-3,totDur/totSyl);
+  const move={rise:'올리며 ↗',fall:'높게 시작해 내리며 ↘',hat:'올렸다 내리며 ↗↘',flat:'높게',none:'또렷하게'};
+  for(const S of ws.filter(w=>w.stress).slice(0,2)){
+    const P=S.k>0?ws[S.k-1]:null;const sh=V(S)?S.f.shape:'none';const len=relLen(S)>=1.3?'길게 끌기':'또렷하게';
+    if(P&&!P.stress&&V(P)&&V(S)&&(P.func||P.f.level<S.f.peak-2||P.f.shape==='fall')){out.push({k:S.k,t:`'${P.w}' ${P.func?'짧고 낮게':'낮게'} ↘ → '${S.w}' 다시 ${move[sh]} ${len} (강조)`});used.add(P.k)}
+    else out.push({k:S.k,t:`'${S.w}' — ${S.k===0&&sh==='rise'?'처음부터 높이 올리며 ↗':move[sh]} ${len} (강조)`});
+    used.add(S.k);
+  }
+  const lastV=[...ws].reverse().find(V),lastC=[...ws].reverse().find(w=>!w.func);
+  if(lastC&&!V(lastC)&&(!lastV||lastC.k>lastV.k)&&!used.has(lastC.k)){
+    // a final content word with no measurable pitch is usually a low, creaky finish
+    const tailW=ws.slice(lastC.k+1).filter(w=>w.func&&!V(w));tailW.forEach(w=>used.add(w.k));
+    out.push({k:lastC.k,t:`끝 '${lastC.w}' 낮게 툭 내려놓으며 마무리 ↘${tailW.length?` · '${tailW.map(w=>w.w).join(' ')}' 거의 소리 없이`:''}`});used.add(lastC.k)}
+  else if(lastV&&!used.has(lastV.k)){const sh=lastV.f.shape;const tailW=ws.slice(lastV.k+1).filter(w=>w.func&&!V(w));tailW.forEach(w=>used.add(w.k));const tail=tailW.map(w=>w.w).join(' ');
+    const how=sh==='fall'?'내리며 마무리 ↘':sh==='rise'?(lastV.f.level<-1?'낮은 데서 살짝 올리기 ↗':'올리며 마무리 ↗'):sh==='hat'?'올렸다 내리기 ↗↘':'평평하게 마무리 →';
+    out.push({k:lastV.k,t:`끝 '${lastV.w}' ${how}${tail?` · '${tail}' 거의 소리 없이`:''}`});used.add(lastV.k)}
+  const seenW=new Set(),weak=[];for(const w of ws){if(w.func&&!w.stress&&!used.has(w.k)&&(w.e-w.s)<0.17){const l=w.w.toLowerCase();if(!seenW.has(l)){seenW.add(l);weak.push(w.w)}}}
+  if(weak.length)out.push({k:999,t:`약하게: ${weak.slice(0,5).join(', ')} — 짧고 낮게, 모음은 '어'처럼 흐리게`});
+  return out.sort((a,b)=>a.k-b.k).map(x=>x.t);
+}
+function chunkSuggestions(prof){
+  const ws=prof.ws,n=ws.length,s=[];const add=(i,j)=>{if(i<0||j>=n||i>=j||j-i+1>=n)return;const key=i+'-'+j;if(!s.some(x=>x.key===key))s.push({key,i,j,text:ws.slice(i,j+1).map(w=>w.w).join(' ')})};
+  for(const S of ws.filter(w=>w.stress)){add(S.k-1,S.k);add(S.k-2,S.k);if(S.k===0)add(0,1)}
+  const lastV=[...ws].reverse().find(w=>w.f&&w.f.voiced>=3);if(lastV)add(Math.max(0,lastV.k-1),n-1);
+  return s.slice(0,4);
+}
+// The teacher's melody as a hum (no words): pitch from the clip, loudness follows the voice; short gaps are bridged.
+function makeHum(an){
+  const hop=160,sr=16000,n=an.f0.length;if(n<4)return null;const f=new Float32Array(n),g=new Float32Array(n);let mx=0;
+  for(let i=0;i<n;i++)if(an.f0[i]>0){f[i]=an.f0[i];mx=Math.max(mx,an.rms[i])}
+  if(!(mx>0))return null;
+  let last=-1;for(let i=0;i<n;i++){if(f[i]>0){if(last>=0&&i-last>1&&i-last<=7)for(let k=last+1;k<i;k++){f[k]=f[last]+(f[i]-f[last])*(k-last)/(i-last);g[k]=-1}last=i}}
+  for(let i=0;i<n;i++){if(f[i]>0){const r=g[i]===-1?mx*0.35:an.rms[i];g[i]=Math.sqrt(Math.max(r,mx*0.12)/mx)}else g[i]=0}
+  const len=n*hop+480,out=new Float32Array(len);let ph=0,amp=0,fr=f.find(v=>v>0)||150;
+  for(let t=0;t<len;t++){const fi=clamp((t-320)/hop,0,n-1),i0=Math.floor(fi),i1=Math.min(n-1,i0+1),u=fi-i0;const fa=f[i0],fb=f[i1];const ft=fa>0&&fb>0?fa+(fb-fa)*u:(fa>0?fa:fb);if(ft>0)fr=ft;const gt=g[i0]+(g[i1]-g[i0])*u;amp+=(gt-amp)*(gt>amp?0.004:0.0025);ph+=2*Math.PI*fr/sr;if(ph>6283)ph-=6283.185307179586;out[t]=amp*(Math.sin(ph)+0.45*Math.sin(2*ph)+0.2*Math.sin(3*ph))}
+  let pk=0;for(let t=0;t<len;t++)pk=Math.max(pk,Math.abs(out[t]));if(pk>0)for(let t=0;t<len;t++)out[t]*=0.7/pk;return out;
+}
+
+// my pitch movement vs the teacher's on one word — tolerant near the category edges, so a 2.0 vs 1.8 slope is not a "miss".
+// 0 = same movement, 1 = movement missing (flat), 2 = the opposite movement
+function shapeMiss(T,M,stressed){const sT=T.shape,hatM=M.peak-Math.max(M.startP,M.endP);
+  if(sT==='rise'){if(M.slope<=-1.5)return 2;return M.slope<0.8&&M.slope<T.slope-2?1:0}
+  if(sT==='fall'){if(M.slope>=1.5)return 2;return M.slope>-0.8&&M.slope>T.slope+2?1:0}
+  if(sT==='hat')return hatM<1&&stressed?1:0;
+  return 0}
+function shapeSim(T,M){if(T.shape==='flat')return M.shape==='flat'?1:0.75;const m=shapeMiss(T,M,true);if(T.shape==='hat')return m?0.6:1;return m===2?0:m===1?0.4:1}
 /* Compare my take with the teacher clip word by word: align the two recordings (DTW on MFCCs with
    per-utterance normalization, so mic and voice differences mostly cancel), then measure pitch shape,
    level, length, pauses and stress inside each teacher word. Pitch is in semitones from each speaker's own median. */
-function compareWithTeacher(te,me,item){
+function compareWithTeacher(te,me,item,prof){
   if(!te||!te.span||!me||!me.span)return null;
   const tA=te.span.first,tB=te.span.last,uA=me.span.first,uB=me.span.last;
   if(tB-tA<8||uB-uA<8)return null;
@@ -909,23 +1055,33 @@ function compareWithTeacher(te,me,item){
   const hints=[];const res={nT,tA,uA,al,teLine,meLine,r,rangeRatio,speed,words:[],hints,into:null,rhythm:null,stress:null};
   const tw=Array.isArray(item.words)&&item.words.length?item.words:null;
   if(tw){
-    const words=tw.map((x,k)=>{let a=Math.round((+x.s||0)*100),b=Math.round((+x.e||0)*100)-1;if(b<a)b=a;a=clamp(a,tA,tB);b=clamp(b,a,tB);const ia=a-tA,ib=b-tA;const ua=al.lo[ia]+uA,ub=Math.max(al.hi[ib],al.lo[ia])+uA;const syl=syllables(x.w);const fT=segFeat(te,a,b),fM=segFeat(me,ua,ub);if(fT)fT.syl=syl;if(fM)fM.syl=syl;let cs=0;for(let i=ia;i<=ib;i++)cs+=al.cost[i];const lw=String(x.w||'').toLowerCase().replace(/’/g,"'").replace(/[^a-z']/g,'');return{k,w:String(x.w||''),s:+x.s||0,e:+x.e||0,ta:a,tb:b,ua,ub,te:fT,me:fM,cost:cs/(ib-ia+1),syl,func:FUNC.has(lw),notes:[]}});
+    prof=prof||teacherProfile(te,tw);
+    const words=prof.ws.map(p=>{const ia=p.a-tA,ib=p.b-tA;const ua=al.lo[ia]+uA,ub=Math.max(al.hi[ib],al.lo[ia])+uA;const fM=segFeat(me,ua,ub);if(fM)fM.syl=p.syl;let cs=0;for(let i=ia;i<=ib;i++)cs+=al.cost[i];return{k:p.k,w:p.w,s:p.s,e:p.e,ta:p.a,tb:p.b,ua,ub,te:p.f,me:fM,cost:cs/(ib-ia+1),syl:p.syl,func:p.func,promT:p.prom,stressT:!!p.stress,notes:[]}});
     res.words=words;
-    const pT=promScores(words.map(w=>w.te)),pM=promScores(words.map(w=>w.me));words.forEach((w,i)=>{w.promT=pT[i];w.promM=pM[i]});
+    const pM=promScores(words.map(w=>w.me));words.forEach((w,i)=>{w.promM=pM[i]});
     // stress: the teacher's most prominent content words (high + loud + long)
-    const cand=words.filter(w=>!w.func&&w.promT!=null).sort((a,b)=>b.promT-a.promT);
-    let stressW=cand.filter(w=>w.promT>=1.0).slice(0,2);if(!stressW.length&&cand.length&&cand[0].promT>=0.6)stressW=[cand[0]];
-    stressW.forEach(w=>w.stressT=true);
+    const stressW=words.filter(w=>w.stressT);
     const myTop=words.filter(w=>!w.func&&w.promM!=null).sort((a,b)=>b.promM-a.promM)[0]||null;
-    const sc=stressW.filter(w=>w.promM!=null).map(w=>w.promM>=0.8?100:w.promM>=0.2?70:35);res.stress=sc.length?Math.round(mean(sc)):null;
-    const miss=stressW.find(w=>w.promM!=null&&w.promM<0.2);
-    if(miss&&myTop&&myTop!==miss){hints.push({c:'',p:3,t:`선생님이 가장 강조한 단어: '${miss.w}' · 내가 가장 강조한 단어: '${myTop.w}' → '${miss.w}'에 힘을 주세요 (더 높고 길게)`});miss.notes.push({sev:1,t:'선생님은 이 단어를 강조해요 → 더 높고 길게'})}
+    // judged against how prominent the teacher made the same word (a 2-word chunk has a different baseline than a sentence)
+    const refP=w=>w.promT!=null?Math.min(0.8,w.promT):0.8;
+    const miss=stressW.find(w=>w.promM!=null&&w.promM<refP(w)-0.6);
+    if(miss&&myTop&&myTop!==miss){const pv=miss.k>0&&!words[miss.k-1].stressT?words[miss.k-1]:null;hints.push({c:'',p:3,t:`선생님이 가장 강조한 단어: '${miss.w}' · 내가 가장 강조한 단어: '${myTop.w}' → ${pv?`'${pv.w}' 짧고 낮게 ↘, `:''}'${miss.w}' 올리며 길게 ↗`});miss.notes.push({sev:1,t:`선생님은 이 단어를 강조해요 → ${pv?`앞 '${pv.w}'를 낮게 두고 `:''}더 높고 길게`})}
+    // the "step": the teacher drops before a stressed word and climbs on it; check I make the same step
+    let stepMiss=0;
+    for(const S of stressW){const Pw=S.k>0?words[S.k-1]:null;if(!Pw||Pw.stressT||!(Pw.te&&Pw.me&&S.te&&S.me&&Pw.te.voiced>=3&&Pw.me.voiced>=3&&S.te.voiced>=3&&S.me.voiced>=3))continue;
+      const stT=S.te.peak-Pw.te.level,stM=S.me.peak-Pw.me.level;
+      if(stT>=3&&stM<stT-3&&stM<stT*0.5){stepMiss++;S.stepMiss=true;S.notes.push({sev:1,t:`앞 '${Pw.w}'에서 내려갔다가 여기서 올라가야 해요 — 선생님은 크게 올라가는데 나는 ${stM<1?'거의 그대로예요':'조금만 올라가요'}`});hints.push({c:'',p:3,t:`'${Pw.w} ${S.w}' — 계단이 작아요: '${Pw.w}' 낮고 짧게 ↘ → '${S.w}' 높게 올리며 길게 ↗`})}}
+    const sc=stressW.filter(w=>w.promM!=null).map(w=>{let v=w.promM>=refP(w)-0.1?100:w.promM>=refP(w)-0.7?70:35;if(w.stepMiss)v=Math.min(v,55);return v});res.stress=sc.length?Math.round(mean(sc)):null;
+    // a weak word said too strongly (e.g. "SOME cash" instead of "some CASH")
+    const loud=words.filter(w=>w.func&&!w.stressT&&w.promM!=null&&w.promM>=0.9&&(w.promT==null||w.promT<=0.2));
+    for(const w of loud)w.notes.push({sev:1,t:"너무 세게 말했어요 → 짧고 낮게 (모음은 '어'처럼)"});
+    if(loud.length){const w=loud[0],nx=words[w.k+1];hints.push({c:'',p:2,t:`'${w.w}' — 너무 세게 말했어요 → 짧고 낮게${nx&&nx.stressT?`, 다음 '${nx.w}'를 강조`:''}`});if(res.stress!=null)res.stress=Math.max(0,res.stress-15*loud.length)}
     // pitch shape / level / length per word
     const shapeHints=[];
     for(const w of words){
       if(!(w.te&&w.me&&w.te.voiced>=3&&w.me.voiced>=3))continue;
-      const sT=w.te.shape,sM=w.me.shape;
-      if(SHAPE_FIX[sT]&&sM!==sT){const opp=(sT==='rise'&&sM==='fall')||(sT==='fall'&&sM==='rise');const soft=sT==='hat'&&(sM==='rise'||sM==='fall');if(!soft||w.stressT){const sev=opp?2:1;w.notes.push({sev,t:`선생님 ${ARROW[sT]} ${SHAPE_KO[sT]}, 나 ${ARROW[sM]} ${SHAPE_KO[sM]} → ${SHAPE_FIX[sT]}`});shapeHints.push({w,sev,sT,sM})}}
+      const sT=w.te.shape,sM=w.me.shape;const sev=SHAPE_FIX[sT]?shapeMiss(w.te,w.me,w.stressT):0;
+      if(sev){w.notes.push({sev,t:`선생님 ${ARROW[sT]} ${SHAPE_KO[sT]}, 나 ${ARROW[sM]} ${SHAPE_KO[sM]} → ${SHAPE_FIX[sT]}`});shapeHints.push({w,sev,sT,sM})}
       const dl=w.me.level-w.te.level;
       // a gap of about an octave is almost always a pitch-tracking error, not a real difference
       if(Math.abs(dl)>=3.5&&Math.abs(dl)<9&&Math.abs(w.te.level)>=1.5){w.notes.push({sev:1,t:dl<0?'선생님보다 많이 낮아요 → 더 높게':'선생님보다 많이 높아요 → 조금 낮게'});if(!shapeHints.find(h=>h.w===w))shapeHints.push({w,sev:1,level:dl})}
@@ -944,18 +1100,23 @@ function compareWithTeacher(te,me,item){
     pauseFlags.sort((a,b)=>b.len-a.len);
     for(const f of pauseFlags.slice(0,2)){const w=words[f.k];hints.push({c:'',p:2,t:f.mid?`'${w.w}' 중간에서 ${f.len.toFixed(1)}초 끊겼어요 → 한 번에 이어서`:`'${w.w} ${words[f.k+1].w}' 사이에서 ${f.len.toFixed(1)}초 끊겼어요 → 선생님처럼 이어서 (연음)`})}
     const missed=[];
-    for(let k=0;k+1<words.length;k++){const g=gapAfter(k);if(g<0.25)continue;const a=words[k].ub,b=words[k+1].ua;let sil=0;for(let q=a;q<=b;q++)if(me.rms[q]<=me.gate*0.6)sil++;if(sil<8){missed.push({k,g});words[k].notes.push({sev:1,t:`이 단어 뒤에서 살짝 쉬어 주세요 (선생님 ${g.toFixed(1)}초)`})}}
+    for(let k=0;k+1<words.length;k++){if(gapAfter(k)<0.25)continue;
+      // the teacher really goes quiet here? (a breath or a held sound between words is not a pause)
+      const ga=words[k].tb+1,gb=words[k+1].ta-1;let silT=0;for(let q=ga;q<=gb;q++)if(te.rms[q]<=te.gate*0.6)silT++;if(silT<15)continue;
+      // my frames aligned to that gap, with a margin (alignment inside silence is loose)
+      const ua=Math.max(uA,al.lo[clamp(ga-tA,0,nT-1)]+uA-5),ub=Math.min(uB,al.hi[clamp(gb-tA,0,nT-1)]+uA+5);let sil=0;for(let q=ua;q<=ub;q++)if(me.rms[q]<=me.gate*0.6)sil++;
+      if(sil<Math.max(6,silT*0.35)){const g=silT/100;missed.push({k,g});words[k].notes.push({sev:1,t:`이 단어 뒤에서 살짝 쉬어 주세요 (선생님 ${g.toFixed(1)}초)`})}}
     if(missed.length)hints.push({c:'',p:1,t:`'${words[missed[0].k].w}' 뒤에서 살짝 쉬어 주세요 (선생님은 ${missed[0].g.toFixed(1)}초 쉼)`});
     // the word whose sound differs most from the teacher's (a "listen and compare" pointer, not a verdict)
     const costs=[];for(let i=0;i<nT;i++)if(al.cost[i]>0)costs.push(al.cost[i]);const medC=costs.length?median(costs):0;
     if(medC>0){const ranked=words.filter(w=>!w.func&&(w.tb-w.ta)>=6).map(w=>({w,ratio:w.cost/medC})).sort((a,b)=>b.ratio-a.ratio);if(ranked.length&&ranked[0].ratio>=1.6){const w=ranked[0].w;w.soundDiff=true;w.notes.push({sev:0,t:'소리가 선생님과 가장 달라요 → ▶ 비교로 들어보세요'});hints.push({c:'',p:1,t:`'${w.w}' — 소리가 선생님과 가장 달라요 → 단어를 눌러 ▶ 비교로 들어보세요`})}}
     // scores
     const comp=words.filter(w=>w.te&&w.me&&w.te.voiced>=3&&w.me.voiced>=3);let shapeS=null,levelS=null;
-    if(comp.length){shapeS=mean(comp.map(w=>{const a=w.te.shape,b=w.me.shape;if(a===b)return 1;if(a==='flat')return 0.75;if((a==='rise'&&b==='fall')||(a==='fall'&&b==='rise'))return 0;if(a==='hat'&&(b==='rise'||b==='fall'))return 0.6;return 0.4}))*100;levelS=mean(comp.map(w=>Math.max(0,1-Math.abs(w.me.level-w.te.level)/7)))*100}
+    if(comp.length){shapeS=mean(comp.map(w=>shapeSim(w.te,w.me)))*100;levelS=mean(comp.map(w=>Math.max(0,1-Math.abs(w.me.level-w.te.level)/7)))*100}
     const corrS=r==null?null:clamp((r+1)/2*100,0,100);
     let into=wavg([[corrS,0.35],[shapeS,0.35],[levelS,0.3]]);if(into!=null&&rangeRatio<0.55)into-=(0.55-rangeRatio)*40;
     // each flagged word costs points directly, so one wrong rise/fall can't hide behind an otherwise similar contour
-    if(into!=null)into-=Math.min(40,shapeHints.reduce((s,h)=>s+(h.sev>1?12:6),0));
+    if(into!=null)into-=Math.min(40,shapeHints.reduce((s,h)=>s+(h.sev>1?12:6),0)+6*stepMiss);
     res.into=into==null?null:clamp(Math.round(into),0,100);
     const dws=words.filter(w=>w.durRatio!=null&&!w.func);const durErr=dws.length?mean(dws.map(w=>Math.abs(Math.log(clamp(w.durRatio,0.2,5))))):0;
     res.rhythm=clamp(Math.round(100-Math.min(50,durErr*60)-Math.min(36,pauseFlags.length*12)-Math.min(16,missed.length*8)-((speed>1.45||speed<0.7)?10:0)),0,100);
@@ -1075,21 +1236,84 @@ async function renderCard(){
   const S=state.session,id=S.queue[S.idx],item=state.bank.byId[id];
   if(!item){nextCard();return}
   stopAllAudio();if(cap){const c=cap;cap=null;c.stop()}
-  cur={item,teacher:undefined,attempts:[],best:null,grade:null,gradeManual:false,hidden:state.settings.hideText,current:null,sel:null,lastBlob:null};
+  cur={item,teacher:undefined,profile:null,attempts:[],best:null,grade:null,gradeManual:false,hidden:state.settings.hideText,current:null,sel:null,lastBlob:null,base:null,picking:false};
+  paintCard();$('#result').hidden=true;
+  const c=cur;const t=await getTeacher(item);
+  if(cur===c){c.teacher=t;c.profile=t&&t.an&&!t.local&&item.words?(t.profile||(t.profile=teacherProfile(t.an,item.words))):null;$('#btn-teacher').textContent=teacherLabel();renderMelody()}
+}
+// paint the practice card from `cur` (a sentence, or a chunk of one)
+function paintCard(){
+  const S=state.session,item=cur.item,ch=!!cur.base,src=ch?cur.base.item:item;
   $('#prac-count').textContent=`${S.idx+1}/${S.queue.length}`;$('#prac-bar').style.width=(S.idx/S.queue.length*100)+'%';
-  const T=state.bank.tiers[item.tier]||{short:item.tier+'순위'};
-  const tierEl=$('#c-tier');tierEl.textContent=T.short;tierEl.className='chip '+tierClass(item.tier);
-  $('#c-source').textContent=(item.lesson&&item.lesson!=='office'?item.lesson+' · ':'')+(item.source||'');
-  $('#c-kind').textContent=kindLabel(item.kind)+(item.role?' '+item.role:'')+(item.stitched?' · 이어붙인 클립':'');
+  $('#chunk-banner').hidden=!ch;if(ch)$('#chunk-label').textContent=`'${item.text}' 구간 연습 — 짧게 익히고 전체 문장으로 돌아가세요`;
+  const T=state.bank.tiers[src.tier]||{short:src.tier+'순위'};
+  const tierEl=$('#c-tier');tierEl.textContent=T.short;tierEl.className='chip '+tierClass(src.tier);
+  $('#c-source').textContent=(src.lesson&&src.lesson!=='office'?src.lesson+' · ':'')+(src.source||'');
+  $('#c-kind').textContent=ch?'구간':kindLabel(item.kind)+(item.role?' '+item.role:'')+(item.stitched?' · 이어붙인 클립':'');
   const textEl=$('#c-text');textEl.textContent=item.text;textEl.classList.toggle('hidden-text',cur.hidden);$('#prac-hide').textContent=cur.hidden?'보기':'가리기';
   $('#c-ko').textContent=state.settings.showKo?item.ko:'';$('#c-ko').hidden=!(state.settings.showKo&&item.ko);
   $('#c-note').textContent=item.note||'';$('#c-note').hidden=!item.note;
   const ctxEl=$('#c-context');ctxEl.hidden=true;
-  if(item.group){const g=state.bank.items.filter(x=>x.group===item.group&&(x.seq||0)<(item.seq||0)).sort((a,b)=>(b.seq||0)-(a.seq||0))[0];if(g){ctxEl.innerHTML=`<span class="muted">앞 대사${g.role?' ('+esc(g.role)+')':''}: </span><b>${esc(g.text)}</b>`;ctxEl.hidden=false}}
-  $('#mic-banner').hidden=true;$('#result').hidden=true;$('#word-detail').hidden=true;$('#btn-me').disabled=true;$('#btn-me').textContent='▶ 내 소리';
-  $('#rec-msg').textContent='선생님 소리를 듣고, ● 녹음을 누른 뒤 따라 말하세요.';resetRecUI();
-  $('#btn-teacher').textContent='▶ 선생님';
-  const c=cur;const t=await getTeacher(item);if(cur===c){c.teacher=t;$('#btn-teacher').textContent=teacherLabel()}
+  if(item.group&&!ch){const g=state.bank.items.filter(x=>x.group===item.group&&(x.seq||0)<(item.seq||0)).sort((a,b)=>(b.seq||0)-(a.seq||0))[0];if(g){ctxEl.innerHTML=`<span class="muted">앞 대사${g.role?' ('+esc(g.role)+')':''}: </span><b>${esc(g.text)}</b>`;ctxEl.hidden=false}}
+  $('#mic-banner').hidden=true;$('#word-detail').hidden=true;$('#btn-me').disabled=!cur.lastBlob;$('#btn-me').textContent='▶ 내 소리';
+  $('#rec-msg').textContent=ch?'선생님 구간을 듣고, ● 녹음을 누른 뒤 그 부분만 따라 말하세요.':'선생님 소리를 듣고, ● 녹음을 누른 뒤 따라 말하세요.';resetRecUI();
+  $('#btn-teacher').textContent=teacherLabel();
+  $('#btn-next').textContent=ch?'← 전체 문장':'다음 →';$('.grade-row').hidden=ch;$('#btn-capture').hidden=ch;
+  renderMelody();
+}
+function melodyChip(w,p,k){
+  const W=60,H=30,f=w.f;const y0=(H-2-((0-p.lo)/(p.hi-p.lo))*(H-4)).toFixed(1);const d=f?sparkPath(f.series,W,H,p.lo,p.hi):'';const bw=Math.round(clamp((w.e-w.s)/p.maxDur,0.08,1)*100);
+  return `<button type="button" class="mc${w.stress?' stress':''}${w.func&&!w.stress?' weak':''}" data-k="${k}"><span class="spbox"><svg class="sp" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><line class="mid" vector-effect="non-scaling-stroke" x1="0" y1="${y0}" x2="${W}" y2="${y0}"></line>${d?`<path vector-effect="non-scaling-stroke" d="${d}"></path>`:''}</svg></span><span class="wt">${esc(w.w)}</span><span class="dur"><i style="width:${bw}%"></i></span><span class="wa">${ARROW[f&&f.voiced>=3?f.shape:'none']}</span></button>`;
+}
+function renderMelody(){
+  const box=$('#melody');const p=cur&&cur.profile;
+  if(!p||state.settings.showMelody===false){box.hidden=true;return}
+  box.hidden=false;box.open=state.settings.melodyOpen!==false;
+  const stressed=p.ws.filter(w=>w.stress).map(w=>w.w);$('#melody-sum').textContent=stressed.length?`강조: ${stressed.join(', ')}`:'';
+  $('#mchips').innerHTML=p.ws.map((w,k)=>melodyChip(w,p,k)).join('');
+  $('#mchips').querySelectorAll('.mc').forEach(b=>b.addEventListener('click',()=>onMelodyTap(+b.dataset.k)));
+  $('#coach').innerHTML=p.coach.map(t=>`<li>${esc(t)}</li>`).join('');
+  $('#btn-chunk').hidden=!!cur.base||p.ws.length<3;$('#btn-slow').textContent='▶ 느리게';$('#btn-hum').textContent='▶ 허밍';
+  $('#chunk-pick').hidden=!cur.picking;if(cur.picking)renderChunkPick();
+}
+function onMelodyTap(k){
+  const p=cur&&cur.profile;if(!p)return;
+  if(cur.picking){if(cur.pickA==null||cur.pickB!=null){cur.pickA=k;cur.pickB=null}else{cur.pickB=k;if(cur.pickB<cur.pickA){const t=cur.pickA;cur.pickA=cur.pickB;cur.pickB=t}}renderChunkPick();return}
+  const w=p.ws[k];if(cur.teacher&&cur.teacher.blob)player.play('t:'+cur.item.id,cur.teacher.blob,{start:Math.max(0,w.s-0.06),end:w.e+0.08});
+}
+function renderChunkPick(){
+  const p=cur.profile;const sugs=chunkSuggestions(p);
+  $('#chunk-sugs').innerHTML=sugs.map(s=>`<button type="button" class="btn small" data-i="${s.i}" data-j="${s.j}">${esc(s.text)}</button>`).join('')||'<span class="small muted">추천 구간이 없어요</span>';
+  $('#chunk-sugs').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>startChunk(+b.dataset.i,+b.dataset.j)));
+  const a=cur.pickA,b=cur.pickB;$$('#mchips .mc').forEach((el,k)=>el.classList.toggle('pick',a!=null&&(b==null?k===a:k>=a&&k<=b)));
+  const go=$('#chunk-go');if(a!=null&&b!=null){go.hidden=false;go.textContent=`'${p.ws.slice(a,b+1).map(w=>w.w).join(' ')}' 연습`;go.onclick=()=>startChunk(a,b)}else go.hidden=true;
+  $('#chunk-help').textContent=a==null?'직접 고르기: 위 단어 카드에서 시작 단어와 끝 단어를 차례로 누르세요.':b==null?'끝 단어를 누르세요.':'다른 구간을 고르려면 시작 단어를 다시 누르세요.';
+}
+function startChunk(i,j){
+  const base=cur;if(!base||!base.teacher||!base.teacher.pcm||!base.profile||cap)return;
+  stopAllAudio();const ws=base.item.words;const total=base.teacher.pcm.length/16000;
+  const t0=Math.max(0,ws[i].s-0.12),t1=Math.min(total,ws[j].e+0.15);
+  const pcm=base.teacher.pcm.slice(Math.floor(t0*16000),Math.ceil(t1*16000));
+  const words=ws.slice(i,j+1).map((w,q)=>({w:w.w,s:Math.max(0,+w.s-t0),e:Math.max(0.02,+w.e-t0),stress:!!base.profile.ws[i+q].stress}));
+  const item=Object.assign({},base.item,{id:base.item.id+'#'+i+'-'+j,text:words.map(w=>w.w).join(' '),ko:'',note:'',words,clip:null,group:null,stitched:false});
+  const teacher={blob:wavBlob(pcm),pcm,an:analyzeVoice(pcm),local:false,chunk:true};
+  base.picking=false;base.pickA=base.pickB=null;
+  cur={item,teacher,profile:null,attempts:[],best:null,grade:null,gradeManual:true,hidden:false,current:null,sel:null,lastBlob:null,base,picking:false};
+  cur.profile=teacherProfile(teacher.an,words);
+  paintCard();$('#result').hidden=true;window.scrollTo(0,0);
+}
+function exitChunk(){
+  if(!cur||!cur.base)return;stopAllAudio();if(cap){const c=cap;cap=null;c.stop()}
+  cur=cur.base;paintCard();if(cur.current)renderResult(cur.current);else $('#result').hidden=true;window.scrollTo(0,0);
+}
+function playHum(){
+  if(!cur||!cur.teacher||!cur.teacher.an)return;const b=$('#btn-hum');if(player.busy){player.stop();return}
+  const t=cur.teacher;if(!t.humBlob){const pcm=makeHum(t.an);if(!pcm){toast('멜로디를 만들 수 없어요');return}t.humBlob=wavBlob(pcm)}
+  b.textContent='■ 정지';player.play('hum:'+cur.item.id,t.humBlob,{onend:()=>{b.textContent='▶ 허밍'}});
+}
+function playSlow(){
+  if(!cur||!cur.teacher)return;const b=$('#btn-slow');if(player.busy){player.stop();return}
+  b.textContent='■ 정지';player.play('t:'+cur.item.id,cur.teacher.blob,{rate:0.7,onend:()=>{b.textContent='▶ 느리게'}});
 }
 function playTeacher(){
   if(!cur||cap)return;const b=$('#btn-teacher');
@@ -1134,7 +1358,8 @@ async function analyzeAttempt(blob,transcripts){
   if(c.hidden){c.hidden=false;$('#c-text').classList.remove('hidden-text');$('#prac-hide').textContent='가리기'}
   if(c.teacher===undefined)c.teacher=await getTeacher(item);
   const te=c.teacher||null;
-  const att={id:Date.now(),item,blob,me,te,cmp:te&&te.an?compareWithTeacher(te.an,me,item):null,asr:null,asrState:null,azure:null};
+  if(te&&te.an&&!te.local&&!c.profile&&item.words)c.profile=te.profile||(te.profile=teacherProfile(te.an,item.words));
+  const att={id:Date.now(),item,blob,me,te,cmp:te&&te.an?compareWithTeacher(te.an,me,item,te.local?null:c.profile):null,asr:null,asrState:null,azure:null};
   if(state.settings.azureKey&&state.settings.azureKey.trim()){$('#rec-msg').textContent='정밀 평가 중…';try{att.azure=parseAzure(await azureAssess(pcm16,item.text))}catch(e){toast('정밀 평가 실패: '+e.message)}}
   if(!att.azure&&transcripts)att.asr=asrCompare(item.text,transcripts);
   if(cur!==c)return;
@@ -1181,7 +1406,7 @@ function scoreColor(s){return s==null?getVar('--muted'):s>=80?getVar('--good'):s
 function drawRing(score){const c=$('#ring'),g=c.getContext('2d');g.clearRect(0,0,192,192);g.lineWidth=14;g.lineCap='round';g.strokeStyle=getVar('--surface-2');g.beginPath();g.arc(96,96,80,0,Math.PI*2);g.stroke();if(score!=null){g.strokeStyle=scoreColor(score);g.beginPath();g.arc(96,96,80,-Math.PI/2,-Math.PI/2+Math.PI*2*score/100);g.stroke()}const n=$('#score-num');n.textContent=score==null?'—':score;n.style.color=score==null?getVar('--muted'):scoreColor(score)}
 function renderResult(att){
   if(!cur||cur.current!==att)return;const v=att.view;
-  $('#rec-msg').textContent=att.cmp?'선생님 녹음과 단어별로 맞춰 비교했어요.':att.te?'비교할 소리가 부족했어요.':'선생님 녹음이 없어 내 소리만 분석했어요.';
+  $('#rec-msg').textContent=att.cmp?(cur.base?'선생님 구간과 단어별로 맞춰 비교했어요.':'선생님 녹음과 단어별로 맞춰 비교했어요.'):att.te?'비교할 소리가 부족했어요.':'선생님 녹음이 없어 내 소리만 분석했어요.';
   $('#result').hidden=false;drawRing(v.overall);
   $('#subs').innerHTML=v.parts.map(([k,val])=>`<div class="sub"><span>${esc(k)}</span><b>${val==null?'—':Math.round(val)}</b><div class="bar"><i style="width:${val==null?0:clamp(val,0,100)}%;background:${val==null?'transparent':scoreColor(val)}"></i></div></div>`).join('');
   renderChips(att);
@@ -1192,7 +1417,7 @@ function renderResult(att){
   if(!cur.gradeManual)cur.grade=cur.best!=null?gradeFromScore(cur.best):null;
   $$('.grade-row .g').forEach(b=>b.classList.toggle('sel',cur.grade!=null&&parseInt(b.dataset.g)===cur.grade));
 }
-function sparkPath(series,W,H){if(!series||series.length<2)return '';const lo=-8,hi=8,n=series.length;let d='',pen=false;for(let i=0;i<n;i++){const v=series[i];if(isNaN(v)){pen=false;continue}const x=(i/(n-1))*W,y=H-2-((clamp(v,lo,hi)-lo)/(hi-lo))*(H-4);d+=(pen?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);pen=true}return d}
+function sparkPath(series,W,H,lo=-8,hi=8){if(!series||series.length<2)return '';const n=series.length;let d='',pen=false;for(let i=0;i<n;i++){const v=series[i];if(isNaN(v)){pen=false;continue}const x=(i/(n-1))*W,y=H-2-((clamp(v,lo,hi)-lo)/(hi-lo))*(H-4);d+=(pen?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);pen=true}return d}
 function chipHtml(tk,d,sel){
   const w=tk.ws[0];const W=60,H=26;let svg='';
   if(w&&(w.te||w.me)){const pT=w.te?sparkPath(w.te.series,W,H):'',pM=w.me?sparkPath(w.me.series,W,H):'';svg=`<span class="spbox"><svg class="sp" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><line class="mid" vector-effect="non-scaling-stroke" x1="0" y1="${H/2}" x2="${W}" y2="${H/2}"></line>${pT?`<path class="te" vector-effect="non-scaling-stroke" d="${pT}"></path>`:''}${pM?`<path class="me" vector-effect="non-scaling-stroke" d="${pM}"></path>`:''}</svg></span>`}
@@ -1255,7 +1480,7 @@ function drawAligned(att){
   line(cmp.teLine,x,getVar('--teacher'));line(cmp.meLine,x,getVar('--me'));
 }
 function finishCard(){
-  if(!cur)return;const S=state.session,id=cur.item.id;
+  if(!cur)return;if(cur.base){exitChunk();return}const S=state.session,id=cur.item.id;
   stopAllAudio();
   if(!cur.attempts.length&&!cur.gradeManual){S.results.push({id,score:null,grade:null,skipped:true});nextCard();return}
   const score=cur.best;const grade=cur.grade??(score!=null?gradeFromScore(score):3);
@@ -1279,7 +1504,7 @@ function endSession(){
 /* ===================== capture teacher audio from phone mic ===================== */
 async function toggleCapture(){
   const b=$('#btn-capture');if(!cur)return;
-  if(capT){const c=capT;capT=null;b.textContent='선생님 음성 직접 녹음';const blob=await c.stop();let pcm;try{pcm=trimSilence(await blobToPcm16(blob))}catch(e){toast('녹음을 읽지 못했어요');return}if(pcm.length<16000*0.3){toast('너무 짧아요');return}await idb.set('local:'+cur.item.id,{wav:toWav(pcm),at:Date.now()});delete teacherCache[cur.item.id];cur.teacher=await getTeacher(cur.item);$('#btn-teacher').textContent=teacherLabel();toast('이 기기에 선생님 음성을 저장했어요');return}
+  if(capT){const c=capT;capT=null;b.textContent='선생님 음성 직접 녹음';const blob=await c.stop();let pcm;try{pcm=trimSilence(await blobToPcm16(blob))}catch(e){toast('녹음을 읽지 못했어요');return}if(pcm.length<16000*0.3){toast('너무 짧아요');return}await idb.set('local:'+cur.item.id,{wav:toWav(pcm),at:Date.now()});delete teacherCache[cur.item.id];cur.teacher=await getTeacher(cur.item);cur.profile=null;renderMelody();$('#btn-teacher').textContent=teacherLabel();toast('이 기기에 선생님 음성을 저장했어요');return}
   if(cap){toast('내 녹음을 먼저 멈춰 주세요');return}
   stopAllAudio();const c=new Capture();try{await c.start()}catch(e){micError(e);return}
   c.onauto=null;clearTimeout(c.maxT);c.maxT=setTimeout(()=>{if(capT===c)toggleCapture()},30000);capT=c;b.textContent='■ 선생님 음성 저장';
@@ -1385,7 +1610,7 @@ function renderAsrState(){
 }
 function renderSettings(){
   const s=state.settings;for(const k of ['ghOwner','ghRepo','ghBranch','ghToken','dailyTarget','newPerDay','weekShare','strugglePct','targetDate','azureKey','azureRegion','ttsRate']){const el=$('#s-'+k);if(el&&document.activeElement!==el)el.value=s[k]??''}
-  $('#s-showKo').checked=!!s.showKo;$('#s-hideText').checked=!!s.hideText;$('#s-ttsRate-val').textContent=(+s.ttsRate).toFixed(2)+'×';
+  $('#s-showKo').checked=!!s.showKo;$('#s-hideText').checked=!!s.hideText;$('#s-showMelody').checked=s.showMelody!==false;$('#s-ttsRate-val').textContent=(+s.ttsRate).toFixed(2)+'×';
   const am=$('#s-asrMode');am.value=s.asrMode||'device';am.querySelector('option[value="browser"]').disabled=IS_IOS||!(window.SpeechRecognition||window.webkitSpeechRecognition);
   renderAsrState();
   const sel=$('#add-tier');if(!sel.options.length){sel.innerHTML=Object.keys(state.bank.tiers).sort().map(k=>`<option value="${k}">${esc(state.bank.tiers[k].short)} · ${esc(state.bank.tiers[k].name)}</option>`).join('')}
@@ -1413,6 +1638,7 @@ function bindSettings(){
   $('#s-ttsRate').addEventListener('input',()=>{$('#s-ttsRate-val').textContent=(+$('#s-ttsRate').value).toFixed(2)+'×'});
   $('#s-showKo').addEventListener('change',e=>{state.settings.showKo=e.target.checked;saveSettings()});
   $('#s-hideText').addEventListener('change',e=>{state.settings.hideText=e.target.checked;saveSettings()});
+  $('#s-showMelody').addEventListener('change',e=>{state.settings.showMelody=e.target.checked;saveSettings()});
   $('#s-asrMode').addEventListener('change',e=>{state.settings.asrMode=e.target.value;saveSettings();renderAsrState()});
   $('#btn-asr-load').addEventListener('click',()=>{state.settings.asrConsent=true;saveSettings();asr.ensure().then(()=>toast('단어 인식 모델이 준비됐어요')).catch(e=>toast('모델을 받지 못했어요: '+e.message,4000));renderAsrState()});
   $('#btn-mictest').addEventListener('click',micTest);
@@ -1537,7 +1763,13 @@ function bind(){
   $('#btn-rec').addEventListener('click',toggleRecord);
   $('#btn-me').addEventListener('click',playMine);
   $('#btn-retry').addEventListener('click',()=>{toggleRecord()});
-  $('#btn-next').addEventListener('click',finishCard);
+  $('#btn-next').addEventListener('click',()=>{if(cur&&cur.base)exitChunk();else finishCard()});
+  $('#btn-slow').addEventListener('click',playSlow);
+  $('#btn-hum').addEventListener('click',playHum);
+  $('#btn-chunk').addEventListener('click',()=>{if(!cur)return;cur.picking=!cur.picking;cur.pickA=cur.pickB=null;renderMelody();if(cur.picking)$('#chunk-pick').scrollIntoView({behavior:'smooth',block:'nearest'})});
+  $('#chunk-cancel').addEventListener('click',()=>{if(!cur)return;cur.picking=false;cur.pickA=cur.pickB=null;renderMelody()});
+  $('#chunk-exit').addEventListener('click',exitChunk);
+  $('#melody').addEventListener('toggle',()=>{if($('#melody').hidden)return;const o=$('#melody').open;if(state.settings.melodyOpen!==o){state.settings.melodyOpen=o;saveSettings()}});
   $$('.grade-row .g').forEach(b=>b.addEventListener('click',()=>{if(!cur)return;cur.grade=parseInt(b.dataset.g);cur.gradeManual=true;$$('.grade-row .g').forEach(x=>x.classList.toggle('sel',x===b))}));
   $('#graph-wrap').addEventListener('toggle',()=>{if($('#graph-wrap').open&&cur&&cur.current)drawAligned(cur.current)});
   $('#btn-capture').addEventListener('click',toggleCapture);
