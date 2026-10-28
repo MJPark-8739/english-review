@@ -315,7 +315,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="chips" id="prio-f" aria-label="고르는 범위"></div>
       </div>
       <div class="prio-list" id="prio-list"></div>
-      <p class="small muted" style="margin:10px 0 0">줄을 누르면 수업·문서별로 나뉘어요. '잘한 것'(80점 이상)은 한 달 넘게 안 본 문장부터 골라요. 랜덤 연습 점수도 복습 일정에 그대로 반영돼요.</p>
+      <p class="small muted" style="margin:10px 0 0">줄을 누르면 수업·문서별로 나뉘어요. '잘한 것'(85점 이상)은 한 달 넘게 안 본 문장부터 골라요. 랜덤 연습 점수도 복습 일정에 그대로 반영돼요.</p>
     </div>
     <div class="grid2">
       <div class="card">
@@ -625,7 +625,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.4.1 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.4.2 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -1637,7 +1637,7 @@ function renderToday(){
 // ---- priority groups + random practice ----
 function shuffled(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 const PRIO_F={all:'전체',new:'안 한 것',weak:'약한 것',good:'잘한 것'};
-const isGood=i=>{const p=P(i.id);return !!(p&&p.avg!=null&&p.avg>=80)};
+const isGood=i=>{const p=P(i.id);return !!(p&&p.avg!=null&&p.avg>=85)};
 const sinceLast=i=>{const p=P(i.id);return p&&p.last?dayDiff(p.last.slice(0,10),todayStr()):9999};
 function prioPick(list){const f=state.settings.randF||'all';return f==='new'?list.filter(i=>!P(i.id)):f==='weak'?list.filter(i=>{const p=P(i.id);return p&&p.avg!=null&&p.avg<75}):f==='good'?list.filter(isGood):list}
 // random order; for "잘한 것" the ones not seen for a month or more come first (still shuffled within each part)
@@ -1663,7 +1663,7 @@ function renderPrio(){
   $('#prio-f').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{s.randF=b.dataset.f;saveSettings();renderPrio()}));
 }
 function startRandom(gid){const g=prioGroups[gid];if(!g)return;const pool=prioPick(g.items);
-  if(!pool.length){const f=state.settings.randF;toast(f==='new'?'이 묶음은 모두 한 번 이상 연습했어요':f==='weak'?'이 묶음에는 75점 미만 문장이 없어요':f==='good'?'이 묶음에는 아직 80점 이상 문장이 없어요':'연습할 문장이 없어요');return}
+  if(!pool.length){const f=state.settings.randF;toast(f==='new'?'이 묶음은 모두 한 번 이상 연습했어요':f==='weak'?'이 묶음에는 75점 미만 문장이 없어요':f==='good'?'이 묶음에는 아직 85점 이상 문장이 없어요':'연습할 문장이 없어요');return}
   startSession(prioOrder(pool).slice(0,state.settings.randN||10).map(i=>i.id),g.label+(state.settings.randF!=='all'?` · ${PRIO_F[state.settings.randF]}`:''))}
 let bankFilter={tier:0,lesson:'',q:''};
 function renderBank(){
