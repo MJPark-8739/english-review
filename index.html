@@ -85,6 +85,7 @@ main{padding:0 max(16px,env(safe-area-inset-right,0px)) calc(var(--tab-h) + 24px
 .btn.rec{background:var(--me);color:#fff;border-color:transparent;font-weight:700}
 .btn.rec.on{background:var(--bad);animation:pulse 1.2s ease-in-out infinite}
 .btn.small{padding:7px 11px;min-height:36px;font-size:13px;border-radius:10px}
+a.btn{color:inherit;text-decoration:none}
 .btn.ghost{background:transparent}
 .btn.wide{width:100%}
 .btn:disabled{opacity:.45;cursor:default}
@@ -272,6 +273,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
 .hw-list{display:flex;flex-direction:column;gap:4px;max-height:280px;overflow:auto}
 .hw-list button{display:flex;gap:8px;align-items:center;border:0;background:transparent;text-align:left;padding:6px 4px;border-radius:8px;font-size:13px;cursor:pointer;width:100%}
 .hw-list button.cur{background:var(--surface-2)}
+.hw-list button.skip .tx{text-decoration:line-through;color:var(--muted)}
 .hw-list .n{width:26px;flex:none;color:var(--muted);font-variant-numeric:tabular-nums}
 .hw-list .tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-en)}
 .hw-list .st{flex:none;width:18px;height:18px;border-radius:50%;background:var(--surface-2)}
@@ -337,11 +339,12 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
     </div>
     <div class="card">
       <div class="card-head"><h3>숙제 제출용 녹음</h3><span class="muted small">한 파일로 공유</span></div>
-      <p class="small muted">문장을 하나씩 녹음하면 mp3 한 파일로 합쳐 줘요. 폰의 공유 시트로 선생님께 바로 보내거나 다운로드할 수 있어요.</p>
+      <p class="small muted">문장을 하나씩 녹음하면 mp3 한 파일과 문장 목록(Word 또는 메모장) 파일을 만들어 줘요. '연습한 문장'을 누르면 연습 때 녹음한 것 중 가장 잘한 녹음을 그대로 써요.</p>
       <div class="row" style="margin-top:10px">
         <button class="btn small" id="btn-hw-set">현재 세트</button>
         <button class="btn small" id="btn-hw-lesson">최신 수업</button>
         <button class="btn small ghost" id="btn-hw-resume" hidden>이어서 하기</button>
+        <button class="btn small" id="btn-hw-takes" hidden>연습한 문장</button>
       </div>
     </div>
     <div class="card">
@@ -443,6 +446,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <button class="btn me" id="hw-me" disabled>▶ 내 소리</button>
     </div>
     <div class="rec-status"><span id="hw-msg">녹음을 누르고 문장을 읽으세요. 말이 끝나면 자동으로 멈춰요.</span><div class="level" id="hw-level" hidden><i></i></div></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn small ghost" id="hw-skip">이 문장 빼기</button></div>
     <div class="next-row">
       <button class="btn" id="hw-prev">← 이전</button>
       <button class="btn primary" id="hw-next">다음 →</button>
@@ -453,11 +457,15 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
     </div>
     <div class="card">
       <div class="card-head"><h3>제출 파일</h3><span class="muted small" id="hw-file-info"></span></div>
-      <p class="small muted">녹음한 순서대로 0.7초 간격으로 이어 붙여 mp3 한 파일로 만들어요. 안 한 문장은 건너뛰어요.</p>
+      <p class="small muted">녹음한 문장만 목록 순서대로 0.7초 간격으로 이어 붙여 mp3 한 파일로 만들고, 같은 순서의 문장 목록 파일(각 문장이 녹음에서 시작하는 시각 포함)을 함께 만들어요. 안 한 문장과 뺀 문장은 건너뛰어요.</p>
+      <div class="row" style="margin-top:10px;align-items:center"><span class="small muted">목록 형식</span><div class="chips" id="hw-fmt"></div></div>
       <div class="row" style="margin-top:10px">
         <button class="btn" id="hw-build">파일 만들기</button>
-        <button class="btn primary" id="hw-share" hidden>선생님께 공유</button>
-        <a class="btn" id="hw-download" hidden download>다운로드</a>
+        <button class="btn primary" id="hw-share" hidden>선생님께 공유 (녹음+목록)</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <a class="btn small" id="hw-download" hidden download>녹음 파일 받기</a>
+        <a class="btn small" id="hw-list-download" hidden download>목록 파일 받기</a>
         <button class="btn small ghost" id="hw-copy">문장 목록 복사</button>
       </div>
       <div class="row" style="margin-top:10px">
@@ -481,6 +489,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <div class="summary-list" id="sum-low" style="margin-top:8px"></div>
       <div class="row" style="margin-top:12px">
         <button class="btn" id="btn-sum-redo">낮은 점수만 다시</button>
+        <button class="btn" id="btn-sum-hw" hidden>녹음한 문장으로 제출 파일</button>
         <button class="btn primary" id="btn-sum-home">오늘 화면으로</button>
       </div>
     </div>
@@ -616,7 +625,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.3 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.4 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -665,7 +674,7 @@ const DEMO_BANK={version:1,demo:true,items:[
   {id:'demo-d2',text:"Sure, what's up?",ko:'그럼요, 무슨 일이에요?',tier:1,source:'데모',lesson:todayStr(),kind:'dialogue',group:'demo-dlg',role:'B',seq:2},
   {id:'demo-04',text:"I'm on the fence about it.",ko:'아직 결정을 못 했어요.',tier:2,source:'데모',lesson:'2026-08-13',kind:'sentence'}
 ]};
-const DEFAULTS={randN:10,randF:'all',dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,showMelody:true,melodyOpen:true,ttsRate:0.95,asrMode:'device',asrConsent:false,azureKey:'',azureRegion:'koreacentral',ghOwner:'MJPark-8739',ghRepo:'english-review-data',ghBranch:'main',ghToken:''};
+const DEFAULTS={randN:10,randF:'all',hwFmt:'docx',dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,showMelody:true,melodyOpen:true,ttsRate:0.95,asrMode:'device',asrConsent:false,azureKey:'',azureRegion:'koreacentral',ghOwner:'MJPark-8739',ghRepo:'english-review-data',ghBranch:'main',ghToken:''};
 const state={bank:{items:[],byId:{},tiers:DEFAULT_TIERS,demo:true,source:'demo'},progress:store.get(LS.progress,{}),log:store.get(LS.log,[]),localItems:store.get(LS.local,[]),settings:Object.assign({},DEFAULTS,store.get(LS.settings,{})),session:null,view:'today',bankPage:1};
 if(IS_IOS&&state.settings.asrMode==='browser')state.settings.asrMode='device';
 function saveProgress(){store.set(LS.progress,state.progress);store.set(LS.log,state.log.slice(-3000))}
@@ -1417,6 +1426,13 @@ async function runDeviceAsr(att){
   catch(e){att.asrState='error';att.asrError=e.message}
   if(cur&&cur.current===att){finalizeAttempt(att);renderResult(att)}
 }
+// best take of the day per sentence (from practice), so practised sentences can go straight into a submission file
+async function saveTake(att){try{const id=att.item&&att.item.id;if(!id||id.includes('#')||!att.me||!att.me.pcm||!att.view)return;const score=att.view.overall,k='take:'+todayStr()+':'+id;const old=await idb.get(k);
+  if(old&&old.att!==att.id&&old.score!=null&&(score==null||old.score>score))return;
+  const t=trimSilence(att.me.pcm);if(t.length<16000*0.3)return;const i16=new Int16Array(t.length);for(let i=0;i<t.length;i++){const v=clamp(t[i],-1,1);i16[i]=v<0?v*0x8000:v*0x7FFF}
+  await idb.set(k,{pcm16:i16.buffer,score,att:att.id,first:old&&old.first||Date.now()})}catch(e){}}
+async function takeDays(){const m={};for(const k of await idb.keys('take:')){const d=k.slice(5,15);(m[d]=m[d]||[]).push(k.slice(16))}return m}
+async function pruneTakes(){try{const lim=addDays(todayStr(),-14);for(const k of await idb.keys('take:'))if(k.slice(5,15)<lim)await idb.del(k)}catch(e){}}
 // index of the first display (base) token for each timed word; null if the two can't be lined up
 function wordToBase(words,text){const n=baseTokens(text).length;const out=[];let p=0;for(const w of words){out.push(Math.min(p,n-1));p+=Math.max(1,baseTokens(w.w).length)}return p===n?out:null}
 function finalizeAttempt(att){
@@ -1443,7 +1459,7 @@ function finalizeAttempt(att){
   else hints.push({c:'info',p:0,t:'선생님 소리나 내 소리가 너무 짧아서 비교하지 못했어요.'});
   hints.sort((a,b)=>b.p-a.p);
   if(!hints.some(h=>h.c!=='info'))hints.unshift({c:'good',p:9,t:cmp?'억양·리듬이 선생님과 잘 맞아요. 한 번 더 들어보고 똑같이 따라 해보세요.':'좋아요. 한 번 더 따라 해보세요.'});
-  att.view={toks,extras,parts,overall,hints:hints.slice(0,5)};
+  att.view={toks,extras,parts,overall,hints:hints.slice(0,5)};saveTake(att);
   if(cur){const vals=cur.attempts.map(a=>a.view&&a.view.overall).filter(v=>v!=null);cur.best=vals.length?Math.max(...vals):null}
 }
 function scoreClass(s){return s==null?'none':s>=80?'ok':s>=65?'warn':'bad'}
@@ -1545,6 +1561,7 @@ function endSession(){
   $('#sum-low').innerHTML=low.length?low.map(r=>`<div class="s"><span class="en">${esc(state.bank.byId[r.id]?state.bank.byId[r.id].text:r.id)}</span><span class="score-pill ${scoreClass(r.score)}">${r.score==null?'—':r.score}</span></div>`).join(''):'<p class="small muted">모두 80점 이상이에요.</p>';
   $('#sum-note').textContent=low.length?`${low.length}문장은 더 짧은 간격으로 다시 나와요.`:'간격이 늘어나요. 내일 또 봐요.';
   $('#btn-sum-redo').hidden=!low.length;$('#btn-sum-redo').onclick=()=>startSession(low.map(r=>r.id),'다시');
+  const recIds=[...new Set(done.filter(r=>r.score!=null).map(r=>r.id))];$('#btn-sum-hw').hidden=!recIds.length;$('#btn-sum-hw').onclick=()=>startTakesHomework(todayStr(),recIds);
   state.session=null;cur=null;showView('summary');syncIfReady(true);
 }
 
@@ -1614,6 +1631,7 @@ function renderToday(){
   const since=addDays(todayStr(),-6);const recent=state.log.filter(e=>e.t.slice(0,10)>=since);$('#w7-attempts').textContent=recent.length;const sc=recent.filter(e=>e.score!=null).map(e=>e.score);$('#w7-avg').textContent=sc.length?Math.round(mean(sc)):'—';
   const days=new Set(state.log.map(e=>e.t.slice(0,10)));let streak=0,dd=todayStr();if(!days.has(dd))dd=addDays(dd,-1);while(days.has(dd)){streak++;dd=addDays(dd,-1)}$('#streak').textContent=streak?`${streak}일 연속`:'';
   const ls=store.get(LS.sync,null);$('#sync-state').textContent=!gh.ready()?'미연결':ls?ls.slice(5,16).replace('T',' '):'아직 안 함';
+  renderTakesButton();
   const hl=store.get('bear.hw.last',null);$('#btn-hw-resume').hidden=!(hl&&hl.key&&hl.key.startsWith(todayStr()));
 }
 // ---- priority groups + random practice ----
@@ -1733,14 +1751,16 @@ function bindSettings(){
 let hw=null,hwCap=null;
 function loadScriptAny(urls){return(async()=>{for(const u of urls){try{await new Promise((res,rej)=>{const s=document.createElement('script');s.src=u;s.onload=res;s.onerror=rej;document.head.appendChild(s)});return true}catch(e){}}return false})()}
 function hwKey(id){return 'hw:'+hw.id+':'+id}
-async function startHomework(ids,label){
+async function startHomework(ids,label,opt={}){
   if(!ids.length){toast('녹음할 문장이 없어요');return}
   const key=todayStr()+'|'+label;
-  hw={id:key,ids:ids.slice(),idx:0,takes:{},wavs:{},label,blob:null,ext:'mp3'};
+  hw={id:key,ids:ids.slice(),idx:0,takes:{},wavs:{},label,blob:null,ext:'mp3',listBlob:null,skip:new Set(store.get('bear.hw.skip.'+key,[]))};
   const keys=await idb.keys('hw:'+key+':');
   for(const k of keys){const id=k.slice(('hw:'+key+':').length);const v=await idb.get(k);if(v&&v.pcm&&hw.ids.includes(id))hw.takes[id]=new Float32Array(v.pcm)}
+  // takes from practice (best of that day) fill sentences not yet recorded here
+  if(opt.fromDay)for(const id of hw.ids){if(hw.takes[id])continue;const v=await idb.get('take:'+opt.fromDay+':'+id);if(v&&v.pcm16){const a=new Int16Array(v.pcm16),f=new Float32Array(a.length);for(let i=0;i<a.length;i++)f[i]=a[i]/32768;hw.takes[id]=f;await idb.set(hwKey(id),{pcm:f.buffer,at:Date.now()})}}
   const firstMissing=hw.ids.findIndex(id=>!hw.takes[id]);hw.idx=firstMissing<0?0:firstMissing;
-  store.set('bear.hw.last',{key,ids:hw.ids,label});
+  store.set('bear.hw.last',{key,ids:hw.ids,label,fromDay:opt.fromDay||null});
   showView('homework');renderHw();
   if(keys.length)toast(`저장된 녹음 ${Object.keys(hw.takes).length}개를 불러왔어요`);
 }
@@ -1749,12 +1769,15 @@ function renderHw(){
   stopAllAudio();
   $('#hw-count').textContent=`${hw.idx+1}/${hw.ids.length}`;$('#hw-bar').style.width=(Object.keys(hw.takes).length/hw.ids.length*100)+'%';
   $('#hw-label').textContent=hw.label;$('#hw-text').textContent=item.text;$('#hw-ko').textContent=item.ko||'';$('#hw-ko').hidden=!item.ko;$('#hw-note').textContent=item.note||'';$('#hw-note').hidden=!item.note;
+  $('#hw-skip').textContent=hw.skip.has(id)?'이 문장 다시 넣기':'이 문장 빼기';
+  $('#hw-fmt').innerHTML=[['docx','Word'],['txt','메모장']].map(([k,v])=>`<button class="chip ${(state.settings.hwFmt||'docx')===k?'sel':''}" data-f="${k}">${v}</button>`).join('');
+  $('#hw-fmt').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{state.settings.hwFmt=b.dataset.f;saveSettings();hw.blob=null;hw.listBlob=null;renderHw()}));
   const has=!!hw.takes[id];$('#hw-me').disabled=!has;$('#hw-me').textContent='▶ 내 소리';$('#hw-msg').textContent=has?'녹음돼 있어요. 다시 녹음하면 덮어써요.':'녹음을 누르고 문장을 읽으세요. 말이 끝나면 자동으로 멈춰요.';
   $('#hw-prev').disabled=hw.idx===0;$('#hw-next').textContent=hw.idx>=hw.ids.length-1?'목록으로':'다음 →';
-  const done=Object.keys(hw.takes).filter(k=>hw.ids.includes(k)).length;$('#hw-done').textContent=`${done}/${hw.ids.length}`;
-  $('#hw-list').innerHTML=hw.ids.map((x,i)=>{const it=state.bank.byId[x];return`<button data-i="${i}" class="${i===hw.idx?'cur':''}"><span class="n">${i+1}</span><span class="tx">${esc(it?it.text:x)}</span><span class="st ${hw.takes[x]?'done':''}"></span></button>`}).join('');
+  const done=Object.keys(hw.takes).filter(k=>hw.ids.includes(k)&&!hw.skip.has(k)).length;$('#hw-done').textContent=`넣을 문장 ${done}/${hw.ids.length}`;
+  $('#hw-list').innerHTML=hw.ids.map((x,i)=>{const it=state.bank.byId[x];return`<button data-i="${i}" class="${i===hw.idx?'cur':''}${hw.skip.has(x)?' skip':''}"><span class="n">${i+1}</span><span class="tx">${esc(it?it.text:x)}</span><span class="st ${hw.takes[x]?'done':''}"></span></button>`}).join('');
   $('#hw-list').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{hw.idx=+b.dataset.i;renderHw()}));
-  $('#hw-share').hidden=!hw.blob;$('#hw-download').hidden=!hw.blob;$('#hw-file-info').textContent=hw.blob?`${(hw.blob.size/1048576).toFixed(1)} MB · ${hw.ext}`:'';
+  $('#hw-share').hidden=!hw.blob;$('#hw-download').hidden=!hw.blob;$('#hw-list-download').hidden=!hw.listBlob;$('#hw-file-info').textContent=hw.blob?`${(hw.blob.size/1048576).toFixed(1)} MB · ${hw.ext} + ${hw.listExt==='txt'?'메모장':'Word'}`:'';
   $('#hw-teacher').textContent='▶ 듣기';getTeacher(item);
 }
 async function hwToggleRecord(){
@@ -1770,7 +1793,7 @@ async function hwStopRecord(){
   const blob=await c.stop();let pcm16;
   try{pcm16=trimSilence(await blobToPcm16(blob))}catch(e){$('#hw-msg').textContent='녹음을 읽지 못했어요. 다시 녹음해 주세요.';return}
   if(pcm16.length<16000*0.3){$('#hw-msg').textContent='소리가 거의 안 잡혔어요. 다시 녹음해 주세요.';return}
-  const id=hw.ids[hw.idx];hw.takes[id]=pcm16;delete hw.wavs[id];hw.blob=null;
+  const id=hw.ids[hw.idx];hw.takes[id]=pcm16;delete hw.wavs[id];hw.blob=null;hw.listBlob=null;
   await idb.set(hwKey(id),{pcm:pcm16.buffer,at:Date.now()});
   renderHw();$('#hw-msg').textContent='저장됐어요. ▶ 내 소리로 확인하고, 괜찮으면 다음으로.';
 }
@@ -1787,9 +1810,9 @@ function hwPlayTeacher(){
   if(item.id in teacherCache)go(teacherCache[item.id]);else getTeacher(item).then(go);
 }
 async function hwBuild(){
-  const ids=hw.ids.filter(id=>hw.takes[id]);if(!ids.length){toast('녹음된 문장이 없어요');return}
-  const gap=new Float32Array(Math.round(16000*0.7));let total=0;const parts=[];
-  for(const id of ids){const t=hw.takes[id];let peak=0;for(let i=0;i<t.length;i++)peak=Math.max(peak,Math.abs(t[i]));const g=peak>0?Math.min(4,0.89/peak):1;const u=new Float32Array(t.length);for(let i=0;i<t.length;i++)u[i]=t[i]*g;parts.push(u,gap);total+=u.length+gap.length}
+  const ids=hw.ids.filter(id=>hw.takes[id]&&!hw.skip.has(id));if(!ids.length){toast('녹음된 문장이 없어요');return}
+  const gap=new Float32Array(Math.round(16000*0.7));let total=0;const parts=[],starts=[];
+  for(const id of ids){const t=hw.takes[id];starts.push(total/16000);let peak=0;for(let i=0;i<t.length;i++)peak=Math.max(peak,Math.abs(t[i]));const g=peak>0?Math.min(4,0.89/peak):1;const u=new Float32Array(t.length);for(let i=0;i<t.length;i++)u[i]=t[i]*g;parts.push(u,gap);total+=u.length+gap.length}
   const all=new Float32Array(total);let o=0;for(const p of parts){all.set(p,o);o+=p.length}
   $('#hw-build').disabled=true;$('#hw-build').textContent='만드는 중…';
   let blob=null,ext='mp3';
@@ -1799,21 +1822,55 @@ async function hwBuild(){
   }catch(e){blob=null}
   if(!blob){blob=new Blob([toWav(all)],{type:'audio/wav'});ext='wav'}
   hw.blob=blob;hw.ext=ext;hw.fileName=`homework-${todayStr()}.${ext}`;
+  const fmt=state.settings.hwFmt==='txt'?'txt':'docx';const info={title:'영어 숙제 녹음',date:todayStr(),label:hw.label,file:hw.fileName,secs:all.length/16000,rows:ids.map((id,i)=>({n:i+1,t:starts[i],en:state.bank.byId[id].text,ko:state.bank.byId[id].ko||''}))};
+  hw.listBlob=fmt==='txt'?listTxt(info):listDocx(info);hw.listExt=fmt;hw.listName=`homework-${todayStr()}.${fmt}`;
+  const la=$('#hw-list-download');if(la.href)URL.revokeObjectURL(la.href);la.href=URL.createObjectURL(hw.listBlob);la.download=hw.listName;
   $('#hw-build').disabled=false;$('#hw-build').textContent='다시 만들기';
   const a=$('#hw-download');if(a.href)URL.revokeObjectURL(a.href);a.href=URL.createObjectURL(blob);a.download=hw.fileName;
-  renderHw();toast(`${ids.length}문장, ${(all.length/16000/60).toFixed(1)}분 · ${ext} 파일 준비됨`);
+  renderHw();toast(`${ids.length}문장, ${fmtClock(all.length/16000)} · 녹음과 목록 파일 준비됨`);
 }
 function hwShare(){
-  if(!hw||!hw.blob)return;const file=new File([hw.blob],hw.fileName,{type:hw.blob.type});
-  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:'영어 숙제 녹음 '+todayStr()}).catch(()=>{})}
-  else{toast('이 브라우저는 파일 공유 시트를 지원하지 않아요. 다운로드 버튼을 쓰세요.')}
+  if(!hw||!hw.blob)return;const file=new File([hw.blob],hw.fileName,{type:hw.blob.type});const files=[file];
+  if(hw.listBlob)files.push(new File([hw.listBlob],hw.listName,{type:hw.listBlob.type}));
+  const can=f=>{try{return !!(navigator.share&&navigator.canShare&&navigator.canShare({files:f}))}catch(e){return false}};
+  if(can(files)){navigator.share({files,title:'영어 숙제 녹음 '+todayStr()}).catch(()=>{})}
+  else if(can([file])){navigator.share({files:[file],title:'영어 숙제 녹음 '+todayStr()}).catch(()=>{});if(hw.listBlob)toast('이 브라우저는 목록 파일을 같이 못 보내요. 목록은 "목록 파일 받기"로 받아 주세요.')}
+  else{toast('이 브라우저는 파일 공유 시트를 지원하지 않아요. 아래 받기 버튼을 쓰세요.')}
 }
-function hwCopyList(){const txt=hw.ids.filter(id=>hw.takes[id]).map((id,i)=>`${i+1}. ${state.bank.byId[id].text}`).join('\n');navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>toast('문장 목록을 복사했어요')).catch(()=>toast('복사가 막혀 있어요'))}
+function fmtClock(sec){sec=Math.max(0,Math.round(sec));return `${Math.floor(sec/60)}:${String(sec%60).padStart(2,'0')}`}
+// sentence list as a Notepad file (UTF-8 with BOM, Windows line ends)
+function listTxt(I){const L=[I.title,`${I.date} · ${I.label} · ${I.rows.length}문장 · ${fmtClock(I.secs)}`,`녹음 파일: ${I.file}`,''];for(const r of I.rows){L.push(`${r.n}. [${fmtClock(r.t)}] ${r.en}`);if(r.ko)L.push(`    ${r.ko}`)}return new Blob(['\uFEFF'+L.join('\r\n')+'\r\n'],{type:'text/plain;charset=utf-8'})}
+// sentence list as a Word file: a minimal .docx (zip, stored) written here, no library needed
+function crc32(u){let c=0xFFFFFFFF;for(let i=0;i<u.length;i++){c^=u[i];for(let k=0;k<8;k++)c=(c>>>1)^(0xEDB88320&-(c&1))}return(c^0xFFFFFFFF)>>>0}
+function zipStore(files){const enc=new TextEncoder(),out=[],cen=[];let off=0;
+  for(const f of files){const nm=enc.encode(f.name),d=typeof f.data==='string'?enc.encode(f.data):f.data,crc=crc32(d);
+    const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(12,0x21,true);h.setUint32(14,crc,true);h.setUint32(18,d.length,true);h.setUint32(22,d.length,true);h.setUint16(26,nm.length,true);out.push(new Uint8Array(h.buffer),nm,d);
+    const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(14,0x21,true);c.setUint32(16,crc,true);c.setUint32(20,d.length,true);c.setUint32(24,d.length,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);cen.push(new Uint8Array(c.buffer),nm);off+=30+nm.length+d.length}
+  const sz=cen.reduce((a,b)=>a+b.length,0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,sz,true);e.setUint32(16,off,true);
+  return new Blob([...out,...cen,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})}
+function listDocx(I){const x=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const run=(t,o={})=>`<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Malgun Gothic"/>${o.b?'<w:b/>':''}${o.c?`<w:color w:val="${o.c}"/>`:''}<w:sz w:val="${o.sz||24}"/></w:rPr><w:t xml:space="preserve">${x(t)}</w:t></w:r>`;
+  const par=(runs,o={})=>`<w:p><w:pPr><w:spacing w:before="${o.before||0}" w:after="${o.after==null?60:o.after}"/>${o.ind?`<w:ind w:left="${o.ind}"/>`:''}${o.keep?'<w:keepNext/>':''}</w:pPr>${runs}</w:p>`;
+  let body=par(run(I.title,{b:1,sz:32}),{after:80})+par(run(`${I.date} · ${I.label} · ${I.rows.length}문장 · ${fmtClock(I.secs)}`,{c:'666666',sz:20}),{after:0})+par(run(`녹음 파일: ${I.file}`,{c:'666666',sz:20}),{after:240});
+  for(const r of I.rows){body+=par(run(`${r.n}. `,{b:1})+run(`[${fmtClock(r.t)}] `,{c:'888888',sz:20})+run(r.en),{before:120,after:r.ko?0:60,keep:!!r.ko});if(r.ko)body+=par(run(r.ko,{c:'666666',sz:20}),{ind:360,after:60})}
+  const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  return zipStore([{name:'[Content_Types].xml',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'},
+    {name:'_rels/.rels',data:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'},
+    {name:'word/document.xml',data:doc}])}
+function hwCopyList(){const txt=hw.ids.filter(id=>hw.takes[id]&&!hw.skip.has(id)).map((id,i)=>`${i+1}. ${state.bank.byId[id].text}`).join('\n');navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>toast('문장 목록을 복사했어요')).catch(()=>toast('복사가 막혀 있어요'))}
 async function hwClear(){if(!hw)return;for(const id of hw.ids)await idb.del(hwKey(id));hw.takes={};hw.wavs={};hw.blob=null;renderHw();toast('이 숙제 녹음을 지웠어요')}
+async function latestTakeDay(){const m=await takeDays();const ds=Object.keys(m).sort();if(!ds.length)return null;const d=ds[ds.length-1];return{d,ids:m[d].filter(id=>state.bank.byId[id])}}
+async function takeOrder(day,ids){const r=[];for(const id of ids){const v=await idb.get('take:'+day+':'+id);r.push({id,first:v&&v.first||0})}return r.sort((a,b)=>a.first-b.first).map(x=>x.id)}
+async function startTakesHomework(day,only){const L=day?{d:day,ids:(await takeDays())[day]||[]}:await latestTakeDay();if(!L||!L.ids.length){toast('연습 때 녹음한 문장이 없어요');return}
+  let ids=L.ids.filter(id=>state.bank.byId[id]);if(only)ids=ids.filter(id=>only.includes(id));ids=await takeOrder(L.d,ids);
+  startHomework(ids,`${L.d===todayStr()?'오늘':L.d.slice(5).replace('-','/')} 연습`,{fromDay:L.d})}
+async function renderTakesButton(){const b=$('#btn-hw-takes');if(!b)return;const L=await latestTakeDay();b.hidden=!(L&&L.ids.length);if(L&&L.ids.length)b.textContent=`${L.d===todayStr()?'오늘':L.d.slice(5).replace('-','/')} 연습한 문장 ${L.ids.length}`}
 function bindHomework(){
   $('#btn-hw-set').addEventListener('click',()=>startHomework(weekItems().sort(sortNew).map(i=>i.id),weekLabel()));
   $('#btn-hw-lesson').addEventListener('click',()=>{const L=latestLesson();const ids=state.bank.items.filter(i=>i.lesson===L).sort(sortNew).map(i=>i.id);startHomework(ids,L?L+' 수업':'최신 수업')});
-  $('#btn-hw-resume').addEventListener('click',()=>{const l=store.get('bear.hw.last',null);if(l)startHomework(l.ids,l.label)});
+  $('#btn-hw-resume').addEventListener('click',()=>{const l=store.get('bear.hw.last',null);if(l)startHomework(l.ids,l.label,{fromDay:l.fromDay||undefined})});
+  $('#btn-hw-takes').addEventListener('click',()=>startTakesHomework());
+  $('#hw-skip').addEventListener('click',()=>{const id=hw.ids[hw.idx];hw.skip.has(id)?hw.skip.delete(id):hw.skip.add(id);store.set('bear.hw.skip.'+hw.id,[...hw.skip]);hw.blob=null;hw.listBlob=null;renderHw()});
   $('#hw-exit').addEventListener('click',()=>showView('today'));
   $('#hw-rec').addEventListener('click',hwToggleRecord);
   $('#hw-me').addEventListener('click',hwPlayMine);
@@ -1858,7 +1915,7 @@ function bind(){
   window.addEventListener('resize',()=>{if(cur&&cur.current&&$('#graph-wrap').open)drawAligned(cur.current)});
 }
 async function init(){
-  bind();
+  bind();pruneTakes();
   await loadBank();
   showView('today');
   if(gh.ready())syncIfReady(true);
