@@ -273,6 +273,16 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
 .hw-list{display:flex;flex-direction:column;gap:4px;max-height:280px;overflow:auto}
 .hw-list button{display:flex;gap:8px;align-items:center;border:0;background:transparent;text-align:left;padding:6px 4px;border-radius:8px;font-size:13px;cursor:pointer;width:100%}
 .hw-list button.cur{background:var(--surface-2)}
+.ko-q{font-size:clamp(20px,5vw,24px);font-weight:700;line-height:1.45;margin:0}
+.t-hint{font-family:var(--font-en);font-size:17px;letter-spacing:.06em;color:var(--muted);margin:0;line-height:1.6}
+.t-en .w{border-radius:4px;padding:0 1px}
+.t-en .w.ok{color:var(--good)}
+.t-en .w.warn{color:var(--warn);text-decoration:underline wavy;text-underline-offset:4px}
+.t-en .w.bad{color:var(--bad);text-decoration:underline;text-underline-offset:4px}
+.ts-item{padding:8px 0;border-bottom:1px solid var(--line)}
+.ts-item:last-child{border-bottom:0}
+.ts-item .k{font-size:13px;color:var(--muted)}
+.ts-item .e{font-family:var(--font-en);font-weight:600;margin-top:2px}
 .hw-list button.skip .tx{text-decoration:line-through;color:var(--muted)}
 .hw-list .n{width:26px;flex:none;color:var(--muted);font-variant-numeric:tabular-nums}
 .hw-list .tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-en)}
@@ -307,6 +317,16 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <button class="btn small" id="btn-random">랜덤 10</button>
         <button class="btn small" id="btn-week">현재 세트 전체</button>
       </div>
+    </div>
+    <div class="card" id="test-card">
+      <div class="card-head"><h2>말하기 시험</h2><span class="muted small">한글 → 영어</span></div>
+      <p class="small muted" style="margin:0 0 10px">한글 뜻만 보고 영어 문장을 말해 봐요. 다 말하면 정답과 내가 말한 것을 비교해 줘요.</p>
+      <div class="prio-opts">
+        <div class="chips" id="test-src" aria-label="시험 범위"></div>
+        <div class="chips" id="test-n" aria-label="문장 수"></div>
+      </div>
+      <button class="btn primary wide" id="btn-test">시험 시작</button>
+      <p class="small muted" id="test-last" style="margin:8px 0 0"></p>
     </div>
     <div class="card" id="prio-card">
       <div class="card-head"><h2>우선순위별 랜덤 연습</h2></div>
@@ -475,6 +495,62 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
   </section>
 
   <!-- SESSION SUMMARY -->
+  <section id="view-test" class="view" hidden>
+    <div class="prac-head">
+      <button class="btn small ghost" id="t-exit">닫기</button>
+      <div class="bar"><i id="t-bar" class="me"></i></div>
+      <span class="small muted num" id="t-count">1/1</span>
+    </div>
+    <div class="sentence-card">
+      <div class="meta"><span class="chip t3">말하기 시험</span><span id="t-src"></span></div>
+      <p class="ko-q" id="t-ko"></p>
+      <p class="t-hint" id="t-hint" hidden></p>
+      <div id="t-answer" hidden>
+        <p class="sentence t-en" id="t-en"></p>
+        <p class="small muted" id="t-heard"></p>
+      </div>
+    </div>
+    <div class="controls" id="t-ask">
+      <button class="btn" id="t-hint-btn">힌트</button>
+      <button class="btn rec" id="t-rec">● 말하기</button>
+      <button class="btn" id="t-reveal">정답 보기</button>
+    </div>
+    <div class="rec-status"><span id="t-msg"></span><div class="level" id="t-level" hidden><i></i></div></div>
+    <div id="t-after" hidden>
+      <div class="row">
+        <button class="btn teacher" id="t-teacher" style="flex:1">▶ 선생님</button>
+        <button class="btn me" id="t-me" style="flex:1" disabled>▶ 내 말</button>
+      </div>
+      <div class="card" style="margin-top:10px">
+        <div class="card-head"><h3>채점</h3><span class="muted small" id="t-auto"></span></div>
+        <div class="grade-row" id="t-grade">
+          <button class="g" data-g="ok">맞음</button><button class="g" data-g="near">거의</button><button class="g" data-g="no">틀림</button>
+        </div>
+        <p class="small muted" style="margin:8px 0 0">뜻이 통하고 문장 구조가 같으면 '맞음', 단어 한두 개가 다르거나 힌트를 봤으면 '거의'예요.</p>
+      </div>
+      <button class="btn primary wide" id="t-next" style="margin-top:10px">다음 →</button>
+    </div>
+  </section>
+  <section id="view-testsum" class="view" hidden>
+    <div class="card">
+      <h2>말하기 시험 끝</h2>
+      <div class="row" style="margin-top:10px;gap:18px">
+        <div><div class="big num" id="ts-ok">0</div><div class="muted small">맞음</div></div>
+        <div><div class="big num" id="ts-near">0</div><div class="muted small">거의</div></div>
+        <div><div class="big num" id="ts-no">0</div><div class="muted small">틀림</div></div>
+      </div>
+      <p class="small muted" style="margin-top:10px" id="ts-note"></p>
+    </div>
+    <div class="card">
+      <h3>다시 볼 문장</h3>
+      <div class="summary-list" id="ts-list" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="ts-retest">틀린 것만 다시 시험</button>
+        <button class="btn" id="ts-practice">틀린 문장 발음 연습</button>
+        <button class="btn primary" id="ts-home">오늘 화면으로</button>
+      </div>
+    </div>
+  </section>
   <section id="view-summary" class="view" hidden>
     <div class="card">
       <h2>오늘 연습 끝</h2>
@@ -625,7 +701,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.4.2 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.5 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -654,7 +730,7 @@ function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.classList.ad
 function wavg(pairs){let s=0,w=0;for(const [v,k] of pairs)if(v!=null&&!isNaN(v)){s+=v*k;w+=k}return w?s/w:null}
 const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-const LS={progress:'bear.progress.v1',settings:'bear.settings.v1',log:'bear.log.v1',local:'bear.localItems.v1',sync:'bear.sync.v1',bankCache:'bear.bankCache.v1'};
+const LS={recall:'bear.recall.v1',exported:'bear.exported.v1',progress:'bear.progress.v1',settings:'bear.settings.v1',log:'bear.log.v1',local:'bear.localItems.v1',sync:'bear.sync.v1',bankCache:'bear.bankCache.v1'};
 const idb={
   open(){return new Promise((res,rej)=>{try{const r=indexedDB.open('bear',1);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains('clips'))db.createObjectStore('clips')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})},
   async get(k){try{const db=await this.open();return await new Promise((res,rej)=>{const t=db.transaction('clips').objectStore('clips').get(k);t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error)})}catch(e){return undefined}},
@@ -674,8 +750,8 @@ const DEMO_BANK={version:1,demo:true,items:[
   {id:'demo-d2',text:"Sure, what's up?",ko:'그럼요, 무슨 일이에요?',tier:1,source:'데모',lesson:todayStr(),kind:'dialogue',group:'demo-dlg',role:'B',seq:2},
   {id:'demo-04',text:"I'm on the fence about it.",ko:'아직 결정을 못 했어요.',tier:2,source:'데모',lesson:'2026-08-13',kind:'sentence'}
 ]};
-const DEFAULTS={randN:10,randF:'all',hwFmt:'docx',dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,showMelody:true,melodyOpen:true,ttsRate:0.95,asrMode:'device',asrConsent:false,azureKey:'',azureRegion:'koreacentral',ghOwner:'MJPark-8739',ghRepo:'english-review-data',ghBranch:'main',ghToken:''};
-const state={bank:{items:[],byId:{},tiers:DEFAULT_TIERS,demo:true,source:'demo'},progress:store.get(LS.progress,{}),log:store.get(LS.log,[]),localItems:store.get(LS.local,[]),settings:Object.assign({},DEFAULTS,store.get(LS.settings,{})),session:null,view:'today',bankPage:1};
+const DEFAULTS={testN:10,testSrc:'hw',randN:10,randF:'all',hwFmt:'docx',dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,showMelody:true,melodyOpen:true,ttsRate:0.95,asrMode:'device',asrConsent:false,azureKey:'',azureRegion:'koreacentral',ghOwner:'MJPark-8739',ghRepo:'english-review-data',ghBranch:'main',ghToken:''};
+const state={recall:store.get(LS.recall,{}),exported:store.get(LS.exported,{}),bank:{items:[],byId:{},tiers:DEFAULT_TIERS,demo:true,source:'demo'},progress:store.get(LS.progress,{}),log:store.get(LS.log,[]),localItems:store.get(LS.local,[]),settings:Object.assign({},DEFAULTS,store.get(LS.settings,{})),session:null,view:'today',bankPage:1};
 if(IS_IOS&&state.settings.asrMode==='browser')state.settings.asrMode='device';
 function saveProgress(){store.set(LS.progress,state.progress);store.set(LS.log,state.log.slice(-3000))}
 function saveSettings(){store.set(LS.settings,state.settings)}
@@ -1580,16 +1656,18 @@ function mergeProgress(local,remote){
   const progress=Object.assign({},remote.progress||{});for(const [id,p] of Object.entries(local.progress||{})){const q=progress[id];if(!q||(p.last||'')>(q.last||''))progress[id]=p}
   const seen=new Set(),log=[];for(const e of [...(remote.log||[]),...(local.log||[])]){const k=e.t+'|'+e.id;if(!seen.has(k)){seen.add(k);log.push(e)}}log.sort((a,b)=>a.t<b.t?-1:1);
   const li={};for(const it of [...(remote.localItems||[]),...(local.localItems||[])])li[it.id]=it;
-  return{progress,log:log.slice(-3000),localItems:Object.values(li)};
+  const recall=Object.assign({},remote.recall||{});for(const [id,r] of Object.entries(local.recall||{})){const q=recall[id];if(!q||(r.last||'')>(q.last||''))recall[id]=r}
+  const exported=Object.assign({},remote.exported||{});for(const [id,d] of Object.entries(local.exported||{}))if(!exported[id]||d>exported[id])exported[id]=d;
+  return{progress,log:log.slice(-3000),localItems:Object.values(li),recall,exported};
 }
 let syncing=false;
 async function syncIfReady(silent){
   if(!gh.ready()||syncing)return;syncing=true;const el=$('#sync-state');el.textContent='동기화 중…';
   try{
     const remote=await gh.getText('progress.json');let rj={};if(remote){try{rj=JSON.parse(remote.text)}catch(e){rj={}}}
-    const merged=mergeProgress({progress:state.progress,log:state.log,localItems:state.localItems},rj);
-    state.progress=merged.progress;state.log=merged.log;state.localItems=merged.localItems;saveProgress();store.set(LS.local,state.localItems);
-    const out=JSON.stringify({updatedAt:new Date().toISOString(),device:navigator.platform||'',progress:state.progress,log:state.log,localItems:state.localItems});
+    const merged=mergeProgress({progress:state.progress,log:state.log,localItems:state.localItems,recall:state.recall,exported:state.exported},rj);
+    state.progress=merged.progress;state.log=merged.log;state.localItems=merged.localItems;state.recall=merged.recall;state.exported=merged.exported;saveProgress();store.set(LS.local,state.localItems);store.set(LS.recall,state.recall);store.set(LS.exported,state.exported);
+    const out=JSON.stringify({updatedAt:new Date().toISOString(),device:navigator.platform||'',progress:state.progress,log:state.log,localItems:state.localItems,recall:state.recall,exported:state.exported});
     if(!remote||remote.text!==out){await gh.putText('progress.json',out,remote?remote.sha:null,'progress '+new Date().toISOString().slice(0,16))}
     const t=new Date();store.set(LS.sync,t.toISOString());el.textContent=`${pad2(t.getMonth()+1)}-${pad2(t.getDate())} ${pad2(t.getHours())}:${pad2(t.getMinutes())}`;
     if(!silent)toast('기록을 동기화했어요');
@@ -1607,9 +1685,10 @@ function stopCaptures(){
 }
 function showView(v){
   state.view=v;$$('.view').forEach(s=>s.hidden=true);$('#view-'+v).hidden=false;
-  $$('.tabbar button').forEach(b=>b.classList.toggle('active',b.dataset.view===v||(['practice','summary','homework'].includes(v)&&b.dataset.view==='today')));
+  $$('.tabbar button').forEach(b=>b.classList.toggle('active',b.dataset.view===v||(['practice','summary','homework','test','testsum'].includes(v)&&b.dataset.view==='today')));
   window.scrollTo(0,0);stopAllAudio();
   if(v!=='practice'&&(cap||capT))stopCaptures();
+  if(v!=='test'&&tCap){const c=tCap;tCap=null;try{c.stop()}catch(e){}}
   if(v!=='homework'&&hwCap)stopCaptures();
   if(v==='today')renderToday();if(v==='bank')renderBank();if(v==='stats')renderStats();if(v==='settings')renderSettings();
 }
@@ -1631,7 +1710,7 @@ function renderToday(){
   const since=addDays(todayStr(),-6);const recent=state.log.filter(e=>e.t.slice(0,10)>=since);$('#w7-attempts').textContent=recent.length;const sc=recent.filter(e=>e.score!=null).map(e=>e.score);$('#w7-avg').textContent=sc.length?Math.round(mean(sc)):'—';
   const days=new Set(state.log.map(e=>e.t.slice(0,10)));let streak=0,dd=todayStr();if(!days.has(dd))dd=addDays(dd,-1);while(days.has(dd)){streak++;dd=addDays(dd,-1)}$('#streak').textContent=streak?`${streak}일 연속`:'';
   const ls=store.get(LS.sync,null);$('#sync-state').textContent=!gh.ready()?'미연결':ls?ls.slice(5,16).replace('T',' '):'아직 안 함';
-  renderTakesButton();
+  renderTakesButton();renderTestCard();
   const hl=store.get('bear.hw.last',null);$('#btn-hw-resume').hidden=!(hl&&hl.key&&hl.key.startsWith(todayStr()));
 }
 // ---- priority groups + random practice ----
@@ -1751,6 +1830,109 @@ function bindSettings(){
   let resetArmed=0;$('#btn-reset').addEventListener('click',()=>{if(Date.now()-resetArmed<5000){state.progress={};state.log=[];saveProgress();resetArmed=0;$('#reset-confirm').hidden=true;toast('기록을 모두 지웠어요');renderToday()}else{resetArmed=Date.now();$('#reset-confirm').hidden=false;setTimeout(()=>{$('#reset-confirm').hidden=true},5000)}});
 }
 
+/* ===================== speaking test (Korean -> English, from memory) ===================== */
+let tst=null,tCap=null;
+const T_GRADE={ok:'맞음',near:'거의',no:'틀림'},T_SRC={hw:'숙제로 낸 문장',done:'연습한 문장',wrong:'시험에서 틀린 문장'};
+function testPools(){const items=state.bank.items.filter(i=>(i.ko||'').trim());return{hw:items.filter(i=>state.exported[i.id]),done:items.filter(i=>P(i.id)),wrong:items.filter(i=>{const r=state.recall[i.id];return r&&r.g&&r.g!=='ok'})}}
+// last time wrong first, then never tested, then "거의", then the ones answered right longest ago
+function testOrder(list){const g=i=>{const x=state.recall[i.id];return !x?1:x.g==='no'?0:x.g==='near'?2:3};return shuffled(list).sort((a,b)=>g(a)-g(b)||((state.recall[a.id]||{}).last||'').localeCompare((state.recall[b.id]||{}).last||''))}
+function renderTestCard(){
+  const s=state.settings,pools=testPools();if(!T_SRC[s.testSrc])s.testSrc='hw';if(![10,30,50].includes(s.testN))s.testN=10;
+  $('#test-src').innerHTML=Object.entries(T_SRC).map(([k,v])=>`<button class="chip ${s.testSrc===k?'sel':''}" data-s="${k}">${v} ${pools[k].length}</button>`).join('');
+  $('#test-n').innerHTML=[10,30,50].map(n=>`<button class="chip ${s.testN===n?'sel':''}" data-n="${n}">${n}문장</button>`).join('');
+  $('#test-src').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{s.testSrc=b.dataset.s;saveSettings();renderTestCard()}));
+  $('#test-n').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{s.testN=+b.dataset.n;saveSettings();renderTestCard()}));
+  $('#btn-test').disabled=!pools[s.testSrc].length;
+  const rs=Object.values(state.recall),okN=rs.filter(r=>r.g==='ok').length;
+  $('#test-last').textContent=rs.length?`시험 본 문장 ${rs.length} · 마지막에 맞힌 문장 ${okN} (${Math.round(okN/rs.length*100)}%)`:s.testSrc==='hw'&&!pools.hw.length?'숙제 제출 파일을 만들면 그 문장들이 여기 들어와요.':'';
+}
+function hintText(t){return displayTokens(t).map(w=>w.replace(/[A-Za-z][A-Za-z'’]*/g,m=>m[0]+m.slice(1).replace(/[A-Za-z]/g,'_'))).join('  ')}
+function startTest(ids,label){if(!ids.length){toast('시험 볼 문장이 없어요');return}tst={ids:ids.slice(),idx:0,label,res:{}};showView('test');renderTest()}
+function renderTest(){
+  const id=tst.ids[tst.idx],it=state.bank.byId[id];if(!it){tst.idx++;tst.idx>=tst.ids.length?tEnd():renderTest();return}
+  stopAllAudio();tst.cur={id,hint:false,blob:null,me:null,asr:null,asrErr:'',grade:null,auto:null};
+  $('#t-count').textContent=`${tst.idx+1}/${tst.ids.length}`;$('#t-bar').style.width=(tst.idx/tst.ids.length*100)+'%';$('#t-src').textContent=tst.label+(it.kind==='dialogue'&&it.role?` · 대화 ${it.role}`:'');
+  $('#t-ko').textContent=it.ko;$('#t-hint').hidden=true;$('#t-answer').hidden=true;$('#t-after').hidden=true;$('#t-ask').hidden=false;
+  $('#t-hint-btn').disabled=false;$('#t-rec').disabled=false;$('#t-rec').textContent='● 말하기';$('#t-rec').classList.remove('on');
+  $('#t-msg').textContent='한글을 보고 영어로 말해 보세요. 말이 끝나면 자동으로 멈춰요.';$('#t-teacher').textContent='▶ 선생님';$('#t-me').textContent='▶ 내 말';
+  getTeacher(it);
+}
+async function tToggleRec(){
+  if(tCap){await tStop();return}
+  stopAllAudio();const b=$('#t-rec');b.disabled=true;const c=new Capture();
+  try{await c.start()}catch(e){b.disabled=false;micError(e);return}
+  tCap=c;b.disabled=false;b.textContent='■ 멈춤';b.classList.add('on');$('#t-level').hidden=false;$('#t-msg').textContent='말하세요… (끝나면 자동으로 멈춰요)';
+  const lv=$('#t-level i');c.onlevel=v=>{lv.style.width=clamp(v*500,2,100)+'%'};c.onauto=()=>tStop();
+  setTimeout(()=>{if(tCap===c&&!c.meterWorks){$('#t-msg').textContent='다 말하면 ■ 멈춤을 눌러 주세요.';$('#t-level').hidden=true}},1800);
+}
+async function tStop(){
+  const c=tCap;if(!c)return;tCap=null;const b=$('#t-rec');b.textContent='● 말하기';b.classList.remove('on');$('#t-level').hidden=true;$('#t-msg').textContent='확인 중…';
+  const blob=await c.stop();const T=tst&&tst.cur;if(!T)return;let pcm;
+  try{pcm=await blobToPcm16(blob)}catch(e){$('#t-msg').textContent='녹음을 읽지 못했어요. 다시 말해 주세요.';return}
+  const me=analyzeVoice(pcm);if(!me.span||me.dur<0.3){$('#t-msg').textContent='소리가 거의 안 잡혔어요. 다시 말해 주세요.';return}
+  T.blob=blob;T.me=me;await tCheck(T);
+}
+async function tCheck(T){
+  const it=state.bank.byId[T.id];$('#t-rec').disabled=true;$('#t-hint-btn').disabled=true;
+  if(state.settings.asrMode==='device'&&state.settings.asrConsent){$('#t-msg').textContent=asr.ready?'내가 말한 문장 확인 중…':asr.text();
+    try{const text=await asr.run(asrInput(T.me));if(tst&&tst.cur===T)T.asr=asrCompare(it.text,[text])}catch(e){T.asrErr=e.message}}
+  if(tst&&tst.cur===T)tReveal();
+}
+function tReveal(){
+  const T=tst.cur,it=state.bank.byId[T.id];stopAllAudio();
+  $('#t-ask').hidden=true;$('#t-after').hidden=false;$('#t-answer').hidden=false;$('#t-hint').hidden=true;$('#t-me').disabled=!T.blob;
+  const {disp,map}=mapRefToDisplay(it.text),mk=disp.map(()=>null),rk={ok:0,warn:1,bad:2};
+  if(T.asr)T.asr.status.forEach((x,k)=>{const d=map[k];if(d==null)return;const v=x==='ok'?'ok':x==='near'?'warn':'bad';if(mk[d]==null||rk[v]>rk[mk[d]])mk[d]=v});
+  $('#t-en').innerHTML=disp.map((w,d)=>`<span class="w ${mk[d]||''}">${esc(w)}</span>`).join(' ');
+  let auto=null,heard='';
+  if(T.asr){const a=T.asr.accuracy;auto=a>=85?'ok':a>=55?'near':'no';if(T.hint&&auto==='ok')auto='near';heard=`들린 말: "${esc(T.asr.transcript||'')}" · 단어 일치 ${a}%${T.asr.extras.length?` · 문장에 없는 말: ${esc(T.asr.extras.join(', '))}`:''}`}
+  else if(!T.blob){auto='no';heard='말하지 않고 정답을 봤어요. 머릿속으로 맞혔다면 직접 바꿔 주세요.'}
+  else if(state.settings.asrMode==='device'&&!state.settings.asrConsent)heard='단어 인식이 꺼져 있어서 자동 채점을 못 했어요. <button class="btn small" id="t-asr-on">단어 인식 켜기</button> (처음 한 번 약 90MB, 폰 안에서만 처리)';
+  else heard=T.asrErr?`단어 인식 실패(${esc(T.asrErr)}) — 들어 보고 직접 채점해 주세요.`:'들어 보고 직접 채점해 주세요.';
+  $('#t-heard').innerHTML=heard;T.auto=auto;T.grade=auto;
+  const on=$('#t-asr-on');if(on)on.onclick=async()=>{state.settings.asrConsent=true;saveSettings();on.disabled=true;await tCheck(T)};
+  $('#t-auto').textContent=auto?`자동 판정: ${T_GRADE[auto]}${T.hint?' (힌트 사용)':''}`:'';paintTGrade();
+  $('#t-msg').textContent=T.blob?'정답과 비교해 보세요. 채점이 다르면 눌러서 바꾸면 돼요.':'정답을 확인하고 채점해 주세요.';
+}
+function paintTGrade(){$$('#t-grade .g').forEach(b=>b.classList.toggle('sel',!!tst&&!!tst.cur&&tst.cur.grade===b.dataset.g));$('#t-next').textContent=tst&&tst.idx>=tst.ids.length-1?'결과 보기':'다음 →'}
+function tCommit(){const T=tst.cur;if(!T||!T.grade)return false;tst.res[T.id]=T.grade;
+  const r=state.recall[T.id]||{n:0,ok:0,near:0,no:0,hist:[]};r.n=(r.n||0)+1;r[T.grade]=(r[T.grade]||0)+1;r.g=T.grade;r.last=new Date().toISOString();r.hint=!!T.hint;r.hist=(r.hist||[]).concat([T.grade]).slice(-6);state.recall[T.id]=r;store.set(LS.recall,state.recall);
+  // can't produce it from memory -> it comes back in tomorrow's practice
+  if(T.grade==='no'){const p=P(T.id);if(p){const tm=addDays(todayStr(),1);if(!p.due||p.due>tm){p.due=tm;saveProgress()}}}
+  return true}
+function tNext(){if(!tCommit()){toast('맞음 / 거의 / 틀림 중에 골라 주세요');return}tst.idx++;if(tst.idx>=tst.ids.length)tEnd();else renderTest()}
+function tEnd(){
+  stopAllAudio();if(tCap){const c=tCap;tCap=null;c.stop()}
+  const ids=Object.keys(tst.res),cnt={ok:0,near:0,no:0};for(const id of ids)cnt[tst.res[id]]++;
+  $('#ts-ok').textContent=cnt.ok;$('#ts-near').textContent=cnt.near;$('#ts-no').textContent=cnt.no;
+  const miss=ids.filter(id=>tst.res[id]!=='ok');
+  $('#ts-note').textContent=ids.length?`${ids.length}문장 중 ${cnt.ok}문장을 보지 않고 말했어요.${cnt.no?` 틀린 ${cnt.no}문장은 내일 연습에 다시 나와요.`:''}`:'채점한 문장이 없어요.';
+  $('#ts-list').innerHTML=miss.length?miss.map(id=>{const it=state.bank.byId[id];return`<div class="ts-item"><div class="k"><span class="chip ${tst.res[id]==='no'?'bad':'warn'}" style="margin-right:6px">${T_GRADE[tst.res[id]]}</span>${esc(it.ko)}</div><div class="e">${esc(it.text)}</div></div>`}).join(''):'<p class="small muted">모두 맞혔어요!</p>';
+  $('#ts-retest').hidden=!miss.length;$('#ts-practice').hidden=!miss.length;
+  $('#ts-retest').onclick=()=>startTest(shuffled(miss),'다시 시험');$('#ts-practice').onclick=()=>startSession(miss,'시험 복습');
+  showView('testsum');syncIfReady(true);
+}
+function tPlayTeacher(){
+  const it=state.bank.byId[tst.cur.id];const b=$('#t-teacher');
+  if(player.busy||speechBusy()){stopAllAudio();b.textContent='▶ 선생님';$('#t-me').textContent='▶ 내 말';return}
+  const go=t=>{b.textContent='■ 정지';if(t&&t.blob)player.play('t:'+it.id,t.blob,{onend:()=>{b.textContent='▶ 선생님'}});else speak(it.text,()=>{b.textContent='▶ 선생님'})};
+  if(it.id in teacherCache)go(teacherCache[it.id]);else getTeacher(it).then(go);
+}
+function tPlayMine(){const T=tst.cur,b=$('#t-me');if(!T||!T.blob)return;if(player.busy){stopAllAudio();b.textContent='▶ 내 말';$('#t-teacher').textContent='▶ 선생님';return}b.textContent='■ 정지';player.play('tm:'+T.id+':'+tst.idx,T.blob,{onend:()=>{b.textContent='▶ 내 말'}})}
+// sentences recorded for homework before exports were tracked count as homework sentences
+async function backfillExported(){try{if(store.get('bear.exported.bf',false))return;for(const k of await idb.keys('hw:')){const id=k.slice(k.lastIndexOf(':')+1),d=k.slice(3,13);if(id&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&(!state.exported[id]||state.exported[id]<d))state.exported[id]=d}store.set(LS.exported,state.exported);store.set('bear.exported.bf',true);if(state.view==='today')renderTestCard()}catch(e){}}
+function bindTest(){
+  $('#btn-test').addEventListener('click',()=>{const s=state.settings,pools=testPools();startTest(testOrder(pools[s.testSrc]||[]).slice(0,s.testN||10).map(i=>i.id),T_SRC[s.testSrc])});
+  $('#t-rec').addEventListener('click',tToggleRec);
+  $('#t-hint-btn').addEventListener('click',()=>{const T=tst.cur,it=state.bank.byId[T.id];T.hint=true;$('#t-hint').textContent=`${hintText(it.text)}  (${baseTokens(it.text).length}단어)`;$('#t-hint').hidden=false;$('#t-hint-btn').disabled=true});
+  $('#t-reveal').addEventListener('click',()=>{if(tCap){const c=tCap;tCap=null;c.stop()}tReveal()});
+  $$('#t-grade .g').forEach(b=>b.addEventListener('click',()=>{tst.cur.grade=b.dataset.g;paintTGrade()}));
+  $('#t-next').addEventListener('click',tNext);
+  $('#t-teacher').addEventListener('click',tPlayTeacher);$('#t-me').addEventListener('click',tPlayMine);
+  $('#t-exit').addEventListener('click',()=>{if(tCap){const c=tCap;tCap=null;c.stop()}if(tst&&Object.keys(tst.res).length)tEnd();else showView('today')});
+  $('#ts-home').addEventListener('click',()=>showView('today'));
+}
+
 /* ===================== homework recording (submit one file) ===================== */
 let hw=null,hwCap=null;
 function loadScriptAny(urls){return(async()=>{for(const u of urls){try{await new Promise((res,rej)=>{const s=document.createElement('script');s.src=u;s.onload=res;s.onerror=rej;document.head.appendChild(s)});return true}catch(e){}}return false})()}
@@ -1826,6 +2008,7 @@ async function hwBuild(){
   }catch(e){blob=null}
   if(!blob){blob=new Blob([toWav(all)],{type:'audio/wav'});ext='wav'}
   hw.blob=blob;hw.ext=ext;hw.fileName=`homework-${todayStr()}.${ext}`;
+  for(const id of ids)state.exported[id]=todayStr();store.set(LS.exported,state.exported);
   const fmt=state.settings.hwFmt==='txt'?'txt':'docx';const info={title:'영어 숙제 녹음',date:todayStr(),label:hw.label,file:hw.fileName,secs:all.length/16000,rows:ids.map((id,i)=>({n:i+1,t:starts[i],en:state.bank.byId[id].text,ko:state.bank.byId[id].ko||''}))};
   hw.listBlob=fmt==='txt'?listTxt(info):listDocx(info);hw.listExt=fmt;hw.listName=`homework-${todayStr()}.${fmt}`;
   const la=$('#hw-list-download');if(la.href)URL.revokeObjectURL(la.href);la.href=URL.createObjectURL(hw.listBlob);la.download=hw.listName;
@@ -1889,7 +2072,7 @@ function bindHomework(){
 
 /* ===================== wiring ===================== */
 function bind(){
-  bindHomework();
+  bindHomework();bindTest();
   $$('.tabbar button').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
   $('#btn-weak').addEventListener('click',()=>{const w=state.bank.items.filter(i=>{const p=P(i.id);return p&&p.avg!=null&&p.avg<75}).sort((a,b)=>P(a.id).avg-P(b.id).avg).slice(0,10);if(!w.length){toast('아직 취약 문장이 없어요');return}startSession(w.map(i=>i.id),'취약')});
   $('#btn-random').addEventListener('click',()=>startSession(shuffled(state.bank.items).slice(0,10).map(i=>i.id),'랜덤'));
@@ -1919,7 +2102,7 @@ function bind(){
   window.addEventListener('resize',()=>{if(cur&&cur.current&&$('#graph-wrap').open)drawAligned(cur.current)});
 }
 async function init(){
-  bind();pruneTakes();
+  bind();pruneTakes();backfillExported();
   await loadBank();
   showView('today');
   if(gh.ready())syncIfReady(true);
