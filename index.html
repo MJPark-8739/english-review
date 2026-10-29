@@ -284,6 +284,12 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
 .t-score .sc b{font-size:22px}
 .t-score .sc span{font-size:12px;color:var(--muted)}
 .t-score .tip{font-size:13px}
+.t-take-list{display:flex;flex-direction:column;gap:6px}
+.t-take{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:var(--surface);cursor:pointer}
+.t-take.sel{border-color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg)}
+.t-take .r{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);flex:none}
+.t-take.sel .r{border-color:var(--fg);background:radial-gradient(var(--fg) 45%,transparent 50%)}
+.t-take .l{flex:1;font-size:14px}
 .ts-item{padding:8px 0;border-bottom:1px solid var(--line)}
 .ts-item:last-child{border-bottom:0}
 .ts-item .k{font-size:13px;color:var(--muted)}
@@ -521,6 +527,12 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <button class="btn" id="t-reveal">정답 보기</button>
     </div>
     <div class="rec-status"><span id="t-msg"></span><div class="level" id="t-level" hidden><i></i></div></div>
+    <div class="card" id="t-takes" hidden>
+      <div class="card-head"><h3>내 녹음</h3><span class="muted small">들어 보고 하나를 골라 제출</span></div>
+      <div class="t-take-list" id="t-take-list"></div>
+      <button class="btn primary wide" id="t-submit" style="margin-top:10px">이 녹음으로 제출</button>
+      <p class="small muted" style="margin:8px 0 0">제출하면 정답이 나오고 채점해요. 버튼을 잘못 눌렀거나 다른 소리가 섞였으면 '다시 녹음'으로 새로 녹음하세요.</p>
+    </div>
     <div id="t-after" hidden>
       <div class="row">
         <button class="btn teacher" id="t-teacher" style="flex:1">▶ 선생님</button>
@@ -707,7 +719,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.5.1 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.5.2 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -1856,7 +1868,7 @@ function hintText(t){return displayTokens(t).map(w=>w.replace(/[A-Za-z][A-Za-z'�
 function startTest(ids,label){if(!ids.length){toast('시험 볼 문장이 없어요');return}tst={ids:ids.slice(),idx:0,label,res:{},scores:{}};showView('test');renderTest()}
 function renderTest(){
   const id=tst.ids[tst.idx],it=state.bank.byId[id];if(!it){tst.idx++;tst.idx>=tst.ids.length?tEnd():renderTest();return}
-  stopAllAudio();tst.cur={id,hint:false,blob:null,me:null,asr:null,asrErr:'',grade:null,auto:null};
+  stopAllAudio();tst.cur={id,hint:false,blob:null,me:null,asr:null,asrErr:'',grade:null,auto:null,takes:[],sel:-1};$('#t-takes').hidden=true;
   $('#t-count').textContent=`${tst.idx+1}/${tst.ids.length}`;$('#t-bar').style.width=(tst.idx/tst.ids.length*100)+'%';$('#t-src').textContent=tst.label+(it.kind==='dialogue'&&it.role?` · 대화 ${it.role}`:'');
   $('#t-ko').textContent=it.ko;$('#t-hint').hidden=true;$('#t-answer').hidden=true;$('#t-after').hidden=true;$('#t-ask').hidden=false;
   $('#t-hint-btn').disabled=false;$('#t-rec').disabled=false;$('#t-rec').textContent='● 말하기';$('#t-rec').classList.remove('on');
@@ -1876,8 +1888,19 @@ async function tStop(){
   const blob=await c.stop();const T=tst&&tst.cur;if(!T)return;let pcm;
   try{pcm=await blobToPcm16(blob)}catch(e){$('#t-msg').textContent='녹음을 읽지 못했어요. 다시 말해 주세요.';return}
   const me=analyzeVoice(pcm);if(!me.span||me.dur<0.3){$('#t-msg').textContent='소리가 거의 안 잡혔어요. 다시 말해 주세요.';return}
-  T.blob=blob;T.me=me;await tCheck(T);
+  T.takes.push({blob,me});if(T.takes.length>5)T.takes.shift();T.sel=T.takes.length-1;renderTakes();
+  $('#t-msg').textContent='녹음했어요. ▶로 들어 보고 마음에 들면 제출하고, 아니면 다시 녹음하세요.';
 }
+function renderTakes(){
+  const T=tst.cur;$('#t-takes').hidden=!T.takes.length;$('#t-rec').textContent=T.takes.length?'● 다시 녹음':'● 말하기';
+  $('#t-take-list').innerHTML=T.takes.map((k,i)=>`<div class="t-take ${i===T.sel?'sel':''}" data-i="${i}"><span class="r"></span><span class="l">녹음 ${i+1} · ${k.me.dur.toFixed(1)}초</span><button class="btn small" data-play="${i}">▶ 듣기</button></div>`).join('');
+  $('#t-take-list').querySelectorAll('.t-take').forEach(el=>el.addEventListener('click',()=>{T.sel=+el.dataset.i;renderTakes()}));
+  $('#t-take-list').querySelectorAll('button[data-play]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const i=+b.dataset.play;
+    if(player.busy){stopAllAudio();$('#t-take-list').querySelectorAll('button[data-play]').forEach(x=>x.textContent='▶ 듣기');if(b.dataset.on){delete b.dataset.on;return}}
+    $('#t-take-list').querySelectorAll('button[data-play]').forEach(x=>delete x.dataset.on);b.dataset.on='1';b.textContent='■ 정지';T.sel=i;$$('#t-take-list .t-take').forEach(x=>x.classList.toggle('sel',+x.dataset.i===i));
+    player.play('tk:'+T.id+':'+i+':'+T.takes.length,T.takes[i].blob,{onend:()=>{b.textContent='▶ 듣기';delete b.dataset.on}})}));
+}
+async function tSubmit(){const T=tst.cur;if(!T||T.sel<0||!T.takes[T.sel])return;if(tCap){const c=tCap;tCap=null;await c.stop()}stopAllAudio();const k=T.takes[T.sel];T.blob=k.blob;T.me=k.me;$('#t-takes').hidden=true;$('#t-ask').hidden=true;$('#t-msg').textContent='확인 중…';await tCheck(T)}
 async function tCheck(T){
   const it=state.bank.byId[T.id];$('#t-rec').disabled=true;$('#t-hint-btn').disabled=true;
   if(state.settings.asrMode==='device'&&state.settings.asrConsent){$('#t-msg').textContent=asr.ready?'내가 말한 문장 확인 중…':asr.text();
@@ -1890,13 +1913,13 @@ async function tCheck(T){
 }
 function tReveal(){
   const T=tst.cur,it=state.bank.byId[T.id];stopAllAudio();
-  $('#t-ask').hidden=true;$('#t-after').hidden=false;$('#t-answer').hidden=false;$('#t-hint').hidden=true;$('#t-me').disabled=!T.blob;
+  $('#t-ask').hidden=true;$('#t-takes').hidden=true;$('#t-after').hidden=false;$('#t-answer').hidden=false;$('#t-hint').hidden=true;$('#t-me').disabled=!T.blob;
   const {disp,map}=mapRefToDisplay(it.text),mk=disp.map(()=>null),rk={ok:0,warn:1,bad:2};
   if(T.asr)T.asr.status.forEach((x,k)=>{const d=map[k];if(d==null)return;const v=x==='ok'?'ok':x==='near'?'warn':'bad';if(mk[d]==null||rk[v]>rk[mk[d]])mk[d]=v});
   $('#t-en').innerHTML=disp.map((w,d)=>`<span class="w ${mk[d]||''}">${esc(w)}</span>`).join(' ');
   let auto=null,heard='';
   if(T.asr){const a=T.asr.accuracy;auto=a>=85?'ok':a>=55?'near':'no';if(T.hint&&auto==='ok')auto='near';heard=`들린 말: "${esc(T.asr.transcript||'')}" · 단어 일치 ${a}%${T.asr.extras.length?` · 문장에 없는 말: ${esc(T.asr.extras.join(', '))}`:''}`}
-  else if(!T.blob){auto='no';heard='말하지 않고 정답을 봤어요. 머릿속으로 맞혔다면 직접 바꿔 주세요.'}
+  else if(!T.blob){auto='no';heard=T.takes.length?'녹음을 제출하지 않고 정답을 봤어요. 맞혔다고 생각하면 직접 바꿔 주세요.':'말하지 않고 정답을 봤어요. 머릿속으로 맞혔다면 직접 바꿔 주세요.'}
   else if(state.settings.asrMode==='device'&&!state.settings.asrConsent)heard='단어 인식이 꺼져 있어서 자동 채점을 못 했어요. <button class="btn small" id="t-asr-on">단어 인식 켜기</button> (처음 한 번 약 90MB, 폰 안에서만 처리)';
   else heard=T.asrErr?`단어 인식 실패(${esc(T.asrErr)}) — 들어 보고 직접 채점해 주세요.`:'들어 보고 직접 채점해 주세요.';
   $('#t-heard').innerHTML=heard;T.auto=auto;T.grade=auto;
@@ -1938,7 +1961,7 @@ function tPlayMine(){const T=tst.cur,b=$('#t-me');if(!T||!T.blob)return;if(playe
 async function backfillExported(){try{if(store.get('bear.exported.bf',false))return;for(const k of await idb.keys('hw:')){const id=k.slice(k.lastIndexOf(':')+1),d=k.slice(3,13);if(id&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&(!state.exported[id]||state.exported[id]<d))state.exported[id]=d}store.set(LS.exported,state.exported);store.set('bear.exported.bf',true);if(state.view==='today')renderTestCard()}catch(e){}}
 function bindTest(){
   $('#btn-test').addEventListener('click',()=>{const s=state.settings,pools=testPools();startTest(testOrder(pools[s.testSrc]||[]).slice(0,s.testN||10).map(i=>i.id),T_SRC[s.testSrc])});
-  $('#t-rec').addEventListener('click',tToggleRec);
+  $('#t-rec').addEventListener('click',tToggleRec);$('#t-submit').addEventListener('click',tSubmit);
   $('#t-hint-btn').addEventListener('click',()=>{const T=tst.cur,it=state.bank.byId[T.id];T.hint=true;$('#t-hint').textContent=`${hintText(it.text)}  (${baseTokens(it.text).length}단어)`;$('#t-hint').hidden=false;$('#t-hint-btn').disabled=true});
   $('#t-reveal').addEventListener('click',()=>{if(tCap){const c=tCap;tCap=null;c.stop()}tReveal()});
   $$('#t-grade .g').forEach(b=>b.addEventListener('click',()=>{tst.cur.grade=b.dataset.g;paintTGrade()}));
