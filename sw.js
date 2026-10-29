@@ -1,5 +1,5 @@
 // Offline shell cache. Network-first for the app itself, cache-first for fonts.
-const CACHE = 'bear-review-v16';
+const CACHE = 'bear-review-v17';
 const SHELL = ['./', './index.html', './asr-worker.js', './manifest.webmanifest', './icon.svg', './icon-192.png'];
 
 self.addEventListener('install', e => {

@@ -541,6 +541,11 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <div class="card" style="margin-top:10px">
         <div class="card-head"><h3>채점</h3><span class="muted small" id="t-auto"></span></div>
         <div class="t-score" id="t-score" hidden></div>
+        <div id="t-words" hidden>
+          <div class="legend"><span><i style="background:var(--teacher)"></i>선생님</span><span><i style="background:var(--me)"></i>나</span><span>↗ 올림 · ↘ 내림 · → 평평</span><span><u>밑줄</u> = 선생님 강조</span></div>
+          <div class="wchips" id="t-wchips"></div>
+          <div class="word-detail" id="t-word-detail" hidden></div>
+        </div>
         <div class="grade-row" id="t-grade">
           <button class="g" data-g="ok">맞음</button><button class="g" data-g="near">거의</button><button class="g" data-g="no">틀림</button>
         </div>
@@ -719,7 +724,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.5.2 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.5.3 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -1588,8 +1593,8 @@ function renderChips(att){
   box.querySelectorAll('button.wc').forEach(b=>b.addEventListener('click',()=>{const d=+b.dataset.d;cur.sel=cur.sel===d?null:d;box.querySelectorAll('button.wc').forEach(x=>x.classList.toggle('sel',+x.dataset.d===cur.sel));if(cur.sel==null)$('#word-detail').hidden=true;else showTokenDetail(att,d);if($('#graph-wrap').open)drawAligned(att)}));
 }
 function featText(f){if(!f)return '—';if(f.voiced<3)return '높낮이 거의 없음 (짧거나 무성음)';const lv=f.level>=2?'높게':f.level<=-2?'낮게':'보통 높이';return `${ARROW[f.shape]} ${SHAPE_KO[f.shape]} · ${lv}`}
-function showTokenDetail(att,d){
-  const tk=att.view.toks[d],box=$('#word-detail');if(!tk){box.hidden=true;return}
+function showTokenDetail(att,d,box=$('#word-detail')){
+  const tk=att.view.toks[d];if(!tk){box.hidden=true;return}
   const w=tk.ws[0],wl=tk.ws[tk.ws.length-1];
   let html=`<div class="row between"><b style="font-family:var(--font-en);font-size:17px">${esc(tk.text)}</b><span class="row" id="wd-btns" style="gap:6px"></span></div>`;
   if(w&&(w.te||w.me)){const dur=w.durRatio==null?'':w.durRatio<0.75?' · 짧게':w.durRatio>1.35?' · 길게':'';html+=`<div class="dl"><b class="te">선생님</b><span>${featText(w.te)}${w.stressT?' · 강조':''}</span><b class="me">나</b><span>${featText(w.me)}${dur}</span></div>`}
@@ -1598,13 +1603,13 @@ function showTokenDetail(att,d){
   else if(w&&w.te&&w.me)html+=`<div class="small muted">선생님과 비슷해요.</div>`;
   if(tk.az&&tk.az.length)html+=tk.az.map(x=>`<div class="phs">${(x.phonemes||[]).map(p=>`<span class="ph ${p.acc==null?'':p.acc>=80?'ok':p.acc>=60?'warn':'bad'}">${esc(p.p)}</span>`).join('')}</div>`).join('');
   box.innerHTML=html;box.hidden=false;
-  const bar=box.querySelector('#wd-btns');const te=cur.teacher;
+  const bar=box.querySelector('#wd-btns');const te=att.te||(cur&&cur.teacher);const tid=att.item.id;
   const tSpan=w&&te&&te.blob?[Math.max(0,w.s-0.06),wl.e+0.08]:null;
   const mSpan=w&&att.blob?[Math.max(0,w.ua/100-0.06),(wl.ub+1)/100+0.1]:null;
   const add=(label,cls,fn)=>{const b=document.createElement('button');b.type='button';b.className='btn small '+cls;b.textContent=label;b.addEventListener('click',fn);bar.appendChild(b)};
-  if(tSpan)add('▶ 선생님','teacher',()=>player.play('t:'+cur.item.id,te.blob,{start:tSpan[0],end:tSpan[1]}));
+  if(tSpan)add('▶ 선생님','teacher',()=>player.play('t:'+tid,te.blob,{start:tSpan[0],end:tSpan[1]}));
   if(mSpan)add('▶ 나','me',()=>player.play('m:'+att.id,att.blob,{start:mSpan[0],end:mSpan[1]}));
-  if(tSpan&&mSpan)add('▶ 비교','',()=>player.play('t:'+cur.item.id,te.blob,{start:tSpan[0],end:tSpan[1],ondone:()=>setTimeout(()=>player.play('m:'+att.id,att.blob,{start:mSpan[0],end:mSpan[1]}),250)}));
+  if(tSpan&&mSpan)add('▶ 비교','',()=>player.play('t:'+tid,te.blob,{start:tSpan[0],end:tSpan[1],ondone:()=>setTimeout(()=>player.play('m:'+att.id,att.blob,{start:mSpan[0],end:mSpan[1]}),250)}));
 }
 function renderAsrBox(att){
   const box=$('#asr-box');if(!cur||cur.current!==att)return;
@@ -1929,7 +1934,13 @@ function tReveal(){
 }
 function paintTGrade(){$$('#t-grade .g').forEach(b=>b.classList.toggle('sel',!!tst&&!!tst.cur&&tst.cur.grade===b.dataset.g));
   const T=tst&&tst.cur,el=$('#t-score');if(T&&T.score!=null&&T.att&&T.att.view){const v=T.att.view,parts=v.parts.filter(x=>x[1]!=null).map(x=>`${x[0]} ${Math.round(x[1])}`).join(' · ');const tip=(v.hints[0]||{}).t||'';
-    el.innerHTML=`<div class="sc"><span>말하기 점수</span><b class="num">${T.score}</b><span>${esc(parts)}</span></div>${T.grade==='ok'&&tip?`<div class="tip">${esc(tip)}</div>`:''}<div class="small muted">${T.grade==='ok'?'맞음이라 이 점수가 연습 기록에도 들어가요.':'정답을 맞혔을 때(맞음)만 점수가 기록돼요.'}</div>`;el.hidden=false}else el.hidden=true;$('#t-next').textContent=tst&&tst.idx>=tst.ids.length-1?'결과 보기':'다음 →'}
+    el.innerHTML=`<div class="sc"><span>말하기 점수</span><b class="num">${T.score}</b><span>${esc(parts)}</span></div>${T.grade==='ok'&&tip?`<div class="tip">${esc(tip)}</div>`:''}<div class="small muted">${T.grade==='ok'?'맞음이라 이 점수가 연습 기록에도 들어가요.':'정답을 맞혔을 때(맞음)만 점수가 기록돼요.'}</div>`;el.hidden=false;renderTWords(T)}else{el.hidden=true;$('#t-words').hidden=true}$('#t-next').textContent=tst&&tst.idx>=tst.ids.length-1?'결과 보기':'다음 →'}
+// the same word chips as in practice: pitch line per word, white = fine, yellow = check, red = clearly different / missed
+function renderTWords(T){const att=T.att,box=$('#t-wchips'),det=$('#t-word-detail');if(!att||!att.view||!att.view.toks.length){$('#t-words').hidden=true;return}
+  $('#t-words').hidden=false;if(T.wsel==null)det.hidden=true;
+  box.innerHTML=att.view.toks.map((tk,d)=>chipHtml(tk,d,T.wsel===d)).join('')+att.view.extras.map(w=>`<span class="wc extra" title="문장에 없는 말"><span class="wt">+ ${esc(w)}</span></span>`).join('');
+  box.querySelectorAll('button.wc').forEach(b=>b.addEventListener('click',()=>{const d=+b.dataset.d;T.wsel=T.wsel===d?null:d;box.querySelectorAll('button.wc').forEach(x=>x.classList.toggle('sel',+x.dataset.d===T.wsel));if(T.wsel==null)det.hidden=true;else showTokenDetail(att,d,det)}));
+  if(T.wsel!=null&&att.view.toks[T.wsel])showTokenDetail(att,T.wsel,det)}
 function tCommit(){const T=tst.cur;if(!T||!T.grade)return false;tst.res[T.id]=T.grade;
   const r=state.recall[T.id]||{n:0,ok:0,near:0,no:0,hist:[]};r.n=(r.n||0)+1;r[T.grade]=(r[T.grade]||0)+1;r.g=T.grade;r.last=new Date().toISOString();r.hint=!!T.hint;
   if(T.grade==='ok'&&T.score!=null){r.score=T.score;tst.scores[T.id]=T.score;applyGrade(T.id,gradeFromScore(T.score),T.score)}else delete tst.scores[T.id];r.hist=(r.hist||[]).concat([T.grade]).slice(-6);state.recall[T.id]=r;store.set(LS.recall,state.recall);
