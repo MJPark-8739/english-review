@@ -279,6 +279,11 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
 .t-en .w.ok{color:var(--good)}
 .t-en .w.warn{color:var(--warn);text-decoration:underline wavy;text-underline-offset:4px}
 .t-en .w.bad{color:var(--bad);text-decoration:underline;text-underline-offset:4px}
+.t-score{display:flex;flex-direction:column;gap:4px;margin:-2px 0 10px}
+.t-score .sc{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.t-score .sc b{font-size:22px}
+.t-score .sc span{font-size:12px;color:var(--muted)}
+.t-score .tip{font-size:13px}
 .ts-item{padding:8px 0;border-bottom:1px solid var(--line)}
 .ts-item:last-child{border-bottom:0}
 .ts-item .k{font-size:13px;color:var(--muted)}
@@ -523,6 +528,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       </div>
       <div class="card" style="margin-top:10px">
         <div class="card-head"><h3>채점</h3><span class="muted small" id="t-auto"></span></div>
+        <div class="t-score" id="t-score" hidden></div>
         <div class="grade-row" id="t-grade">
           <button class="g" data-g="ok">맞음</button><button class="g" data-g="near">거의</button><button class="g" data-g="no">틀림</button>
         </div>
@@ -542,7 +548,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <p class="small muted" style="margin-top:10px" id="ts-note"></p>
     </div>
     <div class="card">
-      <h3>다시 볼 문장</h3>
+      <h3>시험 결과</h3>
       <div class="summary-list" id="ts-list" style="margin-top:8px"></div>
       <div class="row" style="margin-top:12px">
         <button class="btn" id="ts-retest">틀린 것만 다시 시험</button>
@@ -701,7 +707,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.5 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.5.1 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -1503,7 +1509,7 @@ async function runDeviceAsr(att){
   if(cur&&cur.current===att){finalizeAttempt(att);renderResult(att)}
 }
 // best take of the day per sentence (from practice), so practised sentences can go straight into a submission file
-async function saveTake(att){try{const id=att.item&&att.item.id;if(!id||id.includes('#')||!att.me||!att.me.pcm||!att.view)return;const score=att.view.overall,k='take:'+todayStr()+':'+id;const old=await idb.get(k);
+async function saveTake(att){try{if(att.noTake)return;const id=att.item&&att.item.id;if(!id||id.includes('#')||!att.me||!att.me.pcm||!att.view)return;const score=att.view.overall,k='take:'+todayStr()+':'+id;const old=await idb.get(k);
   if(old&&old.att!==att.id&&old.score!=null&&(score==null||old.score>score))return;
   const t=trimSilence(att.me.pcm);if(t.length<16000*0.3)return;const i16=new Int16Array(t.length);for(let i=0;i<t.length;i++){const v=clamp(t[i],-1,1);i16[i]=v<0?v*0x8000:v*0x7FFF}
   await idb.set(k,{pcm16:i16.buffer,score,att:att.id,first:old&&old.first||Date.now()})}catch(e){}}
@@ -1847,7 +1853,7 @@ function renderTestCard(){
   $('#test-last').textContent=rs.length?`시험 본 문장 ${rs.length} · 마지막에 맞힌 문장 ${okN} (${Math.round(okN/rs.length*100)}%)`:s.testSrc==='hw'&&!pools.hw.length?'숙제 제출 파일을 만들면 그 문장들이 여기 들어와요.':'';
 }
 function hintText(t){return displayTokens(t).map(w=>w.replace(/[A-Za-z][A-Za-z'’]*/g,m=>m[0]+m.slice(1).replace(/[A-Za-z]/g,'_'))).join('  ')}
-function startTest(ids,label){if(!ids.length){toast('시험 볼 문장이 없어요');return}tst={ids:ids.slice(),idx:0,label,res:{}};showView('test');renderTest()}
+function startTest(ids,label){if(!ids.length){toast('시험 볼 문장이 없어요');return}tst={ids:ids.slice(),idx:0,label,res:{},scores:{}};showView('test');renderTest()}
 function renderTest(){
   const id=tst.ids[tst.idx],it=state.bank.byId[id];if(!it){tst.idx++;tst.idx>=tst.ids.length?tEnd():renderTest();return}
   stopAllAudio();tst.cur={id,hint:false,blob:null,me:null,asr:null,asrErr:'',grade:null,auto:null};
@@ -1876,6 +1882,10 @@ async function tCheck(T){
   const it=state.bank.byId[T.id];$('#t-rec').disabled=true;$('#t-hint-btn').disabled=true;
   if(state.settings.asrMode==='device'&&state.settings.asrConsent){$('#t-msg').textContent=asr.ready?'내가 말한 문장 확인 중…':asr.text();
     try{const text=await asr.run(asrInput(T.me));if(tst&&tst.cur===T)T.asr=asrCompare(it.text,[text])}catch(e){T.asrErr=e.message}}
+  // the same speaking score as in practice (intonation, rhythm, stress, words) — kept only if the answer is right
+  try{const te=await getTeacher(it);let prof=null;if(te&&te.an&&!te.local&&it.words)prof=te.profile||(te.profile=teacherProfile(te.an,it.words));
+    const att={id:Date.now(),item:it,blob:T.blob,me:T.me,te,cmp:te&&te.an?compareWithTeacher(te.an,T.me,it,te.local?null:prof):null,asr:T.asr||null,azure:null,noTake:true};
+    finalizeAttempt(att);T.att=att;T.score=att.view&&att.view.overall!=null?Math.round(att.view.overall):null}catch(e){T.score=null}
   if(tst&&tst.cur===T)tReveal();
 }
 function tReveal(){
@@ -1894,9 +1904,12 @@ function tReveal(){
   $('#t-auto').textContent=auto?`자동 판정: ${T_GRADE[auto]}${T.hint?' (힌트 사용)':''}`:'';paintTGrade();
   $('#t-msg').textContent=T.blob?'정답과 비교해 보세요. 채점이 다르면 눌러서 바꾸면 돼요.':'정답을 확인하고 채점해 주세요.';
 }
-function paintTGrade(){$$('#t-grade .g').forEach(b=>b.classList.toggle('sel',!!tst&&!!tst.cur&&tst.cur.grade===b.dataset.g));$('#t-next').textContent=tst&&tst.idx>=tst.ids.length-1?'결과 보기':'다음 →'}
+function paintTGrade(){$$('#t-grade .g').forEach(b=>b.classList.toggle('sel',!!tst&&!!tst.cur&&tst.cur.grade===b.dataset.g));
+  const T=tst&&tst.cur,el=$('#t-score');if(T&&T.score!=null&&T.att&&T.att.view){const v=T.att.view,parts=v.parts.filter(x=>x[1]!=null).map(x=>`${x[0]} ${Math.round(x[1])}`).join(' · ');const tip=(v.hints[0]||{}).t||'';
+    el.innerHTML=`<div class="sc"><span>말하기 점수</span><b class="num">${T.score}</b><span>${esc(parts)}</span></div>${T.grade==='ok'&&tip?`<div class="tip">${esc(tip)}</div>`:''}<div class="small muted">${T.grade==='ok'?'맞음이라 이 점수가 연습 기록에도 들어가요.':'정답을 맞혔을 때(맞음)만 점수가 기록돼요.'}</div>`;el.hidden=false}else el.hidden=true;$('#t-next').textContent=tst&&tst.idx>=tst.ids.length-1?'결과 보기':'다음 →'}
 function tCommit(){const T=tst.cur;if(!T||!T.grade)return false;tst.res[T.id]=T.grade;
-  const r=state.recall[T.id]||{n:0,ok:0,near:0,no:0,hist:[]};r.n=(r.n||0)+1;r[T.grade]=(r[T.grade]||0)+1;r.g=T.grade;r.last=new Date().toISOString();r.hint=!!T.hint;r.hist=(r.hist||[]).concat([T.grade]).slice(-6);state.recall[T.id]=r;store.set(LS.recall,state.recall);
+  const r=state.recall[T.id]||{n:0,ok:0,near:0,no:0,hist:[]};r.n=(r.n||0)+1;r[T.grade]=(r[T.grade]||0)+1;r.g=T.grade;r.last=new Date().toISOString();r.hint=!!T.hint;
+  if(T.grade==='ok'&&T.score!=null){r.score=T.score;tst.scores[T.id]=T.score;applyGrade(T.id,gradeFromScore(T.score),T.score)}else delete tst.scores[T.id];r.hist=(r.hist||[]).concat([T.grade]).slice(-6);state.recall[T.id]=r;store.set(LS.recall,state.recall);
   // can't produce it from memory -> it comes back in tomorrow's practice
   if(T.grade==='no'){const p=P(T.id);if(p){const tm=addDays(todayStr(),1);if(!p.due||p.due>tm){p.due=tm;saveProgress()}}}
   return true}
@@ -1905,11 +1918,13 @@ function tEnd(){
   stopAllAudio();if(tCap){const c=tCap;tCap=null;c.stop()}
   const ids=Object.keys(tst.res),cnt={ok:0,near:0,no:0};for(const id of ids)cnt[tst.res[id]]++;
   $('#ts-ok').textContent=cnt.ok;$('#ts-near').textContent=cnt.near;$('#ts-no').textContent=cnt.no;
-  const miss=ids.filter(id=>tst.res[id]!=='ok');
-  $('#ts-note').textContent=ids.length?`${ids.length}문장 중 ${cnt.ok}문장을 보지 않고 말했어요.${cnt.no?` 틀린 ${cnt.no}문장은 내일 연습에 다시 나와요.`:''}`:'채점한 문장이 없어요.';
-  $('#ts-list').innerHTML=miss.length?miss.map(id=>{const it=state.bank.byId[id];return`<div class="ts-item"><div class="k"><span class="chip ${tst.res[id]==='no'?'bad':'warn'}" style="margin-right:6px">${T_GRADE[tst.res[id]]}</span>${esc(it.ko)}</div><div class="e">${esc(it.text)}</div></div>`}).join(''):'<p class="small muted">모두 맞혔어요!</p>';
-  $('#ts-retest').hidden=!miss.length;$('#ts-practice').hidden=!miss.length;
-  $('#ts-retest').onclick=()=>startTest(shuffled(miss),'다시 시험');$('#ts-practice').onclick=()=>startSession(miss,'시험 복습');
+  const miss=ids.filter(id=>tst.res[id]!=='ok');const sc=Object.values(tst.scores);const avgS=sc.length?Math.round(mean(sc)):null;
+  $('#ts-note').textContent=ids.length?`${ids.length}문장 중 ${cnt.ok}문장을 보지 않고 말했어요.${avgS!=null?` 맞힌 문장 말하기 평균 ${avgS}점.`:''}${cnt.no?` 틀린 ${cnt.no}문장은 내일 연습에 다시 나와요.`:''}`:'채점한 문장이 없어요.';
+  const rank={no:0,near:1,ok:2};const order=ids.slice().sort((a,b)=>rank[tst.res[a]]-rank[tst.res[b]]);
+  $('#ts-list').innerHTML=order.map(id=>{const it=state.bank.byId[id],g=tst.res[id],s=tst.scores[id];const lab=g==='ok'?(s!=null?`맞음 ${s}점`:'맞음'):T_GRADE[g];const cls=g==='no'?'bad':g==='near'?'warn':(s!=null&&s<80?'warn':'ok');return`<div class="ts-item"><div class="k"><span class="chip ${cls}" style="margin-right:6px">${lab}</span>${esc(it.ko)}</div><div class="e">${esc(it.text)}</div></div>`}).join('')||'<p class="small muted">채점한 문장이 없어요.</p>';
+  const redo=miss.concat(ids.filter(id=>tst.res[id]==='ok'&&tst.scores[id]!=null&&tst.scores[id]<80));
+  $('#ts-retest').hidden=!miss.length;$('#ts-practice').hidden=!redo.length;$('#ts-practice').textContent=redo.length>miss.length?'틀리거나 점수 낮은 문장 연습':'틀린 문장 발음 연습';
+  $('#ts-retest').onclick=()=>startTest(shuffled(miss),'다시 시험');$('#ts-practice').onclick=()=>startSession(redo,'시험 복습');
   showView('testsum');syncIfReady(true);
 }
 function tPlayTeacher(){
