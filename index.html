@@ -175,7 +175,8 @@ a.btn{text-decoration:none}
 .word-detail .dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:baseline}
 .word-detail .dl b.te{color:var(--teacher)} .word-detail .dl b.me{color:var(--me)}
 .phs{display:flex;gap:4px;flex-wrap:wrap;font-family:var(--font-en);font-size:16px}
-.ph{padding:2px 7px;border-radius:7px;background:var(--surface)}
+.ph{padding:2px 7px;border-radius:7px;background:var(--surface);display:inline-flex;align-items:baseline;gap:3px}
+.ph small{font-size:10px;opacity:.75;font-family:var(--font-ui)}
 .ph.bad{background:var(--bad-soft);color:var(--bad)} .ph.warn{background:var(--warn-soft);color:var(--warn)} .ph.ok{color:var(--good)}
 .asr-box{background:var(--surface-2);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
 .asr-box .heard{font-family:var(--font-en);font-weight:700;color:var(--fg)}
@@ -694,11 +695,13 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
     <details>
       <summary>정밀 발음 평가 (선택)</summary>
       <div class="inner">
-        <p class="small muted">Azure Speech 키를 넣으면 단어·음소 단위 정확도가 정밀해져요. 무료 등급(F0)은 월 5시간까지. 녹음이 Azure로 전송돼요. 비워두면 폰 안 인식으로 단어 단위만 비교합니다.</p>
+        <p class="small muted">Azure Speech 키를 넣으면 소리(음소) 하나하나와 운율(억양·강세·리듬)까지 채점하고, 약한 소리마다 고치는 법을 알려 줘요. 연습과 말하기 시험 모두에 쓰여요. 녹음이 채점을 위해 Microsoft(Azure)로 전송돼요. 키는 이 폰에만 저장돼요. 비워두면 폰 안 인식으로 단어 단위만 비교해요.</p>
         <div class="grid2">
           <label class="field">Azure Speech 키<input id="s-azureKey" type="password" autocomplete="off"></label>
           <label class="field">리전<input id="s-azureRegion" placeholder="koreacentral" autocapitalize="off" autocomplete="off"></label>
         </div>
+        <div class="row" style="margin-top:10px;align-items:center"><button class="btn small" id="btn-azure-test">연결 테스트</button><span class="small muted" id="azure-test-msg"></span></div>
+        <p class="small muted" id="azure-usage" style="margin:8px 0 0"></p>
       </div>
     </details>
     <details>
@@ -724,7 +727,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.5.3 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.6 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -1348,8 +1351,9 @@ function startRecognition(){
 /* ===================== Azure pronunciation assessment (optional) ===================== */
 let sdkPromise=null;
 function loadSpeechSDK(){if(window.SpeechSDK)return Promise.resolve();if(sdkPromise)return sdkPromise;const urls=['https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@1.43.1/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js','https://aka.ms/csspeech/jsbrowserpackageraw'];sdkPromise=(async()=>{for(const u of urls){try{await new Promise((res,rej)=>{const s=document.createElement('script');s.src=u;s.onload=res;s.onerror=rej;document.head.appendChild(s)});if(window.SpeechSDK)return}catch(e){}}sdkPromise=null;throw new Error('평가 모듈을 불러오지 못했어요')})();return sdkPromise}
+function azureUsage(){const m=todayStr().slice(0,7),u=store.get('bear.azure.usage',{});return u.m===m?u:{m,secs:0,n:0}}
 async function azureAssess(pcm16,refText){
-  await loadSpeechSDK();const S=window.SpeechSDK,s=state.settings;
+  await loadSpeechSDK();const S=window.SpeechSDK,s=state.settings;{const u=azureUsage();u.secs+=pcm16.length/16000;u.n++;store.set('bear.azure.usage',u)}
   const cfg=S.SpeechConfig.fromSubscription(s.azureKey.trim(),(s.azureRegion||'koreacentral').trim());cfg.speechRecognitionLanguage='en-US';
   const fmt=S.AudioStreamFormat.getWaveFormatPCM(16000,16,1),push=S.AudioInputStream.createPushStream(fmt);
   push.write(toWav(pcm16).slice(44));push.close();
@@ -1359,6 +1363,18 @@ async function azureAssess(pcm16,refText){
   const rec=new S.SpeechRecognizer(cfg,ac);pa.applyTo(rec);
   return new Promise((res,rej)=>{rec.recognizeOnceAsync(r=>{let json=null;try{json=r.properties.getProperty(S.PropertyId.SpeechServiceResponse_JsonResult)}catch(e){}try{rec.close()}catch(e){}if(r.reason===S.ResultReason.RecognizedSpeech&&json)res(JSON.parse(json));else rej(new Error(r.errorDetails||'음성을 인식하지 못했어요'))},e=>{try{rec.close()}catch(_){}rej(new Error(String(e)))})});
 }
+// Korean how-to for the sounds Korean speakers most often miss (keys are Azure en-US IPA symbols)
+const PH_TIP={'ɹ':"혀끝이 입천장에 닿지 않게 뒤로 말고 입술을 살짝 오므려 '(우)r' — 'ㄹ'처럼 혀를 튕기지 않기",'r':"혀끝이 입천장에 닿지 않게 뒤로 말고 입술을 살짝 오므려 '(우)r' — 'ㄹ'처럼 혀를 튕기지 않기",
+  'l':"혀끝을 윗니 뒤 잇몸에 꼭 붙였다 떼기. 끝소리 l은 혀를 붙인 채 '을'처럼 (feel → 피-을)",'ɝ':"her·bird의 '어r' — 입을 작게 벌리고 혀를 말아 올린 채 '어'. 입술을 둥글게 '워/오' 하지 않기 (worried = w + 어r + 이드)",'ɚ':"약한 '어r' — 혀를 말아 올린 채 짧게 (teacher의 끝)",
+  'æ':"'애'보다 턱을 더 내려 입을 크게 벌리고 '애~' (cash, bad)",'ɛ':"'에' — æ보다 입을 덜 벌려요 (bed vs bad)",'ɪ':"짧고 힘을 뺀 '이' — 길게 '이~' 하지 않기 (sit vs seat)",'i':"입꼬리를 옆으로 당기고 길게 '이~' (see)",
+  'ʊ':"짧은 '우', 입술을 덜 오므려요 (book, good)",'u':"입술을 동그랗게 내밀고 길게 '우~' (food)",'ʌ':"짧고 힘 있는 '어' (cup, but)",'ə':"아주 짧고 약한 '어' — 강세 없는 모음은 흐리게",'ɑ':"입을 크게 벌린 '아' (hot, father)",'ɔ':"입술을 살짝 둥글게 한 '오'와 '어' 사이 (thought)",
+  'oʊ':"'오'로 끝내지 말고 '오우'로 미끄러지기 (go → 고우)",'eɪ':"'에'로 끝내지 말고 '에이' (day → 데이)",'aɪ':"'아이'로 미끄러지기 (time)",'aʊ':"'아우'로 미끄러지기 (now)",'ɔɪ':"'오이'로 미끄러지기 (boy)",
+  'f':"윗니를 아랫입술에 살짝 대고 바람 — 'ㅍ'처럼 두 입술을 붙이지 않기",'v':"f 입모양에서 목을 울려 — 'ㅂ'이 아니에요",'θ':"혀끝을 윗니 사이로 살짝 내밀고 바람 (think) — 'ㅆ'이 아니에요",'ð':"θ 입모양에서 목을 울려 (this, that) — 'ㄷ'이 아니에요",
+  'z':"'ㅈ'이 아니라 s에 목 울림 '즈~' (zoo, is)",'ʒ':"'쥬'보다 부드럽게 (usually, measure)",'dʒ':"입술을 내밀고 '쥐' (job)",'tʃ':"입술을 내밀고 '취' (check)",'ʃ':"입술을 내밀고 바람 '쉬' (she)",'s':"'ㅅ'보다 길고 날카로운 바람 '스'",
+  'w':"입술을 동그랗게 모았다가 펴며 시작 ('우'로 시작하는 느낌)",'j':"'이' 하고 시작 (yes)",'ŋ':"'응'으로 끝내고 뒤에 '그'를 붙이지 않기 (sing → 싱)",'n':"끝소리면 혀를 잇몸에 붙인 채 'ㄴ'으로 닫기",'m':"끝소리면 입을 닫은 채 'ㅁ'으로 끝내기",
+  'p':"첫소리는 바람을 세게 'ㅍ', 끝소리는 '으'를 붙이지 말고 입만 닫기 (cup → 컵)",'t':"첫소리는 바람 'ㅌ', 끝소리는 '으' 없이 혀만 대고 멈추기",'k':"첫소리는 바람 'ㅋ', 끝소리는 '으' 없이 멈추기",
+  'b':"목을 울린 'ㅂ' — 끝소리에 '으'를 붙이지 않기",'d':"목을 울린 'ㄷ' — 끝소리에 '으'를 붙이지 않기 (need → 니-d)",'g':"목을 울린 'ㄱ' — 끝소리에 '으'를 붙이지 않기",'h':"목에서 약한 바람 '흐'"};
+function phTip(p){return PH_TIP[p]||PH_TIP[String(p).replace(/ː/g,'')]||''}
 function parseAzure(j){const nb=(j.NBest||[])[0];if(!nb)return null;const pa=nb.PronunciationAssessment||{};const words=(nb.Words||[]).map(w=>{const a=w.PronunciationAssessment||{};return{w:w.Word,acc:a.AccuracyScore,err:a.ErrorType||'None',phonemes:(w.Phonemes||[]).map(p=>({p:p.Phoneme,acc:(p.PronunciationAssessment||{}).AccuracyScore}))}});return{acc:pa.AccuracyScore,flu:pa.FluencyScore,comp:pa.CompletenessScore,pros:pa.ProsodyScore,pron:pa.PronScore,words,text:nb.Display||''}}
 
 /* ===================== practice flow ===================== */
@@ -1543,7 +1559,7 @@ function finalizeAttempt(att){
   if(att.azure){let ri=0;for(const w of att.azure.words){if(w.err==='Insertion'){extras.push(w.w);continue}const d=map[Math.min(ri,nBase-1)];ri++;if(d==null)continue;const tk=toks[d];tk.az=(tk.az||[]).concat([w]);const s=w.err==='Omission'?'missing':w.acc==null?null:w.acc>=80?'ok':w.acc>=60?'warn':'bad';if(s){tk.status=worse(tk.status,s);if(s==='missing')tk.notes.unshift('빠뜨렸어요');else if(s!=='ok')tk.notes.unshift(`발음 정확도 ${Math.round(w.acc)}점`)}}}
   else if(att.asr){const A=att.asr;A.status.forEach((s,k)=>{const d=map[k];if(d==null)return;const tk=toks[d];if(s==='missing'){tk.status=worse(tk.status,'missing');tk.notes.unshift('인식 안 됨 — 빠뜨렸거나 발음이 약했어요')}else if(s==='sub'){tk.status=worse(tk.status,'bad');tk.heard=A.heard[k];tk.notes.unshift(`'${A.heard[k]}'로 들렸어요`)}else if(s==='near'){tk.status=worse(tk.status,'warn');tk.heard=A.heard[k];tk.notes.unshift(`'${A.heard[k]}'에 가깝게 들렸어요`)}else if(tk.status==='unknown')tk.status='ok'});extras.push(...A.extras)}
   const wordsScore=att.azure?att.azure.acc:att.asr?att.asr.accuracy:null;
-  const parts=[['단어',wordsScore],['억양',cmp?cmp.into:null],['리듬·연음',cmp?cmp.rhythm:null],['강세',cmp?cmp.stress:null]];
+  const parts=[[att.azure?'발음':'단어',wordsScore],['억양',cmp?cmp.into:null],['리듬·연음',cmp?cmp.rhythm:null],['강세',cmp?cmp.stress:null]];if(att.azure&&att.azure.pros!=null)parts.push(['운율',att.azure.pros]);
   let overall=att.azure&&att.azure.pron!=null?wavg([[att.azure.pron,0.6],[cmp?cmp.into:null,0.25],[cmp?cmp.rhythm:null,0.15]]):wavg([[wordsScore,0.35],[cmp?cmp.into:null,0.3],[cmp?cmp.rhythm:null,0.2],[cmp?cmp.stress:null,0.15]]);
   // flagged words pull the score down (and therefore bring the sentence back sooner)
   if(overall!=null){const nBad=toks.filter(t=>t.status==='bad'||t.status==='missing').length,nWarn=toks.filter(t=>t.status==='warn').length;
@@ -1552,7 +1568,7 @@ function finalizeAttempt(att){
   overall=overall==null?null:Math.round(overall);
   const hints=[];const ref=baseTokens(item.text);
   if(att.asr&&!att.azure){let m=0,s=0;att.asr.status.forEach((st,k)=>{if(st==='missing'&&m<2){hints.push({c:'bad',p:6,t:`'${ref[k]}' — 인식 안 됨 (빠뜨렸거나 발음이 약했어요)`});m++}else if(st==='sub'&&s<2){hints.push({c:'bad',p:5,t:`'${ref[k]}' → '${att.asr.heard[k]}'로 들렸어요`});s++}});if(att.asr.extras.length)hints.push({c:'',p:1,t:`문장에 없는 말: ${att.asr.extras.slice(0,3).map(w=>"'"+w+"'").join(', ')}`})}
-  if(att.azure){const bad=att.azure.words.filter(w=>w.err==='Mispronunciation'||(w.acc!=null&&w.acc<60)).slice(0,3);for(const w of bad){const ph=(w.phonemes||[]).filter(p=>p.acc!=null&&p.acc<60).map(p=>p.p);hints.push({c:'bad',p:5,t:`'${w.w}' 발음 ${w.acc!=null?Math.round(w.acc)+'점':''}${ph.length?' — 특히 /'+ph.join(' ')+'/':''}`})}for(const w of att.azure.words.filter(w=>w.err==='Omission').slice(0,2))hints.push({c:'bad',p:6,t:`'${w.w}'를 빠뜨렸어요`})}
+  if(att.azure){const bad=att.azure.words.filter(w=>w.err==='Mispronunciation'||(w.acc!=null&&w.acc<60)).sort((a,b)=>(a.acc??100)-(b.acc??100)).slice(0,3);for(const w of bad){const low=(w.phonemes||[]).filter(p=>p.acc!=null&&p.acc<60).sort((a,b)=>a.acc-b.acc);const ph=low.map(p=>p.p);const tip=low.length?phTip(low[0].p):'';hints.push({c:'bad',p:5,t:`'${w.w}' 발음 ${w.acc!=null?Math.round(w.acc)+'점':''}${ph.length?' — 특히 /'+ph.join(' ')+'/':''}${tip?` → ${tip}`:''}`})}for(const w of att.azure.words.filter(w=>w.err==='Omission').slice(0,2))hints.push({c:'bad',p:6,t:`'${w.w}'를 빠뜨렸어요`})}
   if(cmp)hints.push(...cmp.hints);
   else if(!att.te)hints.push({c:'info',p:0,t:'이 문장은 선생님 녹음이 없어서 억양·리듬 비교는 못 해요.'});
   else hints.push({c:'info',p:0,t:'선생님 소리나 내 소리가 너무 짧아서 비교하지 못했어요.'});
@@ -1601,7 +1617,9 @@ function showTokenDetail(att,d,box=$('#word-detail')){
   const notes=[...new Set(tk.notes)];
   if(notes.length)html+=`<ul class="hints">${notes.slice(0,4).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
   else if(w&&w.te&&w.me)html+=`<div class="small muted">선생님과 비슷해요.</div>`;
-  if(tk.az&&tk.az.length)html+=tk.az.map(x=>`<div class="phs">${(x.phonemes||[]).map(p=>`<span class="ph ${p.acc==null?'':p.acc>=80?'ok':p.acc>=60?'warn':'bad'}">${esc(p.p)}</span>`).join('')}</div>`).join('');
+  if(tk.az&&tk.az.length){html+=tk.az.map(x=>`<div class="phs">${(x.phonemes||[]).map(p=>`<span class="ph ${p.acc==null?'':p.acc>=80?'ok':p.acc>=60?'warn':'bad'}" title="${p.acc==null?'':Math.round(p.acc)+'점'}">${esc(p.p)}<small>${p.acc==null?'':Math.round(p.acc)}</small></span>`).join('')}</div>`).join('');
+    const weak=[];for(const x of tk.az)for(const p of x.phonemes||[])if(p.acc!=null&&p.acc<70&&phTip(p.p)&&!weak.some(q=>q.p===p.p))weak.push(p);
+    if(weak.length)html+=`<ul class="hints">${weak.slice(0,3).map(p=>`<li><b>/${esc(p.p)}/</b> ${Math.round(p.acc)}점 — ${esc(phTip(p.p))}</li>`).join('')}</ul>`}
   box.innerHTML=html;box.hidden=false;
   const bar=box.querySelector('#wd-btns');const te=att.te||(cur&&cur.teacher);const tid=att.item.id;
   const tSpan=w&&te&&te.blob?[Math.max(0,w.s-0.06),wl.e+0.08]:null;
@@ -1815,6 +1833,7 @@ function renderSettings(){
   renderAsrState();
   const sel=$('#add-tier');if(!sel.options.length){sel.innerHTML=Object.keys(state.bank.tiers).sort().map(k=>`<option value="${k}">${esc(state.bank.tiers[k].short)} · ${esc(state.bank.tiers[k].name)}</option>`).join('')}
   if(!$('#add-lesson').value)$('#add-lesson').value=todayStr();
+  {const u=azureUsage();$('#azure-usage').textContent=state.settings.azureKey?`이번 달 정밀 평가 ${u.n}회 · ${Math.round(u.secs/60)}분 사용 (무료 등급은 월 5시간 정도)`:''}
   $('#gh-status').textContent=gh.ready()?`연결 설정됨 · 자료 출처: ${state.bank.source==='github'?'저장소':state.bank.source}`:'아직 연결 안 됨';
 }
 let micTestCap=null,micTestBlob=null;
@@ -1849,6 +1868,13 @@ function bindSettings(){
   $('#btn-add').addEventListener('click',()=>{const lines=$('#add-text').value.split('\n').map(l=>l.trim()).filter(Boolean);if(!lines.length)return;const tier=+$('#add-tier').value||1,lesson=$('#add-lesson').value||todayStr();const base=Date.now();lines.forEach((l,i)=>{const [en,ko,note]=l.split('|').map(x=>(x||'').trim());if(!en)return;state.localItems.push({id:`local-${base}-${i}`,text:en,ko:ko||'',note:note||'',tier,lesson,source:'직접 추가',kind:'sentence'})});store.set(LS.local,state.localItems);finalizeBank(state.bank);$('#add-text').value='';toast(`${lines.length}문장 추가됨`);syncIfReady(true)});
   $('#btn-export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),progress:state.progress,log:state.log,localItems:state.localItems,settings:Object.assign({},state.settings,{ghToken:'',azureKey:''})},null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`bear-review-backup-${todayStr()}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)});
   $('#import-file').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());const m=mergeProgress({progress:state.progress,log:state.log,localItems:state.localItems},j);state.progress=m.progress;state.log=m.log;state.localItems=m.localItems;saveProgress();store.set(LS.local,state.localItems);finalizeBank(state.bank);toast('기록을 합쳤어요')}catch(err){toast('파일을 읽지 못했어요')}e.target.value=''});
+  $('#btn-azure-test').addEventListener('click',async()=>{const m=$('#azure-test-msg'),s=state.settings;['azureKey','azureRegion'].forEach(k=>{const el=$('#s-'+k);if(el){s[k]=el.value.trim()}});saveSettings();
+    if(!s.azureKey){m.textContent='키를 먼저 넣어 주세요';return}m.textContent='선생님 녹음 하나로 점검 중…';
+    const it=state.bank.items.find(i=>i.clip&&i.words);let pcm=null,ref='';if(it){const t=await getTeacher(it);if(t&&t.pcm){pcm=t.pcm;ref=it.text}}
+    if(!pcm){m.textContent='점검에 쓸 선생님 녹음이 없어요 (자료 연결 후 다시)';return}
+    try{const a=parseAzure(await azureAssess(pcm,ref));if(!a){m.textContent='응답은 왔지만 결과가 비어 있어요';return}
+      m.textContent=`연결됨 · 발음 ${Math.round(a.acc)}${a.pros!=null?` · 운율 ${Math.round(a.pros)}`:' · 운율 점수 없음(리전에 따라 안 나올 수 있어요)'} · 음소 ${a.words.reduce((n,w)=>n+(w.phonemes||[]).length,0)}개 채점`;renderSettings()}
+    catch(e){m.textContent='실패: '+e.message+' — 키와 리전(예: koreacentral)을 확인해 주세요'}});
   $('#btn-clear-cache').addEventListener('click',async()=>{await idb.clear();for(const k of Object.keys(teacherCache))delete teacherCache[k];toast('음성 캐시를 비웠어요')});
   let resetArmed=0;$('#btn-reset').addEventListener('click',()=>{if(Date.now()-resetArmed<5000){state.progress={};state.log=[];saveProgress();resetArmed=0;$('#reset-confirm').hidden=true;toast('기록을 모두 지웠어요');renderToday()}else{resetArmed=Date.now();$('#reset-confirm').hidden=false;setTimeout(()=>{$('#reset-confirm').hidden=true},5000)}});
 }
@@ -1908,11 +1934,13 @@ function renderTakes(){
 async function tSubmit(){const T=tst.cur;if(!T||T.sel<0||!T.takes[T.sel])return;if(tCap){const c=tCap;tCap=null;await c.stop()}stopAllAudio();const k=T.takes[T.sel];T.blob=k.blob;T.me=k.me;$('#t-takes').hidden=true;$('#t-ask').hidden=true;$('#t-msg').textContent='확인 중…';await tCheck(T)}
 async function tCheck(T){
   const it=state.bank.byId[T.id];$('#t-rec').disabled=true;$('#t-hint-btn').disabled=true;
-  if(state.settings.asrMode==='device'&&state.settings.asrConsent){$('#t-msg').textContent=asr.ready?'내가 말한 문장 확인 중…':asr.text();
+  T.azure=null;
+  if(state.settings.azureKey&&state.settings.azureKey.trim()){$('#t-msg').textContent='정밀 평가 중…';try{T.azure=parseAzure(await azureAssess(T.me.pcm,it.text));if(T.azure&&T.azure.text)T.asr=asrCompare(it.text,[T.azure.text])}catch(e){T.asrErr='정밀 평가 실패: '+e.message}}
+  if(!T.asr&&state.settings.asrMode==='device'&&state.settings.asrConsent){$('#t-msg').textContent=asr.ready?'내가 말한 문장 확인 중…':asr.text();
     try{const text=await asr.run(asrInput(T.me));if(tst&&tst.cur===T)T.asr=asrCompare(it.text,[text])}catch(e){T.asrErr=e.message}}
   // the same speaking score as in practice (intonation, rhythm, stress, words) — kept only if the answer is right
   try{const te=await getTeacher(it);let prof=null;if(te&&te.an&&!te.local&&it.words)prof=te.profile||(te.profile=teacherProfile(te.an,it.words));
-    const att={id:Date.now(),item:it,blob:T.blob,me:T.me,te,cmp:te&&te.an?compareWithTeacher(te.an,T.me,it,te.local?null:prof):null,asr:T.asr||null,azure:null,noTake:true};
+    const att={id:Date.now(),item:it,blob:T.blob,me:T.me,te,cmp:te&&te.an?compareWithTeacher(te.an,T.me,it,te.local?null:prof):null,asr:T.azure?null:(T.asr||null),azure:T.azure||null,noTake:true};
     finalizeAttempt(att);T.att=att;T.score=att.view&&att.view.overall!=null?Math.round(att.view.overall):null}catch(e){T.score=null}
   if(tst&&tst.cur===T)tReveal();
 }
