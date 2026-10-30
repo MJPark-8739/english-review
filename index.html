@@ -745,7 +745,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.7 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.7.1 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -2124,7 +2124,10 @@ async function hwStopRecord(){
   await idb.set(hwKey(id),{pcm:pcm16.buffer,at:Date.now()});
   renderHw();$('#hw-msg').textContent='저장됐어요. ▶ 내 소리로 확인하고, 괜찮으면 다음으로.';
 }
-function trimSilence(pcm){const frame=160;let maxR=0;const n=Math.floor(pcm.length/frame);const r=new Float32Array(n);for(let i=0;i<n;i++){let s=0;for(let j=0;j<frame;j++){const v=pcm[i*frame+j];s+=v*v}r[i]=Math.sqrt(s/frame);if(r[i]>maxR)maxR=r[i]}const gate=Math.max(0.004,maxR*0.06);let a=0,b=n-1;while(a<n&&r[a]<gate)a++;while(b>a&&r[b]<gate)b--;const s=Math.max(0,(a-15)*frame),e=Math.min(pcm.length,(b+16)*frame);return pcm.slice(s,e)}
+function trimSilence(pcm){const frame=160;let maxR=0;const n=Math.floor(pcm.length/frame);const r=new Float32Array(n);for(let i=0;i<n;i++){let s=0;for(let j=0;j<frame;j++){const v=pcm[i*frame+j];s+=v*v}r[i]=Math.sqrt(s/frame);if(r[i]>maxR)maxR=r[i]}
+  // keep soft endings (final s/t/th, breathy vowels): low gate and 0.35 s of tail, then a short fade so nothing clicks
+  const gate=Math.max(0.0025,maxR*0.03);let a=0,b=n-1;while(a<n&&r[a]<gate)a++;while(b>a&&r[b]<gate)b--;const s=Math.max(0,(a-20)*frame),e=Math.min(pcm.length,(b+35)*frame);const out=pcm.slice(s,e);
+  const f=Math.min(240,out.length>>2);for(let i=0;i<f;i++){const g=i/f;out[i]*=g;out[out.length-1-i]*=g}return out}
 function hwPlayMine(){
   const id=hw.ids[hw.idx];const t=hw.takes[id];if(!t)return;const b=$('#hw-me');
   if(player.busy){player.stop();return}
