@@ -128,6 +128,21 @@ a.btn{color:inherit;text-decoration:none}
 .sentence.hidden-text{filter:blur(9px);user-select:none}
 .ko{font-size:15px;color:var(--muted)}
 .note{font-size:13px;color:var(--fg);background:var(--surface-2);border-radius:10px;padding:8px 10px}
+details.points{border:0;padding:8px 10px;background:var(--teacher-soft);border-radius:10px}
+details.points>summary{padding:0;font-size:13px;font-weight:700;color:var(--teacher);justify-content:flex-start;gap:6px}
+details.points>summary::after{margin-left:auto}
+.plist{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.plist li{font-size:13px;line-height:1.45}
+.plist .h1{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.plist .pw{font-family:var(--font-en);font-weight:700;font-size:14px}
+.plist .ipa{font-family:var(--font-en);color:var(--muted);font-size:12px}
+.plist .pd{font-size:11px;color:var(--muted)}
+.pk{background:var(--surface);color:var(--fg)}
+.pchk{margin:4px 0 8px;padding:10px 12px;border-radius:10px;background:var(--surface-2)}
+.pchk-h{font-size:13px;font-weight:700;color:var(--teacher)}
+.pc{font-weight:600}.pc.ok{color:var(--good)}.pc.warn{color:var(--warn)}.pc.bad{color:var(--bad)}.pc.na{color:var(--muted);font-weight:400}
+.wc.pt{position:relative}.wc.pt::after{content:"";position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:var(--teacher)}
+.ph.btn-ph{cursor:pointer;border:1px solid transparent}.ph.btn-ph:active{border-color:var(--fg)}
 .context{font-size:13px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px}
 .context b{color:var(--fg)}
 .controls{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:8px}
@@ -403,6 +418,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <p class="sentence" id="c-text"></p>
       <p class="ko" id="c-ko"></p>
       <p class="note" id="c-note" hidden></p>
+      <details class="points" id="c-points" open hidden><summary>선생님 포인트 <span class="muted small" id="c-points-n"></span></summary><ul class="plist" id="c-points-list"></ul></details>
     </div>
     <details class="melody-card" id="melody" hidden open>
       <summary><span>선생님 멜로디</span><span class="sum" id="melody-sum"></span></summary>
@@ -443,6 +459,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="wchips" id="wchips"></div>
         <div class="word-detail" id="word-detail" hidden></div>
         <div class="asr-box small" id="asr-box" hidden></div>
+        <div class="pchk" id="pchk" hidden><div class="pchk-h">선생님 포인트 확인</div><ul class="plist" id="pchk-list"></ul></div>
         <ul class="hints" id="hints"></ul>
         <details class="graph-wrap" id="graph-wrap"><summary>문장 전체 억양 그래프</summary><canvas id="contour" height="160"></canvas><p class="small muted" style="margin-top:6px">가로는 선생님 말에 맞춰 단어 위치를 정렬한 시간, 세로는 각자 평소 목소리 높이를 0으로 둔 높낮이예요. 칸 하나가 단어 하나예요.</p></details>
         <div class="grade-row"><span class="small muted">평가</span>
@@ -542,6 +559,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
       <div class="card" style="margin-top:10px">
         <div class="card-head"><h3>채점</h3><span class="muted small" id="t-auto"></span></div>
         <div class="t-score" id="t-score" hidden></div>
+        <div class="pchk" id="t-pchk" hidden><div class="pchk-h">선생님 포인트 확인</div><ul class="plist" id="t-pchk-list"></ul></div>
         <div id="t-words" hidden>
           <div class="legend"><span><i style="background:var(--teacher)"></i>선생님</span><span><i style="background:var(--me)"></i>나</span><span>↗ 올림 · ↘ 내림 · → 평평</span><span><u>밑줄</u> = 선생님 강조</span></div>
           <div class="wchips" id="t-wchips"></div>
@@ -727,7 +745,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.6 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.7 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -796,7 +814,7 @@ const gh={
 
 /* ===================== bank ===================== */
 function normalizeBank(j,source){
-  const items=(j.items||[]).filter(x=>x&&x.text&&x.id).map(x=>({id:String(x.id),text:String(x.text).trim(),ko:x.ko||'',tier:clamp(parseInt(x.tier)||3,1,6),source:x.source||'',lesson:x.lesson||'',kind:x.kind||'sentence',group:x.group||null,role:x.role||null,seq:x.seq||0,clip:x.clip||null,words:Array.isArray(x.words)?x.words:null,note:x.note||'',sets:Array.isArray(x.sets)?x.sets.map(String):[],stitched:!!x.stitched,clipRev:x.clipRev||0}));
+  const items=(j.items||[]).filter(x=>x&&x.text&&x.id).map(x=>({id:String(x.id),text:String(x.text).trim(),ko:x.ko||'',tier:clamp(parseInt(x.tier)||3,1,6),source:x.source||'',lesson:x.lesson||'',kind:x.kind||'sentence',group:x.group||null,role:x.role||null,seq:x.seq||0,clip:x.clip||null,words:Array.isArray(x.words)?x.words:null,points:Array.isArray(x.points)?x.points.filter(p=>p&&p.w):[],phones:Array.isArray(x.phones)?x.phones:null,note:x.note||'',sets:Array.isArray(x.sets)?x.sets.map(String):[],stitched:!!x.stitched,clipRev:x.clipRev||0}));
   const tiers=Object.assign({},DEFAULT_TIERS);if(j.tiers)for(const k of Object.keys(j.tiers)){tiers[k]=Object.assign({},tiers[k]||{},j.tiers[k])}
   return{items,tiers,demo:!!(j.demo||j.sample),source,generatedAt:j.generatedAt||null,version:j.version||1,currentSet:j.currentSet?String(j.currentSet):null,clipsVersion:j.clipsVersion?String(j.clipsVersion):''};
 }
@@ -1375,7 +1393,7 @@ const PH_TIP={'ɹ':"혀끝이 입천장에 닿지 않게 뒤로 말고 입술을
   'p':"첫소리는 바람을 세게 'ㅍ', 끝소리는 '으'를 붙이지 말고 입만 닫기 (cup → 컵)",'t':"첫소리는 바람 'ㅌ', 끝소리는 '으' 없이 혀만 대고 멈추기",'k':"첫소리는 바람 'ㅋ', 끝소리는 '으' 없이 멈추기",
   'b':"목을 울린 'ㅂ' — 끝소리에 '으'를 붙이지 않기",'d':"목을 울린 'ㄷ' — 끝소리에 '으'를 붙이지 않기 (need → 니-d)",'g':"목을 울린 'ㄱ' — 끝소리에 '으'를 붙이지 않기",'h':"목에서 약한 바람 '흐'"};
 function phTip(p){return PH_TIP[p]||PH_TIP[String(p).replace(/ː/g,'')]||''}
-function parseAzure(j){const nb=(j.NBest||[])[0];if(!nb)return null;const pa=nb.PronunciationAssessment||{};const words=(nb.Words||[]).map(w=>{const a=w.PronunciationAssessment||{};return{w:w.Word,acc:a.AccuracyScore,err:a.ErrorType||'None',phonemes:(w.Phonemes||[]).map(p=>({p:p.Phoneme,acc:(p.PronunciationAssessment||{}).AccuracyScore}))}});return{acc:pa.AccuracyScore,flu:pa.FluencyScore,comp:pa.CompletenessScore,pros:pa.ProsodyScore,pron:pa.PronScore,words,text:nb.Display||''}}
+function parseAzure(j){const nb=(j.NBest||[])[0];if(!nb)return null;const pa=nb.PronunciationAssessment||{};const words=(nb.Words||[]).map(w=>{const a=w.PronunciationAssessment||{};return{w:w.Word,acc:a.AccuracyScore,err:a.ErrorType||'None',s:w.Offset!=null?w.Offset/1e7:null,e:w.Offset!=null&&w.Duration!=null?(w.Offset+w.Duration)/1e7:null,phonemes:(w.Phonemes||[]).map(p=>({p:p.Phoneme,acc:(p.PronunciationAssessment||{}).AccuracyScore,s:p.Offset!=null?p.Offset/1e7:null,e:p.Offset!=null&&p.Duration!=null?(p.Offset+p.Duration)/1e7:null}))}});return{acc:pa.AccuracyScore,flu:pa.FluencyScore,comp:pa.CompletenessScore,pros:pa.ProsodyScore,pron:pa.PronScore,words,text:nb.Display||''}}
 
 /* ===================== practice flow ===================== */
 const teacherCache={};
@@ -1420,7 +1438,7 @@ function paintCard(){
   $('#c-kind').textContent=ch?'구간':kindLabel(item.kind)+(item.role?' '+item.role:'')+(item.stitched?' · 이어붙인 클립':'');
   const textEl=$('#c-text');textEl.textContent=item.text;textEl.classList.toggle('hidden-text',cur.hidden);$('#prac-hide').textContent=cur.hidden?'보기':'가리기';
   $('#c-ko').textContent=state.settings.showKo?item.ko:'';$('#c-ko').hidden=!(state.settings.showKo&&item.ko);
-  $('#c-note').textContent=item.note||'';$('#c-note').hidden=!item.note;
+  $('#c-note').textContent=item.note||'';$('#c-note').hidden=!item.note;renderPointsCard(src,ch?item.text:null);
   const ctxEl=$('#c-context');ctxEl.hidden=true;
   if(item.group&&!ch){const g=state.bank.items.filter(x=>x.group===item.group&&(x.seq||0)<(item.seq||0)).sort((a,b)=>(b.seq||0)-(a.seq||0))[0];if(g){ctxEl.innerHTML=`<span class="muted">앞 대사${g.role?' ('+esc(g.role)+')':''}: </span><b>${esc(g.text)}</b>`;ctxEl.hidden=false}}
   $('#mic-banner').hidden=true;$('#word-detail').hidden=true;$('#btn-me').disabled=!cur.lastBlob;$('#btn-me').textContent='▶ 내 소리';
@@ -1463,7 +1481,7 @@ function startChunk(i,j){
   const t0=Math.max(0,ws[i].s-0.12),t1=Math.min(total,ws[j].e+0.15);
   const pcm=base.teacher.pcm.slice(Math.floor(t0*16000),Math.ceil(t1*16000));
   const words=ws.slice(i,j+1).map((w,q)=>({w:w.w,s:Math.max(0,+w.s-t0),e:Math.max(0.02,+w.e-t0),stress:!!base.profile.ws[i+q].stress}));
-  const item=Object.assign({},base.item,{id:base.item.id+'#'+i+'-'+j,text:words.map(w=>w.w).join(' '),ko:'',note:'',words,clip:null,group:null,stitched:false});
+  const item=Object.assign({},base.item,{phones:(base.item.phones||[]).filter(ph=>(ph.s+ph.e)/2>=t0&&(ph.s+ph.e)/2<=t1).map(ph=>({p:ph.p,s:Math.max(0,ph.s-t0),e:Math.max(0,ph.e-t0)})),id:base.item.id+'#'+i+'-'+j,text:words.map(w=>w.w).join(' '),ko:'',note:'',words,clip:null,group:null,stitched:false});
   const teacher={blob:wavBlob(pcm),pcm,an:analyzeVoice(pcm),local:false,chunk:true};
   base.picking=false;base.pickA=base.pickB=null;
   cur={item,teacher,profile:null,attempts:[],best:null,grade:null,gradeManual:true,hidden:false,current:null,sel:null,lastBlob:null,base,picking:false};
@@ -1586,7 +1604,7 @@ function renderResult(att){
   $('#rec-msg').textContent=att.cmp?(cur.base?'선생님 구간과 단어별로 맞춰 비교했어요.':'선생님 녹음과 단어별로 맞춰 비교했어요.'):att.te?'비교할 소리가 부족했어요.':'선생님 녹음이 없어 내 소리만 분석했어요.';
   $('#result').hidden=false;drawRing(v.overall);
   $('#subs').innerHTML=v.parts.map(([k,val])=>`<div class="sub"><span>${esc(k)}</span><b>${val==null?'—':Math.round(val)}</b><div class="bar"><i style="width:${val==null?0:clamp(val,0,100)}%;background:${val==null?'transparent':scoreColor(val)}"></i></div></div>`).join('');
-  renderChips(att);
+  renderChips(att);renderPointChecks(att,cur.base?cur.base.item:cur.item,cur.base?cur.item.text:null,'#pchk','#pchk-list');
   if(cur.sel!=null&&v.toks[cur.sel])showTokenDetail(att,cur.sel);else $('#word-detail').hidden=true;
   renderAsrBox(att);
   $('#hints').innerHTML=v.hints.map(h=>`<li class="${h.c}">${esc(h.t)}</li>`).join('');
@@ -1595,17 +1613,18 @@ function renderResult(att){
   $$('.grade-row .g').forEach(b=>b.classList.toggle('sel',cur.grade!=null&&parseInt(b.dataset.g)===cur.grade));
 }
 function sparkPath(series,W,H,lo=-8,hi=8){if(!series||series.length<2)return '';const n=series.length;let d='',pen=false;for(let i=0;i<n;i++){const v=series[i];if(isNaN(v)){pen=false;continue}const x=(i/(n-1))*W,y=H-2-((clamp(v,lo,hi)-lo)/(hi-lo))*(H-4);d+=(pen?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);pen=true}return d}
-function chipHtml(tk,d,sel){
+function chipHtml(tk,d,sel,pt){
   const w=tk.ws[0];const W=60,H=26;let svg='';
   if(w&&(w.te||w.me)){const pT=w.te?sparkPath(w.te.series,W,H):'',pM=w.me?sparkPath(w.me.series,W,H):'';svg=`<span class="spbox"><svg class="sp" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><line class="mid" vector-effect="non-scaling-stroke" x1="0" y1="${H/2}" x2="${W}" y2="${H/2}"></line>${pT?`<path class="te" vector-effect="non-scaling-stroke" d="${pT}"></path>`:''}${pM?`<path class="me" vector-effect="non-scaling-stroke" d="${pM}"></path>`:''}</svg></span>`}
   const arr=w&&(w.te||w.me)?`<span class="wa"><b class="te">${ARROW[w.te?w.te.shape:'none']}</b><b class="me">${ARROW[w.me?w.me.shape:'none']}</b></span>`:'';
   const stress=tk.ws.some(x=>x.stressT);
   if(!baseTokens(tk.text).length&&!tk.ws.length)return `<span class="wc punct" aria-hidden="true"><span class="wt">${esc(tk.text)}</span></span>`;
-  return `<button type="button" class="wc ${tk.status}${stress?' stress':''}${sel?' sel':''}" data-d="${d}">${svg}<span class="wt">${esc(tk.text)}</span>${arr}</button>`;
+  return `<button type="button" class="wc ${tk.status}${stress?' stress':''}${sel?' sel':''}${pt?' pt':''}" data-d="${d}" ${pt?'title="선생님 포인트"':''}>${svg}<span class="wt">${esc(tk.text)}</span>${arr}</button>`;
 }
 function renderChips(att){
   const v=att.view,box=$('#wchips');
-  box.innerHTML=v.toks.map((tk,d)=>chipHtml(tk,d,cur.sel===d)).join('')+v.extras.map(w=>`<span class="wc extra" title="문장에 없는 말"><span class="wt">+ ${esc(w)}</span></span>`).join('');
+  const pts=pointTokSet(att,cur.base?cur.base.item:att.item,cur.base?att.item.text:null);
+  box.innerHTML=v.toks.map((tk,d)=>chipHtml(tk,d,cur.sel===d,pts.has(d))).join('')+v.extras.map(w=>`<span class="wc extra" title="문장에 없는 말"><span class="wt">+ ${esc(w)}</span></span>`).join('');
   box.querySelectorAll('button.wc').forEach(b=>b.addEventListener('click',()=>{const d=+b.dataset.d;cur.sel=cur.sel===d?null:d;box.querySelectorAll('button.wc').forEach(x=>x.classList.toggle('sel',+x.dataset.d===cur.sel));if(cur.sel==null)$('#word-detail').hidden=true;else showTokenDetail(att,d);if($('#graph-wrap').open)drawAligned(att)}));
 }
 function featText(f){if(!f)return '—';if(f.voiced<3)return '높낮이 거의 없음 (짧거나 무성음)';const lv=f.level>=2?'높게':f.level<=-2?'낮게':'보통 높이';return `${ARROW[f.shape]} ${SHAPE_KO[f.shape]} · ${lv}`}
@@ -1617,7 +1636,7 @@ function showTokenDetail(att,d,box=$('#word-detail')){
   const notes=[...new Set(tk.notes)];
   if(notes.length)html+=`<ul class="hints">${notes.slice(0,4).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
   else if(w&&w.te&&w.me)html+=`<div class="small muted">선생님과 비슷해요.</div>`;
-  if(tk.az&&tk.az.length){html+=tk.az.map(x=>`<div class="phs">${(x.phonemes||[]).map(p=>`<span class="ph ${p.acc==null?'':p.acc>=80?'ok':p.acc>=60?'warn':'bad'}" title="${p.acc==null?'':Math.round(p.acc)+'점'}">${esc(p.p)}<small>${p.acc==null?'':Math.round(p.acc)}</small></span>`).join('')}</div>`).join('');
+  if(tk.az&&tk.az.length){html+=tk.az.map((x,xi)=>`<div class="phs">${(x.phonemes||[]).map((p,pi)=>`<span class="ph btn-ph ${p.acc==null?'':p.acc>=80?'ok':p.acc>=60?'warn':'bad'}" data-x="${xi}" data-p="${pi}" title="${p.acc==null?'':Math.round(p.acc)+'점'}">${esc(p.p)}<small>${p.acc==null?'':Math.round(p.acc)}</small></span>`).join('')}</div>`).join('')+`<div class="small muted">소리를 누르면 선생님 소리 → 내 소리 순서로 그 부분만 들려요.</div>`;
     const weak=[];for(const x of tk.az)for(const p of x.phonemes||[])if(p.acc!=null&&p.acc<70&&phTip(p.p)&&!weak.some(q=>q.p===p.p))weak.push(p);
     if(weak.length)html+=`<ul class="hints">${weak.slice(0,3).map(p=>`<li><b>/${esc(p.p)}/</b> ${Math.round(p.acc)}점 — ${esc(phTip(p.p))}</li>`).join('')}</ul>`}
   box.innerHTML=html;box.hidden=false;
@@ -1627,6 +1646,10 @@ function showTokenDetail(att,d,box=$('#word-detail')){
   const add=(label,cls,fn)=>{const b=document.createElement('button');b.type='button';b.className='btn small '+cls;b.textContent=label;b.addEventListener('click',fn);bar.appendChild(b)};
   if(tSpan)add('▶ 선생님','teacher',()=>player.play('t:'+tid,te.blob,{start:tSpan[0],end:tSpan[1]}));
   if(mSpan)add('▶ 나','me',()=>player.play('m:'+att.id,att.blob,{start:mSpan[0],end:mSpan[1]}));
+  if(tk.az&&tk.az.length){const itm=state.bank.byId[String(att.item.id).split('#')[0]]?att.item:att.item;box.querySelectorAll('.btn-ph').forEach(el=>el.addEventListener('click',()=>{const x=tk.az[+el.dataset.x],ap=x.phonemes||[],p=ap[+el.dataset.p];
+    const tp=te&&te.blob?alignPh(teacherPhonesFor(itm,w,wl),ap)[+el.dataset.p]:null;const mine=p&&p.s!=null&&att.blob?[Math.max(0,p.s-0.12),p.e+0.12]:null;
+    const playMine=()=>{if(mine)player.play('m:'+att.id,att.blob,{start:mine[0],end:mine[1]})};
+    if(tp)player.play('t:'+tid,te.blob,{start:Math.max(0,tp.s-0.12),end:tp.e+0.12,ondone:()=>setTimeout(playMine,300)});else if(mine)playMine();else toast('이 소리의 위치 정보가 없어요')}))}
   if(tSpan&&mSpan)add('▶ 비교','',()=>player.play('t:'+tid,te.blob,{start:tSpan[0],end:tSpan[1],ondone:()=>setTimeout(()=>player.play('m:'+att.id,att.blob,{start:mSpan[0],end:mSpan[1]}),250)}));
 }
 function renderAsrBox(att){
@@ -1879,6 +1902,46 @@ function bindSettings(){
   let resetArmed=0;$('#btn-reset').addEventListener('click',()=>{if(Date.now()-resetArmed<5000){state.progress={};state.log=[];saveProgress();resetArmed=0;$('#reset-confirm').hidden=true;toast('기록을 모두 지웠어요');renderToday()}else{resetArmed=Date.now();$('#reset-confirm').hidden=false;setTimeout(()=>{$('#reset-confirm').hidden=true},5000)}});
 }
 
+/* ===================== teacher's points (선생님이 수업에서 짚어 준 것) ===================== */
+const PK={phoneme:'발음',linking:'연음',rhythm:'리듬',intonation:'억양',stress:'강세'};
+// same word + kind across lessons merged: newest note first, n = how many times it was pointed out
+function itemPoints(item,text){const ps=item.points||[];const bt=' '+baseTokens(text||item.text).join(' ')+' ';const g=new Map();
+  for(const p of ps){const wn=baseTokens(p.w).join(' ');if(!wn||!bt.includes(' '+wn+' '))continue;const key=p.k+'|'+wn;const x=g.get(key)||{k:p.k,w:p.w,wn,ipa:'',notes:[],n:0};x.n++;x.notes.push({note:p.note||'',at:p.at||''});if(p.ipa)x.ipa=p.ipa;g.set(key,x)}
+  const order={phoneme:0,linking:1,stress:2,intonation:3,rhythm:4};return[...g.values()].map(x=>{x.notes.sort((a,b)=>a.at<b.at?1:-1);return x}).sort((a,b)=>(b.n-a.n)||((order[a.k]??9)-(order[b.k]??9)))}
+function pointLi(x,c){const at=x.notes[0].at?x.notes[0].at.slice(5,10).replace('-','/')+' 수업':'';
+  return`<li><div class="h1"><span class="chip pk">${esc(PK[x.k]||x.k)}</span><span class="pw">${esc(x.w)}</span>${x.ipa?`<span class="ipa">${esc(x.ipa)}</span>`:''}${x.n>1?`<span class="chip warn">${x.n}번 지적</span>`:''}${c?`<span class="pc ${c.s||'na'}">${c.s==='ok'?'✓ ':c.s==='warn'?'△ ':c.s==='bad'?'✗ ':''}${esc(c.t)}</span>`:''}</div>${c?'':`<div>${esc(x.notes[0].note)}</div><div class="pd">${esc(at)}${x.n>1?' · 이전: '+esc(x.notes.slice(1).map(q=>q.at.slice(5,10).replace('-','/')).join(', ')):''}</div>`}</li>`}
+function renderPointsCard(item,text){const L=itemPoints(item,text),box=$('#c-points');box.hidden=!L.length;if(!L.length)return;$('#c-points-n').textContent=`${L.length}개`;$('#c-points-list').innerHTML=L.map(x=>pointLi(x)).join('')}
+// consecutive words whose base tokens spell the phrase
+function spanOf(words,wn,get){const want=wn.split(' ');for(let i=0;i<words.length;i++){const acc=[];let j=i;while(j<words.length&&acc.length<want.length){acc.push(...baseTokens(get(words[j])));j++}if(acc.join(' ')===wn)return[i,j-1]}return null}
+function azWordsFor(att,wn){const aw=(att.azure&&att.azure.words||[]).filter(w=>w.err!=='Insertion');const r=spanOf(aw,wn,w=>w.w);return r?aw.slice(r[0],r[1]+1):[]}
+// how this take did on each point the teacher made
+function pointChecks(att,list){const ws=att.cmp?att.cmp.words:[];
+  return list.map(x=>{const r=ws.length?spanOf(ws,x.wn,w=>w.w):null,sub=r?ws.slice(r[0],r[1]+1):[];
+    if(x.k==='phoneme'){const aw=azWordsFor(att,x.wn);if(aw.length&&aw.some(w=>w.acc!=null)){const acc=Math.round(mean(aw.map(w=>w.acc??0)));const low=aw.flatMap(w=>(w.phonemes||[]).filter(p=>p.acc!=null&&p.acc<60).map(p=>`/${p.p}/ ${Math.round(p.acc)}`));return{s:aw.some(w=>w.err==='Omission')||acc<60?'bad':acc<80||low.length?'warn':'ok',t:`발음 ${acc}점${low.length?' · 약한 소리 '+low.slice(0,2).join(', '):''}`}}
+      return{s:'',t:att.azure?'점수 없음':'정밀 평가(Azure)를 켜면 소리 점수가 나와요'}}
+    if(!sub.length||!sub.every(w=>w.me))return{s:'',t:'비교할 소리가 부족해요'};
+    if(x.k==='linking'){const me=att.me;let run=0,best=0;for(let f=sub[0].ua;f<=sub[sub.length-1].ub;f++){if(me.rms[f]<=me.gate*0.6){run++;if(run>best)best=run}else run=0}const g=best/100;
+      return g>=0.18?{s:'bad',t:`중간에 ${g.toFixed(1)}초 끊겼어요 → 한 덩어리로`}:g>=0.12?{s:'warn',t:'살짝 끊겼어요 → 더 붙여서'}:{s:'ok',t:'끊지 않고 이어 말했어요'}}
+    if(x.k==='intonation'){const sev=Math.max(0,...sub.map(w=>w.shapeSev||0));const lv=sub.find(w=>w.te&&w.me&&w.te.voiced>=3&&w.me.voiced>=3&&Math.abs(w.me.level-w.te.level)>=3.5&&Math.abs(w.me.level-w.te.level)<9);
+      if(sev>=2)return{s:'bad',t:'높낮이 방향이 반대예요 → 선생님 멜로디 다시 듣기'};if(sev||lv)return{s:'warn',t:sev?'높낮이 움직임이 약해요':(lv.me.level<lv.te.level?`'${lv.w}'가 낮아요`:`'${lv.w}'가 높아요`)};return{s:'ok',t:'높낮이가 선생님과 비슷해요'}}
+    if(x.k==='stress'){const loud=sub.filter(w=>w.func&&!w.stressT&&w.promM!=null&&w.promM>=0.9&&(w.promT==null||w.promT<=0.2));const weak=sub.filter(w=>(w.stressT||(w.promT!=null&&w.promT>=0.6))&&w.promM!=null&&w.promT!=null&&w.promM<Math.min(0.8,w.promT)-0.8);const step=sub.find(w=>w.stepMiss);
+      if(step)return{s:'bad',t:`'${step.w}' 앞에서 낮췄다가 올리는 계단이 작아요`};if(weak.length)return{s:'warn',t:`'${weak[0].w}'를 더 세게(높게·길게)`};if(loud.length)return{s:'warn',t:`'${loud[0].w}'는 약하게`};return{s:'ok',t:'강세 위치가 선생님과 비슷해요'}}
+    if(x.k==='rhythm'){const tT=att.te&&att.te.an?att.te.an.dur:0,tM=att.me.dur;const dT=sub.reduce((a,w)=>a+(w.te?w.te.dur:0),0),dM=sub.reduce((a,w)=>a+w.me.dur,0);if(!(tT>0&&tM>0&&dT>0))return{s:'',t:'비교할 소리가 부족해요'};
+      const ratio=(dM/tM)/(dT/tT);const me=att.me;let run=0,best=0;for(let f=sub[0].ua;f<=sub[sub.length-1].ub;f++){if(me.rms[f]<=me.gate*0.6){run++;if(run>best)best=run}else run=0}
+      if(best>=20)return{s:'bad',t:`중간에 ${(best/100).toFixed(1)}초 끊겼어요`};if(ratio>1.5||ratio<0.65)return{s:'bad',t:ratio>1?'이 부분을 너무 끌었어요':'이 부분이 너무 빨라요'};if(ratio>1.3||ratio<0.77)return{s:'warn',t:ratio>1?'조금 느려요':'조금 빨라요'};return{s:'ok',t:'박자가 선생님과 비슷해요'}}
+    return{s:'',t:''}})}
+function renderPointChecks(att,item,text,boxSel,listSel){const L=itemPoints(item,text),box=$(boxSel);if(!L.length||!att||!att.view){box.hidden=true;return}const C=pointChecks(att,L);$(listSel).innerHTML=L.map((x,i)=>pointLi(x,C[i])).join('');box.hidden=false}
+// word indices that carry a point (for the dot on chips)
+function pointTokSet(att,item,text){const set=new Set();const L=itemPoints(item,text);if(!L.length||!att.view)return set;const {disp,map}=mapRefToDisplay(item.text&&text?text:item.text);
+  const bt=baseTokens(text||item.text);for(const x of L){const want=x.wn.split(' ');for(let i=0;i+want.length<=bt.length;i++){if(bt.slice(i,i+want.length).join(' ')===x.wn){for(let q=i;q<i+want.length;q++)if(map[q]!=null)set.add(map[q])}}}return set}
+// teacher's phones (ARPAbet) as IPA, to line them up with Azure's phonemes for one word
+const ARPA_IPA={AA:'ɑ',AE:'æ',AH:'ʌ',AO:'ɔ',AW:'aʊ',AY:'aɪ',B:'b',CH:'tʃ',D:'d',DH:'ð',EH:'ɛ',ER:'ɝ',EY:'eɪ',F:'f',G:'ɡ',HH:'h',IH:'ɪ',IY:'i',JH:'dʒ',K:'k',L:'l',M:'m',N:'n',NG:'ŋ',OW:'oʊ',OY:'ɔɪ',P:'p',R:'ɹ',S:'s',SH:'ʃ',T:'t',TH:'θ',UH:'ʊ',UW:'u',V:'v',W:'w',Y:'j',Z:'z',ZH:'ʒ'};
+const phEq=(a,b)=>{const n=x=>String(x).replace(/ː/g,'').replace('ɚ','ɝ').replace('ə','ʌ').replace('g','ɡ').replace('r','ɹ');return n(a)===n(b)};
+function teacherPhonesFor(item,w,wl){if(!item.phones||!w)return[];const a=w.s-0.08,b=wl.e+0.08;return item.phones.filter(ph=>{const c=(ph.s+ph.e)/2;return c>=a&&c<=b})}
+function alignPh(tp,ap){const n=tp.length,m=ap.length,D=[...Array(n+1)].map(()=>new Array(m+1).fill(0));for(let i=0;i<=n;i++)D[i][0]=i;for(let j=0;j<=m;j++)D[0][j]=j;
+  for(let i=1;i<=n;i++)for(let j=1;j<=m;j++)D[i][j]=Math.min(D[i-1][j]+1,D[i][j-1]+1,D[i-1][j-1]+(phEq(ARPA_IPA[tp[i-1].p]||tp[i-1].p,ap[j-1].p)?0:1));
+  const out=new Array(m).fill(null);let i=n,j=m;while(i>0&&j>0){if(D[i][j]===D[i-1][j-1]+(phEq(ARPA_IPA[tp[i-1].p]||tp[i-1].p,ap[j-1].p)?0:1)){out[j-1]=tp[i-1];i--;j--}else if(D[i][j]===D[i-1][j]+1)i--;else j--}return out}
+
 /* ===================== speaking test (Korean -> English, from memory) ===================== */
 let tst=null,tCap=null;
 const T_GRADE={ok:'맞음',near:'거의',no:'틀림'},T_SRC={hw:'숙제로 낸 문장',done:'연습한 문장',wrong:'시험에서 틀린 문장'};
@@ -1962,11 +2025,12 @@ function tReveal(){
 }
 function paintTGrade(){$$('#t-grade .g').forEach(b=>b.classList.toggle('sel',!!tst&&!!tst.cur&&tst.cur.grade===b.dataset.g));
   const T=tst&&tst.cur,el=$('#t-score');if(T&&T.score!=null&&T.att&&T.att.view){const v=T.att.view,parts=v.parts.filter(x=>x[1]!=null).map(x=>`${x[0]} ${Math.round(x[1])}`).join(' · ');const tip=(v.hints[0]||{}).t||'';
-    el.innerHTML=`<div class="sc"><span>말하기 점수</span><b class="num">${T.score}</b><span>${esc(parts)}</span></div>${T.grade==='ok'&&tip?`<div class="tip">${esc(tip)}</div>`:''}<div class="small muted">${T.grade==='ok'?'맞음이라 이 점수가 연습 기록에도 들어가요.':'정답을 맞혔을 때(맞음)만 점수가 기록돼요.'}</div>`;el.hidden=false;renderTWords(T)}else{el.hidden=true;$('#t-words').hidden=true}$('#t-next').textContent=tst&&tst.idx>=tst.ids.length-1?'결과 보기':'다음 →'}
+    el.innerHTML=`<div class="sc"><span>말하기 점수</span><b class="num">${T.score}</b><span>${esc(parts)}</span></div>${T.grade==='ok'&&tip?`<div class="tip">${esc(tip)}</div>`:''}<div class="small muted">${T.grade==='ok'?'맞음이라 이 점수가 연습 기록에도 들어가요.':'정답을 맞혔을 때(맞음)만 점수가 기록돼요.'}</div>`;el.hidden=false;renderTWords(T);renderPointChecks(T.att,state.bank.byId[T.id],null,'#t-pchk','#t-pchk-list')}else{el.hidden=true;$('#t-words').hidden=true;$('#t-pchk').hidden=true}$('#t-next').textContent=tst&&tst.idx>=tst.ids.length-1?'결과 보기':'다음 →'}
 // the same word chips as in practice: pitch line per word, white = fine, yellow = check, red = clearly different / missed
 function renderTWords(T){const att=T.att,box=$('#t-wchips'),det=$('#t-word-detail');if(!att||!att.view||!att.view.toks.length){$('#t-words').hidden=true;return}
   $('#t-words').hidden=false;if(T.wsel==null)det.hidden=true;
-  box.innerHTML=att.view.toks.map((tk,d)=>chipHtml(tk,d,T.wsel===d)).join('')+att.view.extras.map(w=>`<span class="wc extra" title="문장에 없는 말"><span class="wt">+ ${esc(w)}</span></span>`).join('');
+  const pts=pointTokSet(att,att.item);
+  box.innerHTML=att.view.toks.map((tk,d)=>chipHtml(tk,d,T.wsel===d,pts.has(d))).join('')+att.view.extras.map(w=>`<span class="wc extra" title="문장에 없는 말"><span class="wt">+ ${esc(w)}</span></span>`).join('');
   box.querySelectorAll('button.wc').forEach(b=>b.addEventListener('click',()=>{const d=+b.dataset.d;T.wsel=T.wsel===d?null:d;box.querySelectorAll('button.wc').forEach(x=>x.classList.toggle('sel',+x.dataset.d===T.wsel));if(T.wsel==null)det.hidden=true;else showTokenDetail(att,d,det)}));
   if(T.wsel!=null&&att.view.toks[T.wsel])showTokenDetail(att,T.wsel,det)}
 function tCommit(){const T=tst.cur;if(!T||!T.grade)return false;tst.res[T.id]=T.grade;
