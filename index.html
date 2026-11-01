@@ -138,6 +138,8 @@ details.points>summary::after{margin-left:auto}
 .plist .ipa{font-family:var(--font-en);color:var(--muted);font-size:12px}
 .plist .pd{font-size:11px;color:var(--muted)}
 .pk{background:var(--surface);color:var(--fg)}
+.fb-pin{background:var(--teacher-soft);color:var(--fg);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;line-height:1.5}
+.fb-pin b{color:var(--teacher)}
 .pchk{margin:4px 0 8px;padding:10px 12px;border-radius:10px;background:var(--surface-2)}
 .pchk-h{font-size:13px;font-weight:700;color:var(--teacher)}
 .pc{font-weight:600}.pc.ok{color:var(--good)}.pc.warn{color:var(--warn)}.pc.bad{color:var(--bad)}.pc.na{color:var(--muted);font-weight:400}
@@ -333,6 +335,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
     <div id="demo-banner" class="banner" hidden><b>데모</b><span>지금 보이는 문장은 예시예요. 설정 → <b>자료 연결</b>에서 비공개 저장소를 연결하면 실제 수업 문장이 나옵니다.</span></div>
     <div class="card">
       <div class="card-head"><h2>오늘의 연습</h2><span class="muted small" id="today-date"></span></div>
+      <div class="fb-pin" id="fb-pin" hidden></div>
       <div class="row" style="align-items:flex-end;gap:14px">
         <div class="big num" id="today-count">0</div>
         <div class="muted small" style="padding-bottom:6px">문장</div>
@@ -745,7 +748,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.7.1 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.8 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -774,7 +777,7 @@ function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.classList.ad
 function wavg(pairs){let s=0,w=0;for(const [v,k] of pairs)if(v!=null&&!isNaN(v)){s+=v*k;w+=k}return w?s/w:null}
 const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-const LS={recall:'bear.recall.v1',exported:'bear.exported.v1',progress:'bear.progress.v1',settings:'bear.settings.v1',log:'bear.log.v1',local:'bear.localItems.v1',sync:'bear.sync.v1',bankCache:'bear.bankCache.v1'};
+const LS={fbDone:'bear.fbdone.v1',recall:'bear.recall.v1',exported:'bear.exported.v1',progress:'bear.progress.v1',settings:'bear.settings.v1',log:'bear.log.v1',local:'bear.localItems.v1',sync:'bear.sync.v1',bankCache:'bear.bankCache.v1'};
 const idb={
   open(){return new Promise((res,rej)=>{try{const r=indexedDB.open('bear',1);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains('clips'))db.createObjectStore('clips')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})},
   async get(k){try{const db=await this.open();return await new Promise((res,rej)=>{const t=db.transaction('clips').objectStore('clips').get(k);t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error)})}catch(e){return undefined}},
@@ -795,7 +798,7 @@ const DEMO_BANK={version:1,demo:true,items:[
   {id:'demo-04',text:"I'm on the fence about it.",ko:'아직 결정을 못 했어요.',tier:2,source:'데모',lesson:'2026-08-13',kind:'sentence'}
 ]};
 const DEFAULTS={testN:10,testSrc:'hw',randN:10,randF:'all',hwFmt:'docx',dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,showMelody:true,melodyOpen:true,ttsRate:0.95,asrMode:'device',asrConsent:false,azureKey:'',azureRegion:'koreacentral',ghOwner:'MJPark-8739',ghRepo:'english-review-data',ghBranch:'main',ghToken:''};
-const state={recall:store.get(LS.recall,{}),exported:store.get(LS.exported,{}),bank:{items:[],byId:{},tiers:DEFAULT_TIERS,demo:true,source:'demo'},progress:store.get(LS.progress,{}),log:store.get(LS.log,[]),localItems:store.get(LS.local,[]),settings:Object.assign({},DEFAULTS,store.get(LS.settings,{})),session:null,view:'today',bankPage:1};
+const state={fbDone:store.get(LS.fbDone,{}),recall:store.get(LS.recall,{}),exported:store.get(LS.exported,{}),bank:{items:[],byId:{},tiers:DEFAULT_TIERS,demo:true,source:'demo'},progress:store.get(LS.progress,{}),log:store.get(LS.log,[]),localItems:store.get(LS.local,[]),settings:Object.assign({},DEFAULTS,store.get(LS.settings,{})),session:null,view:'today',bankPage:1};
 if(IS_IOS&&state.settings.asrMode==='browser')state.settings.asrMode='device';
 function saveProgress(){store.set(LS.progress,state.progress);store.set(LS.log,state.log.slice(-3000))}
 function saveSettings(){store.set(LS.settings,state.settings)}
@@ -1688,6 +1691,7 @@ function finishCard(){
   if(!cur.attempts.length&&!cur.gradeManual){S.results.push({id,score:null,grade:null,skipped:true});nextCard();return}
   const score=cur.best;const grade=cur.grade??(score!=null?gradeFromScore(score):3);
   applyGrade(id,grade,score);S.results.push({id,score,grade});
+  if(S.fbDate){const pr=store.get('bear.fbprog.v1',{});pr[S.fbDate]=[...new Set([...(pr[S.fbDate]||[]),id])];store.set('bear.fbprog.v1',pr)}
   if(grade===1&&(S.again[id]||0)<2){S.again[id]=(S.again[id]||0)+1;S.queue.push(id)}
   nextCard();
 }
@@ -1702,6 +1706,7 @@ function endSession(){
   $('#sum-note').textContent=low.length?`${low.length}문장은 더 짧은 간격으로 다시 나와요.`:'간격이 늘어나요. 내일 또 봐요.';
   $('#btn-sum-redo').hidden=!low.length;$('#btn-sum-redo').onclick=()=>startSession(low.map(r=>r.id),'다시');
   const recIds=[...new Set(done.filter(r=>r.score!=null).map(r=>r.id))];$('#btn-sum-hw').hidden=!recIds.length;$('#btn-sum-hw').onclick=()=>startTakesHomework(todayStr(),recIds);
+  if(S.fbDate){state.fbDone[S.fbDate]=new Date().toISOString();store.set(LS.fbDone,state.fbDone);$('#sum-note').textContent=`${S.fbDate.slice(5).replace('-','/')} 수업 피드백 복습 끝 — 이제 평소 오늘의 연습이 나와요. `+$('#sum-note').textContent}
   state.session=null;cur=null;showView('summary');syncIfReady(true);
 }
 
@@ -1722,16 +1727,17 @@ function mergeProgress(local,remote){
   const li={};for(const it of [...(remote.localItems||[]),...(local.localItems||[])])li[it.id]=it;
   const recall=Object.assign({},remote.recall||{});for(const [id,r] of Object.entries(local.recall||{})){const q=recall[id];if(!q||(r.last||'')>(q.last||''))recall[id]=r}
   const exported=Object.assign({},remote.exported||{});for(const [id,d] of Object.entries(local.exported||{}))if(!exported[id]||d>exported[id])exported[id]=d;
-  return{progress,log:log.slice(-3000),localItems:Object.values(li),recall,exported};
+  const fbDone=Object.assign({},remote.fbDone||{},local.fbDone||{});
+  return{progress,log:log.slice(-3000),localItems:Object.values(li),recall,exported,fbDone};
 }
 let syncing=false;
 async function syncIfReady(silent){
   if(!gh.ready()||syncing)return;syncing=true;const el=$('#sync-state');el.textContent='동기화 중…';
   try{
     const remote=await gh.getText('progress.json');let rj={};if(remote){try{rj=JSON.parse(remote.text)}catch(e){rj={}}}
-    const merged=mergeProgress({progress:state.progress,log:state.log,localItems:state.localItems,recall:state.recall,exported:state.exported},rj);
+    const merged=mergeProgress({progress:state.progress,log:state.log,localItems:state.localItems,recall:state.recall,exported:state.exported,fbDone:state.fbDone},rj);state.fbDone=merged.fbDone;store.set(LS.fbDone,state.fbDone);
     state.progress=merged.progress;state.log=merged.log;state.localItems=merged.localItems;state.recall=merged.recall;state.exported=merged.exported;saveProgress();store.set(LS.local,state.localItems);store.set(LS.recall,state.recall);store.set(LS.exported,state.exported);
-    const out=JSON.stringify({updatedAt:new Date().toISOString(),device:navigator.platform||'',progress:state.progress,log:state.log,localItems:state.localItems,recall:state.recall,exported:state.exported});
+    const out=JSON.stringify({updatedAt:new Date().toISOString(),device:navigator.platform||'',progress:state.progress,log:state.log,localItems:state.localItems,recall:state.recall,exported:state.exported,fbDone:state.fbDone});
     if(!remote||remote.text!==out){await gh.putText('progress.json',out,remote?remote.sha:null,'progress '+new Date().toISOString().slice(0,16))}
     const t=new Date();store.set(LS.sync,t.toISOString());el.textContent=`${pad2(t.getMonth()+1)}-${pad2(t.getDate())} ${pad2(t.getHours())}:${pad2(t.getMinutes())}`;
     if(!silent)toast('기록을 동기화했어요');
@@ -1762,7 +1768,9 @@ function renderToday(){
   const {queue,breakdown}=buildSession();
   $('#today-count').textContent=queue.length;
   $('#today-breakdown').innerHTML=[['최신 수업',breakdown.week,'t1'],['현재 세트',breakdown.set,'t1'],['복습',breakdown.due,''],['취약',breakdown.weak,'t3'],['과거 신규',breakdown.fresh,'t2']].filter(x=>x[1]>0).map(x=>`<span class="chip ${x[2]}">${x[0]} ${x[1]}</span>`).join('')||'<span class="chip">오늘 할 것이 없어요</span>';
-  $('#btn-start').disabled=!queue.length;$('#btn-start').onclick=()=>startSession(queue,'오늘');
+  const F=fbPending();$('#fb-pin').hidden=!F;
+  if(F){$('#fb-pin').innerHTML=`<b>${F.d.slice(5).replace('-','/')} 수업 피드백 복습이 먼저예요.</b><br>선생님이 짚어 준 ${F.total}문장만 연습해요${F.items.length<F.total?` — 남은 ${F.items.length}문장(지적 ${F.n}개)`:`(지적 ${F.n}개)`}. 끝까지 하면 평소 오늘의 연습으로 돌아가요.`;$('#today-count').textContent=F.items.length;$('#today-breakdown').innerHTML='<span class="chip t1">수업 피드백 '+F.items.length+'</span>';$('#btn-start').disabled=false;$('#btn-start').textContent='수업 피드백 복습 시작';$('#btn-start').onclick=()=>startFeedback(F)}
+  else{$('#btn-start').textContent='연습 시작';$('#btn-start').disabled=!queue.length;$('#btn-start').onclick=()=>startSession(queue,'오늘')}
   renderPrio();
   const wk=weekItems();$('#week-count').textContent=wk.length;$('#week-label').textContent=weekLabel();
   const wkDone=wk.filter(i=>{const p=P(i.id);return p&&p.reps>=1}).length,wkGood=wk.filter(i=>{const p=P(i.id);return p&&p.avg>=80}).length;
@@ -1908,8 +1916,15 @@ const PK={phoneme:'발음',linking:'연음',rhythm:'리듬',intonation:'억양',
 function itemPoints(item,text){const ps=item.points||[];const bt=' '+baseTokens(text||item.text).join(' ')+' ';const g=new Map();
   for(const p of ps){const wn=baseTokens(p.w).join(' ');if(!wn||!bt.includes(' '+wn+' '))continue;const key=p.k+'|'+wn;const x=g.get(key)||{k:p.k,w:p.w,wn,ipa:'',notes:[],n:0};x.n++;x.notes.push({note:p.note||'',at:p.at||''});if(p.ipa)x.ipa=p.ipa;g.set(key,x)}
   const order={phoneme:0,linking:1,stress:2,intonation:3,rhythm:4};return[...g.values()].map(x=>{x.notes.sort((a,b)=>a.at<b.at?1:-1);return x}).sort((a,b)=>(b.n-a.n)||((order[a.k]??9)-(order[b.k]??9)))}
-function pointLi(x,c){const at=x.notes[0].at?x.notes[0].at.slice(5,10).replace('-','/')+' 수업':'';
-  return`<li><div class="h1"><span class="chip pk">${esc(PK[x.k]||x.k)}</span><span class="pw">${esc(x.w)}</span>${x.ipa?`<span class="ipa">${esc(x.ipa)}</span>`:''}${x.n>1?`<span class="chip warn">${x.n}번 지적</span>`:''}${c?`<span class="pc ${c.s||'na'}">${c.s==='ok'?'✓ ':c.s==='warn'?'△ ':c.s==='bad'?'✗ ':''}${esc(c.t)}</span>`:''}</div>${c?'':`<div>${esc(x.notes[0].note)}</div><div class="pd">${esc(at)}${x.n>1?' · 이전: '+esc(x.notes.slice(1).map(q=>q.at.slice(5,10).replace('-','/')).join(', ')):''}</div>`}</li>`}
+function pointLi(x,c){const at=x.notes[0].at?x.notes[0].at.slice(5,10).replace('-','/')+' 수업':'';const isNew=!!x.notes[0].at&&x.notes[0].at.slice(0,10)===fbLatest();
+  return`<li><div class="h1"><span class="chip pk">${esc(PK[x.k]||x.k)}</span><span class="pw">${esc(x.w)}</span>${x.ipa?`<span class="ipa">${esc(x.ipa)}</span>`:''}${x.n>1?`<span class="chip warn">${x.n}번 지적</span>`:''}${isNew&&!c?'<span class="chip t1">최근 수업</span>':''}${c?`<span class="pc ${c.s||'na'}">${c.s==='ok'?'✓ ':c.s==='warn'?'△ ':c.s==='bad'?'✗ ':''}${esc(c.t)}</span>`:''}</div>${c?'':`<div>${esc(x.notes[0].note)}</div><div class="pd">${esc(at)}${x.n>1?' · 이전: '+esc(x.notes.slice(1).map(q=>q.at.slice(5,10).replace('-','/')).join(', ')):''}</div>`}</li>`}
+// the newest lesson that has teacher points, and the sentences the teacher pointed at in it
+function fbLatest(){let L='';for(const i of state.bank.items)for(const p of i.points||[]){const d=String(p.at||'').slice(0,10);if(/^\d{4}-\d{2}-\d{2}$/.test(d)&&d>L)L=d}return L||null}
+function fbItems(d){const first=i=>(i.points||[]).filter(p=>String(p.at||'').startsWith(d)).map(p=>p.at).sort()[0]||'';return state.bank.items.filter(i=>(i.points||[]).some(p=>String(p.at||'').startsWith(d))).sort((a,b)=>first(a).localeCompare(first(b)))}
+function fbPending(){const L=fbLatest();if(!L||state.fbDone[L])return null;const all=fbItems(L);if(!all.length)return null;const done=new Set((store.get('bear.fbprog.v1',{})[L])||[]);let its=all.filter(i=>!done.has(i.id));
+  if(!its.length){state.fbDone[L]=new Date().toISOString();store.set(LS.fbDone,state.fbDone);return null}
+  return{d:L,items:its,total:all.length,n:its.reduce((c,i)=>c+(i.points||[]).filter(p=>String(p.at||'').startsWith(L)).length,0)}}
+function startFeedback(F){startSession(F.items.map(i=>i.id),'수업 피드백');if(state.session)state.session.fbDate=F.d}
 function renderPointsCard(item,text){const L=itemPoints(item,text),box=$('#c-points');box.hidden=!L.length;if(!L.length)return;$('#c-points-n').textContent=`${L.length}개`;$('#c-points-list').innerHTML=L.map(x=>pointLi(x)).join('')}
 // consecutive words whose base tokens spell the phrase
 function spanOf(words,wn,get){const want=wn.split(' ');for(let i=0;i<words.length;i++){const acc=[];let j=i;while(j<words.length&&acc.length<want.length){acc.push(...baseTokens(get(words[j])));j++}if(acc.join(' ')===wn)return[i,j-1]}return null}
