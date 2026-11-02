@@ -752,7 +752,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.8.1 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.8.2 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -1381,7 +1381,9 @@ function startRecognition(){
 let sdkPromise=null;
 function loadSpeechSDK(){if(window.SpeechSDK)return Promise.resolve();if(sdkPromise)return sdkPromise;const urls=['https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@1.43.1/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js','https://aka.ms/csspeech/jsbrowserpackageraw'];sdkPromise=(async()=>{for(const u of urls){try{await new Promise((res,rej)=>{const s=document.createElement('script');s.src=u;s.onload=res;s.onerror=rej;document.head.appendChild(s)});if(window.SpeechSDK)return}catch(e){}}sdkPromise=null;throw new Error('평가 모듈을 불러오지 못했어요')})();return sdkPromise}
 function azureUsage(){const m=todayStr().slice(0,7),u=store.get('bear.azure.usage',{});return u.m===m?u:{m,secs:0,n:0}}
-async function azureAssess(pcm16,refText){
+// Azure reads the reference word by word: curly apostrophes (you’ll) and pattern marks (… ~ —) must not reach it
+function azureRef(t){return String(t||'').replace(/[’‘`´]/g,"'").replace(/[…~—–]/g,' ').replace(/\s+/g,' ').trim()}
+async function azureAssess(pcm16,refText){refText=azureRef(refText);
   await loadSpeechSDK();const S=window.SpeechSDK,s=state.settings;{const u=azureUsage();u.secs+=pcm16.length/16000;u.n++;store.set('bear.azure.usage',u)}
   const cfg=S.SpeechConfig.fromSubscription(s.azureKey.trim(),(s.azureRegion||'koreacentral').trim());cfg.speechRecognitionLanguage='en-US';
   const fmt=S.AudioStreamFormat.getWaveFormatPCM(16000,16,1),push=S.AudioInputStream.createPushStream(fmt);
@@ -1586,6 +1588,18 @@ function logTry(att){try{const id=att.item&&att.item.id;if(!id||!att.view||att.v
 function renderHist(att){const el=$('#hist');if(!el)return;const id=String(att.item.id).split('#')[0];const L=(state.tries[id]||[]).filter(x=>x.k!=='chunk');if(L.length<2){el.hidden=true;return}
   const last=L.slice(-6),keys=Object.keys(last[last.length-1].p);
   el.innerHTML=`<div class="hist-h">이 문장 최근 기록</div><div class="hist-o">${last.map(x=>`<b class="num" style="color:${scoreColor(x.o)}">${x.o}</b>`).join(' → ')}</div><div class="hist-p">${keys.map(k=>`${esc(k)} ${last.map(x=>x.p[k]??'—').join('→')}`).join(' · ')}</div>`;el.hidden=false}
+// Azure word -> index of the sentence's base token, matched by spelling (apostrophes ignored); handles "you" + "'ll" vs "you'll"
+function azureToBase(words,base){const key=t=>String(t||'').toLowerCase().replace(/[’‘`']/g,'').replace(/[^a-z0-9]/g,'');const out=new Map();const az=words.filter(w=>w.err!=='Insertion');
+  // the sentence as expanded pieces (you'll -> you + will), each remembering its word
+  const exp=[];base.forEach((t,k)=>{for(const x of expandTok(t))exp.push({key:key(x),k})});const whole=k=>key(base[k]);const skipWord=(i,k)=>{while(i<exp.length&&exp[i].k===k)i++;return i};
+  let i=0,j=0;
+  while(j<az.length&&i<exp.length){const a=key(az[j].w),e=exp[i];
+    if(a===e.key){out.set(az[j],e.k);i++;j++}
+    else if(a===whole(e.k)){out.set(az[j],e.k);i=skipWord(i,e.k);j++}
+    else if(j+1<az.length&&a+key(az[j+1].w)===whole(e.k)){out.set(az[j],e.k);out.set(az[j+1],e.k);i=skipWord(i,e.k);j+=2}
+    else{let hit=-1;for(let q=i+1;q<Math.min(exp.length,i+4);q++)if(exp[q].key===a||whole(exp[q].k)===a){hit=q;break}
+      if(hit>=0){out.set(az[j],exp[hit].k);i=exp[hit].key===a?hit+1:skipWord(hit,exp[hit].k);j++}else{out.set(az[j],e.k);i++;j++}}}
+  return out}
 // index of the first display (base) token for each timed word; null if the two can't be lined up
 function wordToBase(words,text){const n=baseTokens(text).length;const out=[];let p=0;for(const w of words){out.push(Math.min(p,n-1));p+=Math.max(1,baseTokens(w.w).length)}return p===n?out:null}
 function finalizeAttempt(att){
@@ -1594,7 +1608,7 @@ function finalizeAttempt(att){
   const rank={unknown:0,ok:1,warn:2,bad:3,missing:4};const worse=(a,b)=>rank[b]>rank[a]?b:a;
   if(cmp&&cmp.words.length){const wb=wordToBase(cmp.words,item.text),okMap=cmp.words.length===nBase;cmp.words.forEach((w,k)=>{const d=wb?map[wb[k]]:okMap?map[k]:Math.min(k,disp.length-1);if(d==null)return;const tk=toks[d];tk.ws.push(w);const sev=w.notes.reduce((m,n)=>Math.max(m,n.sev),0);tk.status=worse(tk.status,sev>=2?'bad':sev===1?'warn':(w.te&&w.me)?'ok':'unknown');tk.ps=worse(tk.ps||'unknown',sev>=2?'bad':sev===1?'warn':'unknown');for(const n of w.notes)tk.notes.push(n.t)})}
   const extras=[];
-  if(att.azure){let ri=0;for(const w of att.azure.words){if(w.err==='Insertion'){extras.push(w.w);continue}const d=map[Math.min(ri,nBase-1)];ri++;if(d==null)continue;const tk=toks[d];tk.az=(tk.az||[]).concat([w]);const s=w.err==='Omission'?'missing':w.acc==null?null:w.acc>=80?'ok':w.acc>=60?'warn':'bad';if(s){tk.status=worse(tk.status,s);if(s==='missing')tk.notes.unshift('빠뜨렸어요');else if(s!=='ok')tk.notes.unshift(`발음 정확도 ${Math.round(w.acc)}점`)}}}
+  if(att.azure){const am=azureToBase(att.azure.words,baseTokens(item.text));let ri=0;for(const w of att.azure.words){if(w.err==='Insertion'){extras.push(w.w);continue}const d=map[Math.min(am.get(w)??ri,nBase-1)];ri++;if(d==null)continue;const tk=toks[d];tk.az=(tk.az||[]).concat([w]);const s=w.err==='Omission'?'missing':w.acc==null?null:w.acc>=80?'ok':w.acc>=60?'warn':'bad';if(s){tk.status=worse(tk.status,s);if(s==='missing')tk.notes.unshift('빠뜨렸어요');else if(s!=='ok')tk.notes.unshift(`발음 정확도 ${Math.round(w.acc)}점`)}}}
   else if(att.asr){const A=att.asr;A.status.forEach((s,k)=>{const d=map[k];if(d==null)return;const tk=toks[d];if(s==='missing'){tk.status=worse(tk.status,'missing');tk.notes.unshift('인식 안 됨 — 빠뜨렸거나 발음이 약했어요')}else if(s==='sub'){tk.status=worse(tk.status,'bad');tk.heard=A.heard[k];tk.notes.unshift(`'${A.heard[k]}'로 들렸어요`)}else if(s==='near'){tk.status=worse(tk.status,'warn');tk.heard=A.heard[k];tk.notes.unshift(`'${A.heard[k]}'에 가깝게 들렸어요`)}else if(tk.status==='unknown')tk.status='ok'});extras.push(...A.extras)}
   const wordsScore=att.azure?att.azure.acc:att.asr?att.asr.accuracy:null;
   const parts=[[att.azure?'발음':'단어',wordsScore],['억양',cmp?cmp.into:null],['리듬·연음',cmp?cmp.rhythm:null],['강세',cmp?cmp.stress:null]];if(att.azure&&att.azure.pros!=null)parts.push(['운율',att.azure.pros]);
