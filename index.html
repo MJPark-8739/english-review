@@ -140,6 +140,9 @@ details.points>summary::after{margin-left:auto}
 .pk{background:var(--surface);color:var(--fg)}
 .fb-pin{background:var(--teacher-soft);color:var(--fg);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;line-height:1.5}
 .fb-pin b{color:var(--teacher)}
+.hist{margin:2px 0 8px;font-size:12px;color:var(--muted);line-height:1.5}
+.hist-h{font-weight:700;color:var(--fg);font-size:12px}
+.hist-o b{font-size:14px}
 .pchk{margin:4px 0 8px;padding:10px 12px;border-radius:10px;background:var(--surface-2)}
 .pchk-h{font-size:13px;font-weight:700;color:var(--teacher)}
 .pc{font-weight:600}.pc.ok{color:var(--good)}.pc.warn{color:var(--warn)}.pc.bad{color:var(--bad)}.pc.na{color:var(--muted);font-weight:400}
@@ -458,6 +461,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
           <div class="ring"><canvas id="ring" width="192" height="192"></canvas><div class="n" id="score-num">—</div></div>
           <div class="subs" id="subs"></div>
         </div>
+        <div class="hist" id="hist" hidden></div>
         <div class="legend"><span><i style="background:var(--teacher)"></i>선생님</span><span><i style="background:var(--me)"></i>나</span><span>↗ 올림 · ↘ 내림 · → 평평</span><span><u>밑줄</u> = 선생님 강조</span></div>
         <div class="wchips" id="wchips"></div>
         <div class="word-detail" id="word-detail" hidden></div>
@@ -748,7 +752,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.8 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.8.1 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -777,7 +781,7 @@ function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.classList.ad
 function wavg(pairs){let s=0,w=0;for(const [v,k] of pairs)if(v!=null&&!isNaN(v)){s+=v*k;w+=k}return w?s/w:null}
 const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-const LS={fbDone:'bear.fbdone.v1',recall:'bear.recall.v1',exported:'bear.exported.v1',progress:'bear.progress.v1',settings:'bear.settings.v1',log:'bear.log.v1',local:'bear.localItems.v1',sync:'bear.sync.v1',bankCache:'bear.bankCache.v1'};
+const LS={tries:'bear.tries.v1',fbDone:'bear.fbdone.v1',recall:'bear.recall.v1',exported:'bear.exported.v1',progress:'bear.progress.v1',settings:'bear.settings.v1',log:'bear.log.v1',local:'bear.localItems.v1',sync:'bear.sync.v1',bankCache:'bear.bankCache.v1'};
 const idb={
   open(){return new Promise((res,rej)=>{try{const r=indexedDB.open('bear',1);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains('clips'))db.createObjectStore('clips')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})},
   async get(k){try{const db=await this.open();return await new Promise((res,rej)=>{const t=db.transaction('clips').objectStore('clips').get(k);t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error)})}catch(e){return undefined}},
@@ -798,7 +802,7 @@ const DEMO_BANK={version:1,demo:true,items:[
   {id:'demo-04',text:"I'm on the fence about it.",ko:'아직 결정을 못 했어요.',tier:2,source:'데모',lesson:'2026-08-13',kind:'sentence'}
 ]};
 const DEFAULTS={testN:10,testSrc:'hw',randN:10,randF:'all',hwFmt:'docx',dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,showMelody:true,melodyOpen:true,ttsRate:0.95,asrMode:'device',asrConsent:false,azureKey:'',azureRegion:'koreacentral',ghOwner:'MJPark-8739',ghRepo:'english-review-data',ghBranch:'main',ghToken:''};
-const state={fbDone:store.get(LS.fbDone,{}),recall:store.get(LS.recall,{}),exported:store.get(LS.exported,{}),bank:{items:[],byId:{},tiers:DEFAULT_TIERS,demo:true,source:'demo'},progress:store.get(LS.progress,{}),log:store.get(LS.log,[]),localItems:store.get(LS.local,[]),settings:Object.assign({},DEFAULTS,store.get(LS.settings,{})),session:null,view:'today',bankPage:1};
+const state={tries:store.get(LS.tries,{}),fbDone:store.get(LS.fbDone,{}),recall:store.get(LS.recall,{}),exported:store.get(LS.exported,{}),bank:{items:[],byId:{},tiers:DEFAULT_TIERS,demo:true,source:'demo'},progress:store.get(LS.progress,{}),log:store.get(LS.log,[]),localItems:store.get(LS.local,[]),settings:Object.assign({},DEFAULTS,store.get(LS.settings,{})),session:null,view:'today',bankPage:1};
 if(IS_IOS&&state.settings.asrMode==='browser')state.settings.asrMode='device';
 function saveProgress(){store.set(LS.progress,state.progress);store.set(LS.log,state.log.slice(-3000))}
 function saveSettings(){store.set(LS.settings,state.settings)}
@@ -1161,6 +1165,10 @@ function coachLines(ws){
     else out.push({k:S.k,t:`'${S.w}' — ${S.k===0&&sh==='rise'?'처음부터 높이 올리며 ↗':move[sh]} ${len} (강조)`});
     used.add(S.k);
   }
+  // the biggest pitch move that is not covered yet (often the main "nuclear" accent, e.g. 'little' ↗ → 'early' ↘)
+  {let big=null;for(const w of ws){if(used.has(w.k)||w.func||!V(w))continue;const mv=w.f.shape==='hat'?Math.max(w.f.peak-w.f.startP,w.f.peak-w.f.endP):Math.abs(w.f.slope);if(mv>=4&&(!big||mv>big.mv))big={w,mv}}
+    if(big){const B=big.w,P=B.k>0?ws[B.k-1]:null,sh=B.f.shape;const lead=P&&!used.has(P.k)&&V(P)&&!P.func&&sh==='fall'&&P.f.shape==='rise'?`'${P.w}' 올리고 ↗ → `:'';
+      out.push({k:B.k,t:`${lead}'${B.w}'에서 크게 ${sh==='fall'?'내리기 ↘':sh==='rise'?'올리기 ↗':'올렸다 내리기 ↗↘'} (이 문장에서 가장 큰 높낮이 움직임)`});used.add(B.k);if(lead)used.add(P.k)}}
   const lastV=[...ws].reverse().find(V),lastC=[...ws].reverse().find(w=>!w.func);
   if(lastC&&!V(lastC)&&(!lastV||lastC.k>lastV.k)&&!used.has(lastC.k)){
     // a final content word with no measurable pitch is usually a low, creaky finish
@@ -1569,13 +1577,22 @@ async function saveTake(att){try{if(att.noTake)return;const id=att.item&&att.ite
   await idb.set(k,{pcm16:i16.buffer,score,att:att.id,first:old&&old.first||Date.now()})}catch(e){}}
 async function takeDays(){const m={};for(const k of await idb.keys('take:')){const d=k.slice(5,15);(m[d]=m[d]||[]).push(k.slice(16))}return m}
 async function pruneTakes(){try{const lim=addDays(todayStr(),-14);for(const k of await idb.keys('take:'))if(k.slice(5,15)<lim)await idb.del(k)}catch(e){}}
+// a compact record of every scored take (overall, parts, weakest words) so progress on one sentence can be reviewed
+function logTry(att){try{const id=att.item&&att.item.id;if(!id||!att.view||att.view.overall==null)return;const base=String(id).split('#')[0];const v=att.view;
+  const weak=att.azure?att.azure.words.filter(w=>w.acc!=null&&w.acc<80).sort((a,b)=>a.acc-b.acc).slice(0,3).map(w=>{const lp=(w.phonemes||[]).filter(p=>p.acc!=null).sort((a,b)=>a.acc-b.acc)[0];return `${w.w} ${Math.round(w.acc)}${lp?' /'+lp.p+'/ '+Math.round(lp.acc):''}`}):[];
+  const flags=v.toks.filter(t=>t.ps==='bad'||t.ps==='warn').map(t=>t.text).slice(0,4);
+  const rec={t:new Date(att.id).toISOString(),a:att.id,o:Math.round(v.overall),p:Object.fromEntries(v.parts.filter(x=>x[1]!=null).map(x=>[x[0],Math.round(x[1])])),w:weak,f:flags,k:String(id).includes('#')?'chunk':att.noTake?'test':'practice'};
+  const L=(state.tries[base]||[]).filter(x=>x.a!==att.id);L.push(rec);state.tries[base]=L.slice(-10);store.set(LS.tries,state.tries)}catch(e){}}
+function renderHist(att){const el=$('#hist');if(!el)return;const id=String(att.item.id).split('#')[0];const L=(state.tries[id]||[]).filter(x=>x.k!=='chunk');if(L.length<2){el.hidden=true;return}
+  const last=L.slice(-6),keys=Object.keys(last[last.length-1].p);
+  el.innerHTML=`<div class="hist-h">이 문장 최근 기록</div><div class="hist-o">${last.map(x=>`<b class="num" style="color:${scoreColor(x.o)}">${x.o}</b>`).join(' → ')}</div><div class="hist-p">${keys.map(k=>`${esc(k)} ${last.map(x=>x.p[k]??'—').join('→')}`).join(' · ')}</div>`;el.hidden=false}
 // index of the first display (base) token for each timed word; null if the two can't be lined up
 function wordToBase(words,text){const n=baseTokens(text).length;const out=[];let p=0;for(const w of words){out.push(Math.min(p,n-1));p+=Math.max(1,baseTokens(w.w).length)}return p===n?out:null}
 function finalizeAttempt(att){
   const item=att.item,cmp=att.cmp;const {disp,map}=mapRefToDisplay(item.text);const nBase=baseTokens(item.text).length;
   const toks=disp.map(t=>({text:t,status:'unknown',notes:[],ws:[],heard:null,az:null}));
   const rank={unknown:0,ok:1,warn:2,bad:3,missing:4};const worse=(a,b)=>rank[b]>rank[a]?b:a;
-  if(cmp&&cmp.words.length){const wb=wordToBase(cmp.words,item.text),okMap=cmp.words.length===nBase;cmp.words.forEach((w,k)=>{const d=wb?map[wb[k]]:okMap?map[k]:Math.min(k,disp.length-1);if(d==null)return;const tk=toks[d];tk.ws.push(w);const sev=w.notes.reduce((m,n)=>Math.max(m,n.sev),0);tk.status=worse(tk.status,sev>=2?'bad':sev===1?'warn':(w.te&&w.me)?'ok':'unknown');for(const n of w.notes)tk.notes.push(n.t)})}
+  if(cmp&&cmp.words.length){const wb=wordToBase(cmp.words,item.text),okMap=cmp.words.length===nBase;cmp.words.forEach((w,k)=>{const d=wb?map[wb[k]]:okMap?map[k]:Math.min(k,disp.length-1);if(d==null)return;const tk=toks[d];tk.ws.push(w);const sev=w.notes.reduce((m,n)=>Math.max(m,n.sev),0);tk.status=worse(tk.status,sev>=2?'bad':sev===1?'warn':(w.te&&w.me)?'ok':'unknown');tk.ps=worse(tk.ps||'unknown',sev>=2?'bad':sev===1?'warn':'unknown');for(const n of w.notes)tk.notes.push(n.t)})}
   const extras=[];
   if(att.azure){let ri=0;for(const w of att.azure.words){if(w.err==='Insertion'){extras.push(w.w);continue}const d=map[Math.min(ri,nBase-1)];ri++;if(d==null)continue;const tk=toks[d];tk.az=(tk.az||[]).concat([w]);const s=w.err==='Omission'?'missing':w.acc==null?null:w.acc>=80?'ok':w.acc>=60?'warn':'bad';if(s){tk.status=worse(tk.status,s);if(s==='missing')tk.notes.unshift('빠뜨렸어요');else if(s!=='ok')tk.notes.unshift(`발음 정확도 ${Math.round(w.acc)}점`)}}}
   else if(att.asr){const A=att.asr;A.status.forEach((s,k)=>{const d=map[k];if(d==null)return;const tk=toks[d];if(s==='missing'){tk.status=worse(tk.status,'missing');tk.notes.unshift('인식 안 됨 — 빠뜨렸거나 발음이 약했어요')}else if(s==='sub'){tk.status=worse(tk.status,'bad');tk.heard=A.heard[k];tk.notes.unshift(`'${A.heard[k]}'로 들렸어요`)}else if(s==='near'){tk.status=worse(tk.status,'warn');tk.heard=A.heard[k];tk.notes.unshift(`'${A.heard[k]}'에 가깝게 들렸어요`)}else if(tk.status==='unknown')tk.status='ok'});extras.push(...A.extras)}
@@ -1583,7 +1600,7 @@ function finalizeAttempt(att){
   const parts=[[att.azure?'발음':'단어',wordsScore],['억양',cmp?cmp.into:null],['리듬·연음',cmp?cmp.rhythm:null],['강세',cmp?cmp.stress:null]];if(att.azure&&att.azure.pros!=null)parts.push(['운율',att.azure.pros]);
   let overall=att.azure&&att.azure.pron!=null?wavg([[att.azure.pron,0.6],[cmp?cmp.into:null,0.25],[cmp?cmp.rhythm:null,0.15]]):wavg([[wordsScore,0.35],[cmp?cmp.into:null,0.3],[cmp?cmp.rhythm:null,0.2],[cmp?cmp.stress:null,0.15]]);
   // flagged words pull the score down (and therefore bring the sentence back sooner)
-  if(overall!=null){const nBad=toks.filter(t=>t.status==='bad'||t.status==='missing').length,nWarn=toks.filter(t=>t.status==='warn').length;
+  if(overall!=null){const nBad=toks.filter(t=>t.ps==='bad'||t.status==='missing').length,nWarn=toks.filter(t=>t.ps==='warn'&&t.status!=='missing').length;
     overall-=4*nBad+2*nWarn;if(nBad+nWarn>=1)overall=Math.min(overall,89);if(nBad>=1)overall=Math.min(overall,84);if(nBad+nWarn>=3)overall=Math.min(overall,79);overall=Math.max(0,overall)}
   if(overall!=null&&cmp&&cmp.lengthOff&&!att.asr&&!att.azure)overall=Math.min(overall,55);
   overall=overall==null?null:Math.round(overall);
@@ -1595,7 +1612,7 @@ function finalizeAttempt(att){
   else hints.push({c:'info',p:0,t:'선생님 소리나 내 소리가 너무 짧아서 비교하지 못했어요.'});
   hints.sort((a,b)=>b.p-a.p);
   if(!hints.some(h=>h.c!=='info'))hints.unshift({c:'good',p:9,t:cmp?'억양·리듬이 선생님과 잘 맞아요. 한 번 더 들어보고 똑같이 따라 해보세요.':'좋아요. 한 번 더 따라 해보세요.'});
-  att.view={toks,extras,parts,overall,hints:hints.slice(0,5)};saveTake(att);
+  att.view={toks,extras,parts,overall,hints:hints.slice(0,5)};saveTake(att);logTry(att);
   if(cur){const vals=cur.attempts.map(a=>a.view&&a.view.overall).filter(v=>v!=null);cur.best=vals.length?Math.max(...vals):null}
 }
 function scoreClass(s){return s==null?'none':s>=80?'ok':s>=65?'warn':'bad'}
@@ -1607,7 +1624,7 @@ function renderResult(att){
   $('#rec-msg').textContent=att.cmp?(cur.base?'선생님 구간과 단어별로 맞춰 비교했어요.':'선생님 녹음과 단어별로 맞춰 비교했어요.'):att.te?'비교할 소리가 부족했어요.':'선생님 녹음이 없어 내 소리만 분석했어요.';
   $('#result').hidden=false;drawRing(v.overall);
   $('#subs').innerHTML=v.parts.map(([k,val])=>`<div class="sub"><span>${esc(k)}</span><b>${val==null?'—':Math.round(val)}</b><div class="bar"><i style="width:${val==null?0:clamp(val,0,100)}%;background:${val==null?'transparent':scoreColor(val)}"></i></div></div>`).join('');
-  renderChips(att);renderPointChecks(att,cur.base?cur.base.item:cur.item,cur.base?cur.item.text:null,'#pchk','#pchk-list');
+  renderHist(att);renderChips(att);renderPointChecks(att,cur.base?cur.base.item:cur.item,cur.base?cur.item.text:null,'#pchk','#pchk-list');
   if(cur.sel!=null&&v.toks[cur.sel])showTokenDetail(att,cur.sel);else $('#word-detail').hidden=true;
   renderAsrBox(att);
   $('#hints').innerHTML=v.hints.map(h=>`<li class="${h.c}">${esc(h.t)}</li>`).join('');
@@ -1728,16 +1745,17 @@ function mergeProgress(local,remote){
   const recall=Object.assign({},remote.recall||{});for(const [id,r] of Object.entries(local.recall||{})){const q=recall[id];if(!q||(r.last||'')>(q.last||''))recall[id]=r}
   const exported=Object.assign({},remote.exported||{});for(const [id,d] of Object.entries(local.exported||{}))if(!exported[id]||d>exported[id])exported[id]=d;
   const fbDone=Object.assign({},remote.fbDone||{},local.fbDone||{});
-  return{progress,log:log.slice(-3000),localItems:Object.values(li),recall,exported,fbDone};
+  const tries={};for(const src of [remote.tries||{},local.tries||{}])for(const [id,a] of Object.entries(src)){const m=new Map((tries[id]||[]).map(x=>[x.t,x]));for(const x of a||[])m.set(x.t,x);tries[id]=[...m.values()].sort((x,y)=>x.t<y.t?-1:1).slice(-10)}
+  return{progress,log:log.slice(-3000),localItems:Object.values(li),recall,exported,fbDone,tries};
 }
 let syncing=false;
 async function syncIfReady(silent){
   if(!gh.ready()||syncing)return;syncing=true;const el=$('#sync-state');el.textContent='동기화 중…';
   try{
     const remote=await gh.getText('progress.json');let rj={};if(remote){try{rj=JSON.parse(remote.text)}catch(e){rj={}}}
-    const merged=mergeProgress({progress:state.progress,log:state.log,localItems:state.localItems,recall:state.recall,exported:state.exported,fbDone:state.fbDone},rj);state.fbDone=merged.fbDone;store.set(LS.fbDone,state.fbDone);
+    const merged=mergeProgress({progress:state.progress,log:state.log,localItems:state.localItems,recall:state.recall,exported:state.exported,fbDone:state.fbDone,tries:state.tries},rj);state.fbDone=merged.fbDone;store.set(LS.fbDone,state.fbDone);state.tries=merged.tries;store.set(LS.tries,state.tries);
     state.progress=merged.progress;state.log=merged.log;state.localItems=merged.localItems;state.recall=merged.recall;state.exported=merged.exported;saveProgress();store.set(LS.local,state.localItems);store.set(LS.recall,state.recall);store.set(LS.exported,state.exported);
-    const out=JSON.stringify({updatedAt:new Date().toISOString(),device:navigator.platform||'',progress:state.progress,log:state.log,localItems:state.localItems,recall:state.recall,exported:state.exported,fbDone:state.fbDone});
+    const out=JSON.stringify({updatedAt:new Date().toISOString(),device:navigator.platform||'',progress:state.progress,log:state.log,localItems:state.localItems,recall:state.recall,exported:state.exported,fbDone:state.fbDone,tries:state.tries});
     if(!remote||remote.text!==out){await gh.putText('progress.json',out,remote?remote.sha:null,'progress '+new Date().toISOString().slice(0,16))}
     const t=new Date();store.set(LS.sync,t.toISOString());el.textContent=`${pad2(t.getMonth()+1)}-${pad2(t.getDate())} ${pad2(t.getHours())}:${pad2(t.getMinutes())}`;
     if(!silent)toast('기록을 동기화했어요');
