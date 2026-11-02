@@ -785,7 +785,7 @@ const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
 const median=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[s.length>>1]};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const APP_VER='2.0';
+const APP_VER='2.1';
 function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),ms)}
 function wavg(pairs){let s=0,w=0;for(const [v,k] of pairs)if(v!=null&&!isNaN(v)){s+=v*k;w+=k}return w?s/w:null}
 const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -1050,13 +1050,17 @@ function sqrtSpec(x,c){const {N,L,win,rev,cs,sn}=SP;const re=new Float32Array(N)
 function harmScore(m,p,sr){const df=sr/SP.N,fmax=Math.min(3500,sr/2-p);let s=0,kn=0,mn=0;const k1=Math.max(1,Math.floor(0.25*p/df)),k2=Math.min(m.length-1,Math.floor(fmax/df));
   for(let k=k1;k<=k2;k++){const f=k*df,q=f/p,h=Math.round(q);if(!SP.pr[h])continue;const ad=Math.abs(q-h);let w;if(ad<0.25)w=Math.cos(2*Math.PI*q);else if(ad<0.75)w=Math.cos(2*Math.PI*q)/2;else continue;w/=Math.sqrt(f);s+=w*m[k];if(w>0)kn+=w*w;mn+=m[k]*m[k]}
   return kn>0&&mn>0?s/Math.sqrt(kn*mn):0}
+// the recording's background level: 5th percentile of frame energies (a little above digital silence)
+function noiseFloor(r){const v=Array.from(r).filter(x=>x>1e-6).sort((a,b)=>a-b);return v.length?v[Math.floor(v.length*0.05)]:0}
+// quiet takes (phone mic without auto gain) are brought up to a normal level for analysis, Azure and playback
+function normPcm(pcm,target=0.7,maxGain=16){let p=0;for(let i=0;i<pcm.length;i++){const a=Math.abs(pcm[i]);if(a>p)p=a}if(!(p>0))return pcm;const g=Math.min(maxGain,target/p);if(g<1.25)return pcm;const o=new Float32Array(pcm.length);for(let i=0;i<pcm.length;i++)o[i]=pcm[i]*g;return o}
 function trackPitch(x,sr){
   const frame=Math.round(sr*0.04),hop=Math.round(sr*0.01);
   const minLag=Math.floor(sr/400),maxLag=Math.min(Math.floor(sr/70),frame-2);
   const n=Math.max(0,Math.floor((x.length-frame)/hop)+1);
   const f0=new Float32Array(n),rms=new Float32Array(n);let maxR=0;
   for(let i=0;i<n;i++){const o=i*hop;let s=0;for(let j=0;j<frame;j++){const v=x[o+j];s+=v*v}rms[i]=Math.sqrt(s/frame);if(rms[i]>maxR)maxR=rms[i]}
-  const gate=Math.max(0.006,maxR*0.08);
+  const gate=Math.max(maxR*0.08,Math.min(0.006,noiseFloor(rms)*3));
   const nsdf=new Float32Array(maxLag+2);const cands=new Array(n);
   const at=t=>{if(t<minLag||t>maxLag)return 0;const a=Math.floor(t),u=t-a;return Math.max(0,nsdf[a]*(1-u)+nsdf[Math.min(maxLag,a+1)]*u)};
   for(let i=0;i<n;i++){
@@ -1142,6 +1146,7 @@ function segFeat(an,a,b){
   const vals=[];let e=0;for(let i=a;i<=b;i++){const v=an.st[i];if(!isNaN(v))vals.push(v);e+=an.rms[i]||0}
   const f={a,b,dur:(b-a+1)/100,energy:20*Math.log10(e/(b-a+1)+1e-6),voiced:vals.length,series:an.st.slice(a,b+1),shape:'none'};
   if(vals.length>=3){const s=[...vals].sort((x,y)=>x-y);f.level=s[s.length>>1];f.peak=s[Math.min(s.length-1,Math.floor(s.length*0.9))];const k=Math.max(1,Math.floor(vals.length*0.3));f.startP=mean(vals.slice(0,k));f.endP=mean(vals.slice(-k));f.slope=f.endP-f.startP;
+    f.low=s[Math.floor(s.length*0.1)];f.lift=f.endP-f.low;f.drop=f.peak-f.endP;
     f.shape=(vals.length>=6&&f.peak-Math.max(f.startP,f.endP)>=2.2&&f.peak-Math.min(f.startP,f.endP)>=3)?'hat':f.slope>=2?'rise':f.slope<=-2?'fall':'flat'}
   return f;
 }
@@ -1230,15 +1235,15 @@ function makeHum(an){
 // 0 = same movement, 1 = movement missing (flat), 2 = the opposite movement
 function shapeMiss(T,M,stressed){const sT=T.shape,hatM=M.peak-Math.max(M.startP,M.endP),hatT=T.peak-Math.max(T.startP,T.endP);
   // natural speakers vary a lot on small moves: the bar grows with the teacher's own movement
-  if(sT==='rise'){const s=T.slope;if(M.slope<=-Math.max(1.5,0.6*s))return 2;return s>=3.5&&M.slope<Math.max(0.5,0.25*s)?1:0}
-  if(sT==='fall'){const s=-T.slope;if(M.slope>=Math.max(1.5,0.6*s))return 2;return s>=3.5&&M.slope>-Math.max(0.5,0.25*s)?1:0}
+  if(sT==='rise'){const s=T.slope,up=Math.max(M.slope,M.lift??M.slope);if(M.slope<=-Math.max(1.5,0.6*s)&&up<Math.max(1,0.25*s))return 2;return s>=3.5&&up<Math.max(0.5,0.25*s)?1:0}
+  if(sT==='fall'){const s=-T.slope,dn=Math.max(-M.slope,M.drop??-M.slope);if(M.slope>=Math.max(1.5,0.6*s)&&dn<Math.max(1,0.25*s))return 2;return s>=3.5&&dn<Math.max(0.5,0.25*s)?1:0}
   if(sT==='hat')return stressed&&hatT>=3&&hatM<1?1:0;
   return 0}
-function scaleF(f,k){if(!f||k===1||f.voiced<3)return f;const g=Object.assign({},f,{startP:f.startP*k,endP:f.endP*k,peak:f.peak*k,level:f.level*k,slope:f.slope*k});
+function scaleF(f,k){if(!f||k===1||f.voiced<3)return f;const g=Object.assign({},f,{startP:f.startP*k,endP:f.endP*k,peak:f.peak*k,level:f.level*k,slope:f.slope*k,low:f.low*k,lift:f.lift*k,drop:f.drop*k});
   g.shape=(f.voiced>=6&&g.peak-Math.max(g.startP,g.endP)>=2.2&&g.peak-Math.min(g.startP,g.endP)>=3)?'hat':g.slope>=2?'rise':g.slope<=-2?'fall':'flat';return g}
 // pitch features from a list of semitone values (same rules as segFeat)
-function supFeat(v){if(v.length<5)return null;const s=[...v].sort((a,b)=>a-b),k=Math.max(1,Math.floor(v.length*0.3));const startP=mean(v.slice(0,k)),endP=mean(v.slice(-k)),peak=s[Math.min(s.length-1,Math.floor(s.length*0.9))],slope=endP-startP;
-  return{startP,endP,peak,slope,level:s[s.length>>1],shape:(v.length>=6&&peak-Math.max(startP,endP)>=2.2&&peak-Math.min(startP,endP)>=3)?'hat':slope>=2?'rise':slope<=-2?'fall':'flat'}}
+function supFeat(v){if(v.length<5)return null;const s=[...v].sort((a,b)=>a-b),k=Math.max(1,Math.floor(v.length*0.3));const startP=mean(v.slice(0,k)),endP=mean(v.slice(-k)),peak=s[Math.min(s.length-1,Math.floor(s.length*0.9))],slope=endP-startP,low=s[Math.floor(s.length*0.1)];
+  return{startP,endP,peak,slope,low,lift:endP-low,drop:peak-endP,level:s[s.length>>1],shape:(v.length>=6&&peak-Math.max(startP,endP)>=2.2&&peak-Math.min(startP,endP)>=3)?'hat':slope>=2?'rise':slope<=-2?'fall':'flat'}}
 /* Compare my take with the teacher clip word by word: align the two recordings (DTW on MFCCs with
    per-utterance normalization, so mic and voice differences mostly cancel), then measure pitch shape,
    level, length, pauses and stress inside each teacher word. Pitch is in semitones from each speaker's own median. */
@@ -1593,6 +1598,7 @@ async function analyzeAttempt(blob,transcripts){
   const c=cur;if(!c)return;const item=sItem(c.item);let pcm16;
   try{pcm16=await blobToPcm16(blob)}catch(e){$('#rec-msg').textContent='녹음 파일을 읽지 못했어요. 다시 녹음해 주세요.';return}
   if(cur!==c)return;
+  {const n=normPcm(pcm16);if(n!==pcm16){pcm16=n;blob=wavBlob(n)}}
   c.lastBlob=blob;$('#btn-me').disabled=false;
   const me=analyzeVoice(pcm16);
   if(!me.span||me.dur<0.3){$('#rec-msg').textContent='소리가 거의 안 잡혔어요. 폰 아래쪽 마이크를 가리지 않았는지, 블루투스 이어폰이 연결돼 있지 않은지 확인하고 다시 녹음해 주세요.';return}
@@ -1975,7 +1981,7 @@ async function micTest(){
   const an=analyzeVoice(pcm);let pk=0;for(let i=0;i<pcm.length;i++)pk=Math.max(pk,Math.abs(pcm[i]));
   if(!an.span){msg.textContent='소리가 안 잡혔어요. 마이크 권한, 폰 아래쪽 마이크 구멍, 블루투스 이어폰 연결을 확인해 주세요.';return}
   let v=0;for(let i=an.span.first;i<=an.span.last;i++)if(!isNaN(an.st[i]))v++;const voiced=v/(an.span.last-an.span.first+1);
-  const level=pk<0.05?'작아요 (폰을 입에 조금 더 가까이)':pk>0.98?'너무 커요 (조금 떨어져서)':'좋아요';
+  const level=pk<0.05?'작아요 — 앱이 키워서 분석하지만, 폰을 입에 조금 더 가까이 하면 더 정확해요':pk>0.98?'너무 커요 (조금 떨어져서)':'좋아요';
   msg.textContent=`소리 크기: ${level} · 높낮이 인식: 말한 구간의 ${Math.round(voiced*100)}% ${voiced<0.35?'(낮음 — 조용한 곳에서, 조금 더 크게)':'(좋음 — 억양 비교 가능)'}${c.meterWorks?'':' · 자동 멈춤은 이 기기에서 안 될 수 있어요(■ 멈춤 사용)'}`;
 }
 function bindSettings(){
@@ -2090,8 +2096,9 @@ async function tToggleRec(){
 }
 async function tStop(){
   const c=tCap;if(!c)return;tCap=null;const b=$('#t-rec');b.textContent='● 말하기';b.classList.remove('on');$('#t-level').hidden=true;$('#t-msg').textContent='확인 중…';
-  const blob=await c.stop();const T=tst&&tst.cur;if(!T)return;let pcm;
+  let blob=await c.stop();const T=tst&&tst.cur;if(!T)return;let pcm;
   try{pcm=await blobToPcm16(blob)}catch(e){$('#t-msg').textContent='녹음을 읽지 못했어요. 다시 말해 주세요.';return}
+  {const n=normPcm(pcm);if(n!==pcm){pcm=n;blob=wavBlob(n)}}
   const me=analyzeVoice(pcm);if(!me.span||me.dur<0.3){$('#t-msg').textContent='소리가 거의 안 잡혔어요. 다시 말해 주세요.';return}
   T.takes.push({blob,me});if(T.takes.length>5)T.takes.shift();T.sel=T.takes.length-1;renderTakes();
   $('#t-msg').textContent='녹음했어요. ▶로 들어 보고 마음에 들면 제출하고, 아니면 다시 녹음하세요.';
@@ -2229,7 +2236,7 @@ async function hwToggleRecord(){
 async function hwStopRecord(){
   const c=hwCap;if(!c)return;hwCap=null;const btn=$('#hw-rec');btn.textContent='● 녹음';btn.classList.remove('on');$('#hw-level').hidden=true;$('#hw-msg').textContent='저장 중…';
   const blob=await c.stop();let pcm16;
-  try{pcm16=trimSilence(await blobToPcm16(blob))}catch(e){$('#hw-msg').textContent='녹음을 읽지 못했어요. 다시 녹음해 주세요.';return}
+  try{pcm16=normPcm(trimSilence(await blobToPcm16(blob)),0.89)}catch(e){$('#hw-msg').textContent='녹음을 읽지 못했어요. 다시 녹음해 주세요.';return}
   if(pcm16.length<16000*0.3){$('#hw-msg').textContent='소리가 거의 안 잡혔어요. 다시 녹음해 주세요.';return}
   const id=hw.ids[hw.idx];hw.takes[id]=pcm16;delete hw.wavs[id];hw.blob=null;hw.listBlob=null;
   await idb.set(hwKey(id),{pcm:pcm16.buffer,at:Date.now()});
@@ -2237,7 +2244,7 @@ async function hwStopRecord(){
 }
 function trimSilence(pcm){const frame=160;let maxR=0;const n=Math.floor(pcm.length/frame);const r=new Float32Array(n);for(let i=0;i<n;i++){let s=0;for(let j=0;j<frame;j++){const v=pcm[i*frame+j];s+=v*v}r[i]=Math.sqrt(s/frame);if(r[i]>maxR)maxR=r[i]}
   // keep soft endings (final s/t/th, breathy vowels): low gate and 0.35 s of tail, then a short fade so nothing clicks
-  const gate=Math.max(0.0025,maxR*0.03);let a=0,b=n-1;while(a<n&&r[a]<gate)a++;while(b>a&&r[b]<gate)b--;const s=Math.max(0,(a-20)*frame),e=Math.min(pcm.length,(b+35)*frame);const out=pcm.slice(s,e);
+  const gate=Math.max(maxR*0.03,Math.min(0.0025,noiseFloor(r)*3));let a=0,b=n-1;while(a<n&&r[a]<gate)a++;while(b>a&&r[b]<gate)b--;const s=Math.max(0,(a-20)*frame),e=Math.min(pcm.length,(b+35)*frame);const out=pcm.slice(s,e);
   const f=Math.min(240,out.length>>2);for(let i=0;i<f;i++){const g=i/f;out[i]*=g;out[out.length-1-i]*=g}return out}
 function hwPlayMine(){
   const id=hw.ids[hw.idx];const t=hw.takes[id];if(!t)return;const b=$('#hw-me');
@@ -2253,7 +2260,7 @@ function hwPlayTeacher(){
 async function hwBuild(){
   const ids=hw.ids.filter(id=>hw.takes[id]&&!hw.skip.has(id));if(!ids.length){toast('녹음된 문장이 없어요');return}
   const gap=new Float32Array(Math.round(16000*0.7));let total=0;const parts=[],starts=[];
-  for(const id of ids){const t=hw.takes[id];starts.push(total/16000);let peak=0;for(let i=0;i<t.length;i++)peak=Math.max(peak,Math.abs(t[i]));const g=peak>0?Math.min(4,0.89/peak):1;const u=new Float32Array(t.length);for(let i=0;i<t.length;i++)u[i]=t[i]*g;parts.push(u,gap);total+=u.length+gap.length}
+  for(const id of ids){const t=hw.takes[id];starts.push(total/16000);let peak=0;for(let i=0;i<t.length;i++)peak=Math.max(peak,Math.abs(t[i]));const g=peak>0?Math.min(16,0.89/peak):1;const u=new Float32Array(t.length);for(let i=0;i<t.length;i++)u[i]=t[i]*g;parts.push(u,gap);total+=u.length+gap.length}
   const all=new Float32Array(total);let o=0;for(const p of parts){all.set(p,o);o+=p.length}
   $('#hw-build').disabled=true;$('#hw-build').textContent='만드는 중…';
   let blob=null,ext='mp3';
