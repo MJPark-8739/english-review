@@ -141,6 +141,8 @@ details.points>summary::after{margin-left:auto}
 .fb-pin{background:var(--teacher-soft);color:var(--fg);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;line-height:1.5}
 .fb-pin b{color:var(--teacher)}
 .hist{margin:2px 0 8px;font-size:12px;color:var(--muted);line-height:1.5}
+.report-row{display:flex;justify-content:flex-end;margin:4px 0 2px}
+.report-box{margin:4px 0 8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
 .hist-h{font-weight:700;color:var(--fg);font-size:12px}
 .hist-o b{font-size:14px}
 .pchk{margin:4px 0 8px;padding:10px 12px;border-radius:10px;background:var(--surface-2)}
@@ -468,6 +470,12 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="asr-box small" id="asr-box" hidden></div>
         <div class="pchk" id="pchk" hidden><div class="pchk-h">선생님 포인트 확인</div><ul class="plist" id="pchk-list"></ul></div>
         <ul class="hints" id="hints"></ul>
+        <div class="report-row"><button type="button" class="btn small ghost" id="btn-report">채점이 이상해요 → 검토 요청</button></div>
+        <div class="report-box" id="report-box" hidden>
+          <textarea id="report-note" rows="2" placeholder="어디가 이상한지 짧게 (선택) — 예: again을 선생님처럼 했는데 빨간색"></textarea>
+          <div class="row" style="justify-content:flex-end;gap:8px;margin-top:6px"><button type="button" class="btn small" id="report-cancel">취소</button><button type="button" class="btn small primary" id="report-send">보내기</button></div>
+          <p class="small muted" style="margin-top:6px">이 녹음과 채점 내용이 비공개 데이터 저장소의 review 폴더에 올라가요. Claude에게 "검토 요청 확인해줘"라고 하면 실제 소리로 확인해요.</p>
+        </div>
         <details class="graph-wrap" id="graph-wrap"><summary>문장 전체 억양 그래프</summary><canvas id="contour" height="160"></canvas><p class="small muted" style="margin-top:6px">가로는 선생님 말에 맞춰 단어 위치를 정렬한 시간, 세로는 각자 평소 목소리 높이를 0으로 둔 높낮이예요. 칸 하나가 단어 하나예요.</p></details>
         <div class="grade-row"><span class="small muted">평가</span>
           <button class="g" data-g="1">다시</button><button class="g" data-g="2">어려움</button><button class="g" data-g="3">좋음</button><button class="g" data-g="4">쉬움</button>
@@ -752,7 +760,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.9 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 <span id="app-ver"></span> · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -777,6 +785,7 @@ const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
 const median=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[s.length>>1]};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const APP_VER='2.0';
 function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),ms)}
 function wavg(pairs){let s=0,w=0;for(const [v,k] of pairs)if(v!=null&&!isNaN(v)){s+=v*k;w+=k}return w?s/w:null}
 const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -816,10 +825,15 @@ const gh={
   headers(raw){return{Authorization:'Bearer '+this.cfg().token,Accept:raw?'application/vnd.github.raw+json':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}},
   async raw(path){const r=await fetch(this.base(path)+'?ref='+encodeURIComponent(this.cfg().branch),{headers:this.headers(true)});if(r.status===404)return null;if(!r.ok)throw new Error('GitHub '+r.status);return r},
   async getText(path){const r=await fetch(this.base(path)+'?ref='+encodeURIComponent(this.cfg().branch),{headers:this.headers(false)});if(r.status===404)return null;if(!r.ok)throw new Error('GitHub '+r.status);const j=await r.json();if(j.encoding!=='base64'||!j.content){const rr=await this.raw(path);return{sha:j.sha,text:rr?await rr.text():''}}return{sha:j.sha,text:decodeURIComponent(escape(atob(j.content.replace(/\n/g,''))))}},
+  async putB64(path,b64,message){const r=await fetch(this.base(path),{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},this.headers(false)),body:JSON.stringify({message,content:b64,branch:this.cfg().branch})});if(!r.ok){let t='';try{t=(await r.json()).message||''}catch(e){}throw new Error('GitHub '+r.status+(t?' '+t:''))}return r.json()},
   async putText(path,text,sha,message){const body={message,content:btoa(unescape(encodeURIComponent(text))),branch:this.cfg().branch};if(sha)body.sha=sha;const r=await fetch(this.base(path),{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},this.headers(false)),body:JSON.stringify(body)});if(!r.ok){let t='';try{t=(await r.json()).message||''}catch(e){}throw new Error('GitHub '+r.status+(t?' · '+t:''))}return(await r.json()).content.sha}
 };
 
 /* ===================== bank ===================== */
+// what is actually said: "(up)" = optional words that are said; "allows(permits)" and "subject/topic" = alternatives, the first is scored
+function spokenText(t){t=String(t||'');if(!/[()\/]/.test(t))return t;return t.replace(/(\S)\([^)]*\)/g,'$1').replace(/[()]/g,' ').replace(/([A-Za-z’']+)\/[A-Za-z’']+/g,'$1').replace(/\s+([?.,!])/g,'$1').replace(/\s+/g,' ').trim()}
+// the item as scored (same id, spoken text)
+function sItem(it){if(!it)return it;const t=spokenText(it.text);return t===it.text?it:Object.assign({},it,{text:t})}
 function normalizeBank(j,source){
   const items=(j.items||[]).filter(x=>x&&x.text&&x.id).map(x=>({id:String(x.id),text:String(x.text).trim(),ko:x.ko||'',tier:clamp(parseInt(x.tier)||3,1,6),source:x.source||'',lesson:x.lesson||'',kind:x.kind||'sentence',group:x.group||null,role:x.role||null,seq:x.seq||0,clip:x.clip||null,words:Array.isArray(x.words)?x.words:null,points:Array.isArray(x.points)?x.points.filter(p=>p&&p.w):[],phones:Array.isArray(x.phones)?x.phones:null,note:x.note||'',sets:Array.isArray(x.sets)?x.sets.map(String):[],stitched:!!x.stitched,clipRev:x.clipRev||0}));
   const tiers=Object.assign({},DEFAULT_TIERS);if(j.tiers)for(const k of Object.keys(j.tiers)){tiers[k]=Object.assign({},tiers[k]||{},j.tiers[k])}
@@ -1140,16 +1154,26 @@ const FUNC=new Set('a an the to of in on at for from by with and or but so as if
 function syllables(w){w=String(w||'').toLowerCase().replace(/[^a-z]/g,'');if(!w)return 1;if(w.length<=3)return 1;w=w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/,'').replace(/^y/,'');const m=w.match(/[aeiouy]{1,2}/g);return Math.max(1,m?m.length:1)}
 function promScores(feats){const ok=feats.map(f=>!!(f&&f.voiced>=3));const P_=[],E=[],Dd=[];feats.forEach((f,i)=>{if(ok[i]){P_.push(f.peak);E.push(f.energy);Dd.push(Math.log(f.dur/f.syl))}});if(P_.length<2)return feats.map(()=>null);const zs=arr=>{const m=mean(arr),sd=Math.sqrt(mean(arr.map(x=>(x-m)*(x-m))))||1;return v=>(v-m)/sd};const zP=zs(P_),zE=zs(E),zD=zs(Dd);return feats.map((f,i)=>ok[i]?zP(f.peak)+0.7*zE(f.energy)+0.7*zD(Math.log(f.dur/f.syl)):null)}
 
+// phrase index per timed word, from the sentence's punctuation (, . ? ! ; :)
+function phraseGroups(text,n){const raw=spokenText(text).trim().split(/\s+/).filter(t=>/[A-Za-z0-9]/.test(t));if(raw.length!==n)return new Array(n).fill(0);let g=0;return raw.map(t=>{const x=g;if(/[.,!?;:…—–~]["'’”)]*$/.test(t))g++;return x})}
+// a word counts as prominent if it stands out in the whole sentence OR inside its own phrase
+// (a sentence-final phrase is lower overall, so its main word can look weak sentence-wide)
+function phraseProm(feats,grp){const out=promScores(feats);const ng=Math.max(0,...grp)+1;if(ng<2)return out;
+  for(let g=0;g<ng;g++){const idx=grp.map((x,i)=>x===g?i:-1).filter(i=>i>=0);if(idx.length<4)continue;const p=promScores(idx.map(i=>feats[i]));idx.forEach((i,q)=>{if(p[q]!=null)out[i]=out[i]==null?p[q]:Math.max(out[i],p[q])})}return out}
 function normWord(w){return String(w||'').toLowerCase().replace(/’/g,"'").replace(/[^a-z']/g,'')}
 /* The teacher's melody for one sentence: pitch shape/level/length per word and which words carry the stress.
    Words may carry an explicit `stress` flag (used for chunks so they keep the full sentence's stress). */
-function teacherProfile(te,words){
+function teacherProfile(te,words,text){
   if(!te||!te.span||!Array.isArray(words)||!words.length)return null;
   const tA=te.span.first,tB=te.span.last;
   const ws=words.map((x,k)=>{let a=Math.round((+x.s||0)*100),b=Math.round((+x.e||0)*100)-1;if(b<a)b=a;a=clamp(a,tA,tB);b=clamp(b,a,tB);const f=segFeat(te,a,b);const syl=syllables(x.w);if(f)f.syl=syl;return{k,w:String(x.w||''),s:+x.s||0,e:+x.e||0,a,b,f,syl,func:FUNC.has(normWord(x.w)),stress:false,prom:null}});
-  const pr=promScores(ws.map(w=>w.f));ws.forEach((w,i)=>{w.prom=pr[i]});
+  const grp=phraseGroups(text,ws.length);ws.forEach((w,i)=>{w.g=grp[i]});
+  const pr=phraseProm(ws.map(w=>w.f),grp);ws.forEach((w,i)=>{w.prom=pr[i]});
   if(words.some(x=>x.stress!==undefined))ws.forEach((w,i)=>{w.stress=!!words[i].stress});
-  else{const cand=ws.filter(w=>!w.func&&w.prom!=null).sort((a,b)=>b.prom-a.prom);let sw=cand.filter(w=>w.prom>=1.0).slice(0,2);if(!sw.length&&cand.length&&cand[0].prom>=0.6)sw=[cand[0]];sw.forEach(w=>{w.stress=true})}
+  else{const ng=Math.max(0,...grp)+1;
+    if(ng<2){const cand=ws.filter(w=>!w.func&&w.prom!=null).sort((a,b)=>b.prom-a.prom);let sw=cand.filter(w=>w.prom>=1.0).slice(0,2);if(!sw.length&&cand.length&&cand[0].prom>=0.6)sw=[cand[0]];sw.forEach(w=>{w.stress=true})}
+    // several phrases: each phrase gets its own main stress (its most prominent content word)
+    else for(let g=0;g<ng;g++){const inG=ws.filter(w=>w.g===g&&w.prom!=null),top=Math.max(-9,...inG.map(w=>w.prom));const cand=inG.filter(w=>!w.func).sort((a,b)=>b.prom-a.prom);if(cand.length&&cand[0].prom>=0.6&&cand[0].prom>=top-1.2){cand[0].stress=true;if(cand[1]&&cand[1].prom>=1.5&&inG.length>=5)cand[1].stress=true}}}
   const vals=[];for(let i=tA;i<=tB;i++)if(!isNaN(te.st[i]))vals.push(te.st[i]);vals.sort((a,b)=>a-b);
   const lo=vals.length>8?Math.min(-6,vals[Math.floor(vals.length*0.03)]-1):-8,hi=vals.length>8?Math.max(6,vals[Math.floor(vals.length*0.97)]+1):8;
   const prof={ws,lo,hi,maxDur:Math.max(0.1,...ws.map(w=>w.e-w.s))};prof.coach=coachLines(ws);return prof;
@@ -1159,8 +1183,8 @@ function coachLines(ws){
   const out=[],used=new Set();const V=w=>!!(w&&w.f&&w.f.voiced>=3);
   const totDur=ws.reduce((s,x)=>s+(x.e-x.s),0),totSyl=ws.reduce((s,x)=>s+x.syl,0)||1;const relLen=w=>((w.e-w.s)/w.syl)/Math.max(1e-3,totDur/totSyl);
   const move={rise:'올리며 ↗',fall:'높게 시작해 내리며 ↘',hat:'올렸다 내리며 ↗↘',flat:'높게',none:'또렷하게'};
-  for(const S of ws.filter(w=>w.stress).slice(0,2)){
-    const P=S.k>0?ws[S.k-1]:null;const sh=V(S)?S.f.shape:'none';const len=relLen(S)>=1.3?'길게 끌기':'또렷하게';
+  for(const S of ws.filter(w=>w.stress).slice(0,3)){
+    const P=S.k>0&&ws[S.k-1].g===S.g?ws[S.k-1]:null;const sh=V(S)?S.f.shape:'none';const len=relLen(S)>=1.3?'길게 끌기':'또렷하게';
     if(P&&!P.stress&&V(P)&&V(S)&&(P.func||P.f.level<S.f.peak-2||P.f.shape==='fall')){out.push({k:S.k,t:`'${P.w}' ${P.func?'짧고 낮게':'낮게'} ↘ → '${S.w}' 다시 ${move[sh]} ${len} (강조)`});used.add(P.k)}
     else out.push({k:S.k,t:`'${S.w}' — ${S.k===0&&sh==='rise'?'처음부터 높이 올리며 ↗':move[sh]} ${len} (강조)`});
     used.add(S.k);
@@ -1235,33 +1259,38 @@ function compareWithTeacher(te,me,item,prof){
   const hints=[];const res={nT,tA,uA,al,teLine,meLine,r,rangeRatio,speed,words:[],hints,into:null,rhythm:null,stress:null};
   const tw=Array.isArray(item.words)&&item.words.length?item.words:null;
   if(tw){
-    prof=prof||teacherProfile(te,tw);
-    const words=prof.ws.map(p=>{const ia=p.a-tA,ib=p.b-tA;const ua=al.lo[ia]+uA,ub=Math.max(al.hi[ib],al.lo[ia])+uA;const fM=segFeat(me,ua,ub);if(fM)fM.syl=p.syl;let cs=0;for(let i=ia;i<=ib;i++)cs+=al.cost[i];return{k:p.k,w:p.w,s:p.s,e:p.e,ta:p.a,tb:p.b,ua,ub,te:p.f,me:fM,cost:cs/(ib-ia+1),syl:p.syl,func:p.func,promT:p.prom,stressT:!!p.stress,notes:[]}});
+    prof=prof||teacherProfile(te,tw,item.text);
+    const words=prof.ws.map(p=>{const ia=p.a-tA,ib=p.b-tA;const ua=al.lo[ia]+uA,ub=Math.max(al.hi[ib],al.lo[ia])+uA;const fM=segFeat(me,ua,ub);if(fM)fM.syl=p.syl;let cs=0;for(let i=ia;i<=ib;i++)cs+=al.cost[i];return{k:p.k,w:p.w,s:p.s,e:p.e,ta:p.a,tb:p.b,ua,ub,te:p.f,me:fM,cost:cs/(ib-ia+1),syl:p.syl,func:p.func,promT:p.prom,stressT:!!p.stress,g:p.g||0,notes:[]}});
     res.words=words;
-    const pM=promScores(words.map(w=>w.me));words.forEach((w,i)=>{w.promM=pM[i]});
+    const pM=phraseProm(words.map(w=>w.me),phraseGroups(item.text,words.length)),pMg=promScores(words.map(w=>w.me));words.forEach((w,i)=>{w.promM=pM[i];w.promMg=pMg[i]});
     // stress: the teacher's most prominent content words (high + loud + long)
     const stressW=words.filter(w=>w.stressT);
     const myTop=words.filter(w=>!w.func&&w.promM!=null).sort((a,b)=>b.promM-a.promM)[0]||null;
     // judged against how prominent the teacher made the same word (a 2-word chunk has a different baseline than a sentence)
     const refP=w=>w.promT!=null?Math.min(0.8,w.promT):0.8;
-    const miss=stressW.find(w=>w.promM!=null&&w.promM<refP(w)-0.6);
-    if(miss&&myTop&&myTop!==miss){const pv=miss.k>0&&!words[miss.k-1].stressT?words[miss.k-1]:null;hints.push({c:'',p:3,t:`선생님이 가장 강조한 단어: '${miss.w}' · 내가 가장 강조한 단어: '${myTop.w}' → ${pv?`'${pv.w}' 짧고 낮게 ↘, `:''}'${miss.w}' 올리며 길게 ↗`});miss.notes.push({sev:1,t:`선생님은 이 단어를 강조해요 → ${pv?`앞 '${pv.w}'를 낮게 두고 `:''}더 높고 길게`})}
+    const topIn=g=>words.filter(w=>w.g===g&&!w.func&&w.promM!=null).sort((a,b)=>b.promM-a.promM)[0]||null;
+    const misses=stressW.filter(w=>{if(w.promM==null||w.promM>=refP(w)-0.6)return false;const t=topIn(w.g);return (t&&t!==w&&t.promM-w.promM>=0.5)||w.promM<refP(w)-1.3});
+    for(const miss of misses.slice(0,2)){const pv=miss.k>0&&!words[miss.k-1].stressT&&words[miss.k-1].g===miss.g?words[miss.k-1]:null;const other=topIn(miss.g);miss.stressMiss=true;
+      hints.push({c:'',p:3,t:other&&other!==miss?`선생님이 강조한 단어: '${miss.w}' · 내가 강조한 단어: '${other.w}' → ${pv?`'${pv.w}' 짧고 낮게 ↘, `:''}'${miss.w}' 올리며 길게 ↗`:`'${miss.w}' — 강조가 약해요 → ${pv?`'${pv.w}' 짧고 낮게 ↘, `:''}'${miss.w}' 더 높고 길게 ↗`});
+      miss.notes.push({sev:1,t:`선생님은 이 단어를 강조해요 → ${pv?`앞 '${pv.w}'를 낮게 두고 `:''}더 높고 길게`})}
     // the "step": the teacher drops before a stressed word and climbs on it; check I make the same step
     let stepMiss=0;
-    for(const S of stressW){const Pw=S.k>0?words[S.k-1]:null;if(!Pw||Pw.stressT||!(Pw.te&&Pw.me&&S.te&&S.me&&Pw.te.voiced>=3&&Pw.me.voiced>=3&&S.te.voiced>=3&&S.me.voiced>=3))continue;
+    for(const S of stressW){const Pw=S.k>0&&words[S.k-1].g===S.g?words[S.k-1]:null;if(!Pw||Pw.stressT||!(Pw.te&&Pw.me&&S.te&&S.me&&Pw.te.voiced>=3&&Pw.me.voiced>=3&&S.te.voiced>=3&&S.me.voiced>=3))continue;
       const stT=S.te.peak-Pw.te.level,stM=S.me.peak-Pw.me.level;
       if(stT>=3&&stM<stT-3&&stM<stT*0.5){stepMiss++;S.stepMiss=true;S.notes.push({sev:1,t:`앞 '${Pw.w}'에서 내려갔다가 여기서 올라가야 해요 — 선생님은 크게 올라가는데 나는 ${stM<1?'거의 그대로예요':'조금만 올라가요'}`});hints.push({c:'',p:3,t:`'${Pw.w} ${S.w}' — 계단이 작아요: '${Pw.w}' 낮고 짧게 ↘ → '${S.w}' 높게 올리며 길게 ↗`})}}
-    const sc=stressW.filter(w=>w.promM!=null).map(w=>{let v=w.promM>=refP(w)-0.1?100:w.promM>=refP(w)-0.7?70:35;if(w.stepMiss)v=Math.min(v,55);return v});res.stress=sc.length?Math.round(mean(sc)):null;
+    const sc=stressW.filter(w=>w.promM!=null).map(w=>{let v=w.promM>=refP(w)-0.1?100:w.stressMiss?40:75;if(w.stepMiss)v=Math.min(v,55);return v});res.stress=sc.length?Math.round(mean(sc)):null;
     // a weak word said too strongly (e.g. "SOME cash" instead of "some CASH")
-    const topStressM=Math.max(-9,...stressW.filter(w=>w.promM!=null).map(w=>w.promM));
-    const loud=words.filter(w=>w.func&&!w.stressT&&w.promM!=null&&w.promM>=1.2&&w.promM>topStressM&&(w.promT==null||w.promT<=0.2));
+    // (sentence-wide prominence here: inside a short phrase a small word can look big)
+    // (sentence-wide prominence here: inside a short phrase a small word can look big; a clear margin over the phrase's stressed word)
+    const topStressIn=g=>{const L=stressW.filter(w=>w.promMg!=null);const inG=L.filter(w=>w.g===g);return Math.max(-9,...(inG.length?inG:L).map(w=>w.promMg))};
+    const loud=words.filter(w=>w.func&&!w.stressT&&w.promMg!=null&&w.promMg>=1.4&&w.promMg>topStressIn(w.g)+0.3&&(w.promT==null||w.promT<=0.2));
     for(const w of loud)w.notes.push({sev:1,t:"너무 세게 말했어요 → 짧고 낮게 (모음은 '어'처럼)"});
     if(loud.length){const w=loud[0],nx=words[w.k+1];hints.push({c:'',p:2,t:`'${w.w}' — 너무 세게 말했어요 → 짧고 낮게${nx&&nx.stressT?`, 다음 '${nx.w}'를 강조`:''}`});if(res.stress!=null)res.stress=Math.max(0,res.stress-15*loud.length)}
     // pitch shape / level / length per word
     // my pitch scaled to the teacher's range (a narrower or wider voice is not an intonation error by itself)
     const kR=(rT>0.5&&rM>0.5)?clamp(rT/rM,0.6,1.7):1;
     // phrase ends (before , . ? !) carry the boundary tone; small function words elsewhere are not judged on shape
-    const rawTok=String(item.text||'').trim().split(/\s+/).filter(t=>/[A-Za-z0-9]/.test(t));const endAt=rawTok.length===words.length?rawTok.map((t,i)=>/[.,!?;:…—–~]["'’”)]*$/.test(t)||i===rawTok.length-1):words.map((w,i)=>i===words.length-1);
+    const rawTok=spokenText(item.text).trim().split(/\s+/).filter(t=>/[A-Za-z0-9]/.test(t));const endAt=rawTok.length===words.length?rawTok.map((t,i)=>/[.,!?;:…—–~]["'’”)]*$/.test(t)||i===rawTok.length-1):words.map((w,i)=>i===words.length-1);
     words.forEach((w,i)=>{w.phraseEnd=!!endAt[i];const mv=w.te&&w.te.voiced>=3?Math.max(Math.abs(w.te.slope),w.te.peak-Math.max(w.te.startP,w.te.endP)):0;w.judged=w.stressT||w.phraseEnd||(!w.func&&mv>=3)});
     const shapeHints=[];
     for(const w of words){
@@ -1288,9 +1317,12 @@ function compareWithTeacher(te,me,item,prof){
     const gapAfter=k=>k+1<words.length?Math.max(0,(words[k+1].ta-words[k].tb-1)/100):0;
     const pauseFlags=[];
     const teSilentAt=(a,b)=>{const x=al.inv[clamp(a-uA,0,nU-1)]+tA,y=al.inv[clamp(b-uA,0,nU-1)]+tA;let c=0;for(let q=x;q<=y;q++)if(te.rms[q]<=te.gate*0.6)c++;return c>=Math.max(8,(b-a+1)*0.4)};
-    for(const run of me.pauses){if(run.a<uA||run.b>uB)continue;if(teSilentAt(run.a,run.b))continue;const len=(run.b-run.a+1)/100;const j=clamp(Math.round((run.a+run.b)/2)-uA,0,nU-1);const ti=al.inv[j]+tA;let k=-1;for(let q=0;q<words.length;q++)if(words[q].ta<=ti)k=q;if(k<0)continue;const w=words[k];const nearEnd=ti>w.tb-Math.max(3,(w.tb-w.ta)*0.25);
-      if(nearEnd){if(k+1<words.length&&gapAfter(k)<0.1&&len>=0.2&&!w.phraseEnd){words[k+1].notes.push({sev:1,t:`앞 단어와 ${len.toFixed(1)}초 끊겼어요 → 이어서 (연음)`});pauseFlags.push({k,len})}}
-      else if(len>=0.3){w.notes.push({sev:1,t:`단어 중간에서 ${len.toFixed(1)}초 끊겼어요 → 한 번에`});pauseFlags.push({k,len,mid:true})}}
+    const wordAt=ti=>{let k=-1;for(let q=0;q<words.length;q++)if(words[q].ta<=ti)k=q;return k};
+    for(const run of me.pauses){if(run.a<uA||run.b>uB)continue;if(teSilentAt(run.a,run.b))continue;const len=(run.b-run.a+1)/100;
+      const tiA=al.inv[clamp(run.a-1-uA,0,nU-1)]+tA,tiB=al.inv[clamp(run.b+1-uA,0,nU-1)]+tA;const kA=wordAt(tiA),kB=wordAt(tiB);if(kA<0)continue;const w=words[kA];
+      const edge=Math.max(3,(w.tb-w.ta)*0.2);
+      if(kA===kB&&tiA-w.ta>=edge&&w.tb-tiB>=edge){if(len>=0.3){w.notes.push({sev:1,t:`단어 중간에서 ${len.toFixed(1)}초 끊겼어요 → 한 번에`});pauseFlags.push({k:kA,len,mid:true})}}
+      else{const k=kB>kA?kB-1:tiA-w.ta<edge?kA-1:kA;if(k<0||k+1>=words.length)continue;if(gapAfter(k)<0.1&&len>=0.2&&!words[k].phraseEnd){words[k+1].notes.push({sev:1,t:`앞 단어와 ${len.toFixed(1)}초 끊겼어요 → 이어서 (연음)`});pauseFlags.push({k,len})}}}
     pauseFlags.sort((a,b)=>b.len-a.len);
     for(const f of pauseFlags.slice(0,2)){const w=words[f.k];hints.push({c:'',p:2,t:f.mid?`'${w.w}' 중간에서 ${f.len.toFixed(1)}초 끊겼어요 → 한 번에 이어서`:`'${w.w} ${words[f.k+1].w}' 사이에서 ${f.len.toFixed(1)}초 끊겼어요 → 선생님처럼 이어서 (연음)`})}
     const missed=[];
@@ -1448,7 +1480,7 @@ async function renderCard(){
   cur={item,teacher:undefined,profile:null,attempts:[],best:null,grade:null,gradeManual:false,hidden:state.settings.hideText,current:null,sel:null,lastBlob:null,base:null,picking:false};
   paintCard();$('#result').hidden=true;
   const c=cur;const t=await getTeacher(item);
-  if(cur===c){c.teacher=t;c.profile=t&&t.an&&!t.local&&item.words?(t.profile||(t.profile=teacherProfile(t.an,item.words))):null;$('#btn-teacher').textContent=teacherLabel();renderMelody()}
+  if(cur===c){c.teacher=t;c.profile=t&&t.an&&!t.local&&item.words?(t.profile||(t.profile=teacherProfile(t.an,item.words,item.text))):null;$('#btn-teacher').textContent=teacherLabel();renderMelody()}
 }
 // paint the practice card from `cur` (a sentence, or a chunk of one)
 function paintCard(){
@@ -1508,7 +1540,7 @@ function startChunk(i,j){
   const teacher={blob:wavBlob(pcm),pcm,an:analyzeVoice(pcm),local:false,chunk:true};
   base.picking=false;base.pickA=base.pickB=null;
   cur={item,teacher,profile:null,attempts:[],best:null,grade:null,gradeManual:true,hidden:false,current:null,sel:null,lastBlob:null,base,picking:false};
-  cur.profile=teacherProfile(teacher.an,words);
+  cur.profile=teacherProfile(teacher.an,words,item.text);
   paintCard();$('#result').hidden=true;window.scrollTo(0,0);
 }
 function exitChunk(){
@@ -1558,7 +1590,7 @@ async function stopRecording(){
   await analyzeAttempt(blob,rz&&rz.transcripts.length?rz.transcripts:null);
 }
 async function analyzeAttempt(blob,transcripts){
-  const c=cur;if(!c)return;const item=c.item;let pcm16;
+  const c=cur;if(!c)return;const item=sItem(c.item);let pcm16;
   try{pcm16=await blobToPcm16(blob)}catch(e){$('#rec-msg').textContent='녹음 파일을 읽지 못했어요. 다시 녹음해 주세요.';return}
   if(cur!==c)return;
   c.lastBlob=blob;$('#btn-me').disabled=false;
@@ -1567,7 +1599,7 @@ async function analyzeAttempt(blob,transcripts){
   if(c.hidden){c.hidden=false;$('#c-text').classList.remove('hidden-text');$('#prac-hide').textContent='가리기'}
   if(c.teacher===undefined)c.teacher=await getTeacher(item);
   const te=c.teacher||null;
-  if(te&&te.an&&!te.local&&!c.profile&&item.words)c.profile=te.profile||(te.profile=teacherProfile(te.an,item.words));
+  if(te&&te.an&&!te.local&&!c.profile&&item.words)c.profile=te.profile||(te.profile=teacherProfile(te.an,item.words,item.text));
   const att={id:Date.now(),item,blob,me,te,cmp:te&&te.an?compareWithTeacher(te.an,me,item,te.local?null:c.profile):null,asr:null,asrState:null,azure:null};
   if(state.settings.azureKey&&state.settings.azureKey.trim()){$('#rec-msg').textContent='정밀 평가 중…';try{att.azure=parseAzure(await azureAssess(pcm16,item.text))}catch(e){toast('정밀 평가 실패: '+e.message)}}
   if(!att.azure&&transcripts)att.asr=asrCompare(item.text,transcripts);
@@ -1595,6 +1627,20 @@ function logTry(att){try{const id=att.item&&att.item.id;if(!id||!att.view||att.v
   const flags=v.toks.filter(t=>t.ps==='bad'||t.ps==='warn').map(t=>t.text).slice(0,4);
   const rec={t:new Date(att.id).toISOString(),a:att.id,o:Math.round(v.overall),p:Object.fromEntries(v.parts.filter(x=>x[1]!=null).map(x=>[x[0],Math.round(x[1])])),w:weak,f:flags,k:String(id).includes('#')?'chunk':att.noTake?'test':'practice'};
   const L=(state.tries[base]||[]).filter(x=>x.a!==att.id);L.push(rec);state.tries[base]=L.slice(-10);store.set(LS.tries,state.tries)}catch(e){}}
+function u8b64(u){let s='';for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)}
+function reportData(att){const v=att.view||{},c=att.cmp;const r1=x=>x==null||isNaN(x)?null:Math.round(x*100)/100;const f=x=>x?{sh:x.shape,sl:r1(x.slope),lv:r1(x.level),pk:r1(x.peak),st:r1(x.startP),en:r1(x.endP),v:x.voiced}:null;
+  return{app:APP_VER,id:att.item.id,text:att.item.text,at:new Date(att.id).toISOString(),note:($('#report-note').value||'').trim(),chunk:!!(cur&&cur.base),
+    overall:v.overall,parts:v.parts,toks:(v.toks||[]).map(t=>({t:t.text,s:t.status,ps:t.ps||null,n:t.notes})),hints:(v.hints||[]).map(h=>h.t),
+    cmp:c?{r:r1(c.r),rangeRatio:r1(c.rangeRatio),speed:r1(c.speed),into:c.into,rhythm:c.rhythm,stress:c.stress,words:c.words.map(w=>({w:w.w,g:w.g,s:w.s,e:w.e,judged:!!w.judged,end:!!w.phraseEnd,stressT:w.stressT,promT:r1(w.promT),promM:r1(w.promM),te:f(w.te),me:f(w.me),notes:w.notes.map(n=>n.sev+':'+n.t)}))}:null,
+    azure:att.azure||null,asr:att.asr?{transcript:att.asr.transcript||null,accuracy:att.asr.accuracy}:null,ua:navigator.userAgent}}
+async function sendReport(){const att=cur&&cur.current;if(!att||!att.me||!att.me.pcm)return;if(!gh.ready()){toast('설정에서 GitHub 동기화를 먼저 연결해 주세요');return}
+  const btn=$('#report-send');btn.disabled=true;btn.textContent='보내는 중…';
+  try{const d=new Date(att.id),hh=[d.getHours(),d.getMinutes(),d.getSeconds()].map(x=>String(x).padStart(2,'0')).join('');
+    const path=`review/${todayStr()}/${String(att.item.id).replace('#','~').replace(/[^A-Za-z0-9_~-]/g,'_')}-${hh}`;
+    await gh.putB64(path+'.wav',u8b64(new Uint8Array(toWav(att.me.pcm))),'review audio '+att.item.id);
+    await gh.putText(path+'.json',JSON.stringify(reportData(att),null,1),null,'review '+att.item.id);
+    $('#report-box').hidden=true;const b=$('#btn-report');b.textContent='검토 요청 보냄 ✓';b.disabled=true;toast('검토 요청을 보냈어요')}
+  catch(e){toast('보내지 못했어요: '+e.message,4000)}finally{btn.disabled=false;btn.textContent='보내기'}}
 function renderHist(att){const el=$('#hist');if(!el)return;const id=String(att.item.id).split('#')[0];const L=(state.tries[id]||[]).filter(x=>x.k!=='chunk');if(L.length<2){el.hidden=true;return}
   const last=L.slice(-6),keys=Object.keys(last[last.length-1].p);
   el.innerHTML=`<div class="hist-h">이 문장 최근 기록</div><div class="hist-o">${last.map(x=>`<b class="num" style="color:${scoreColor(x.o)}">${x.o}</b>`).join(' → ')}</div><div class="hist-p">${keys.map(k=>`${esc(k)} ${last.map(x=>x.p[k]??'—').join('→')}`).join(' · ')}</div>`;el.hidden=false}
@@ -1624,6 +1670,8 @@ function finalizeAttempt(att){
   if(att.azure){const am=azureToBase(att.azure.words,baseTokens(item.text));let ri=0;for(const w of att.azure.words){if(w.err==='Insertion'){extras.push(w.w);continue}const d=map[Math.min(am.get(w)??ri,nBase-1)];ri++;if(d==null)continue;const tk=toks[d];tk.az=(tk.az||[]).concat([w]);const fw=isFuncW(w.w),s=w.err==='Omission'?'missing':w.acc==null?null:w.acc>=(fw?55:80)?'ok':w.acc>=(fw?35:60)?'warn':'bad';if(s){tk.status=worse(tk.status,s);if(s==='missing')tk.notes.unshift('빠뜨렸어요');else if(s!=='ok')tk.notes.unshift(`발음 정확도 ${Math.round(w.acc)}점`)}}}
   else if(att.asr){const A=att.asr;A.status.forEach((s,k)=>{const d=map[k];if(d==null)return;const tk=toks[d];if(s==='missing'){tk.status=worse(tk.status,'missing');tk.notes.unshift('인식 안 됨 — 빠뜨렸거나 발음이 약했어요')}else if(s==='sub'){tk.status=worse(tk.status,'bad');tk.heard=A.heard[k];tk.notes.unshift(`'${A.heard[k]}'로 들렸어요`)}else if(s==='near'){tk.status=worse(tk.status,'warn');tk.heard=A.heard[k];tk.notes.unshift(`'${A.heard[k]}'에 가깝게 들렸어요`)}else if(tk.status==='unknown')tk.status='ok'});extras.push(...A.extras)}
   let azAcc=null,azPron=null;if(att.azure){const v=att.azure.words.filter(w=>w.err!=='Insertion').map(azAdjAcc).filter(x=>x!=null);azAcc=v.length?mean(v):att.azure.acc;azPron=att.azure.pron!=null?clamp(att.azure.pron+(azAcc-(att.azure.acc??azAcc))*0.6,0,100):null}
+  // a take Azure could hardly match to the sentence (cut off, another voice, a mis-tap) is shown but not scored
+  let broken=false;if(att.azure){const aw=att.azure.words.filter(w=>w.err!=='Insertion');const om=aw.filter(w=>w.err==='Omission').length;broken=aw.length>=3&&(om/aw.length>=0.4||(azAcc!=null&&azAcc<30))}
   const wordsScore=att.azure?azAcc:att.asr?att.asr.accuracy:null;
   const parts=[[att.azure?'발음':'단어',wordsScore],['억양',cmp?cmp.into:null],['리듬·연음',cmp?cmp.rhythm:null],['강세',cmp?cmp.stress:null]];if(att.azure&&att.azure.pros!=null)parts.push(['운율',att.azure.pros]);
   let overall=att.azure&&azPron!=null?wavg([[azPron,0.6],[cmp?cmp.into:null,0.25],[cmp?cmp.rhythm:null,0.15]]):wavg([[wordsScore,0.35],[cmp?cmp.into:null,0.3],[cmp?cmp.rhythm:null,0.2],[cmp?cmp.stress:null,0.15]]);
@@ -1640,7 +1688,8 @@ function finalizeAttempt(att){
   else hints.push({c:'info',p:0,t:'선생님 소리나 내 소리가 너무 짧아서 비교하지 못했어요.'});
   hints.sort((a,b)=>b.p-a.p);
   if(!hints.some(h=>h.c!=='info'))hints.unshift({c:'good',p:9,t:cmp?'억양·리듬이 선생님과 잘 맞아요. 한 번 더 들어보고 똑같이 따라 해보세요.':'좋아요. 한 번 더 따라 해보세요.'});
-  att.view={toks,extras,parts,overall,hints:hints.slice(0,5)};saveTake(att);logTry(att);
+  if(broken){overall=null;hints.unshift({c:'bad',p:10,t:'녹음이 문장과 거의 맞지 않아요 (중간에 끊겼거나 다른 소리가 들어갔어요) — 이번 녹음은 점수에 넣지 않았어요. 다시 녹음해 주세요.'})}
+  att.view={toks,extras,parts,overall,hints:hints.slice(0,5),broken};if(!broken){saveTake(att);logTry(att)}
   if(cur){const vals=cur.attempts.map(a=>a.view&&a.view.overall).filter(v=>v!=null);cur.best=vals.length?Math.max(...vals):null}
 }
 function scoreClass(s){return s==null?'none':s>=80?'ok':s>=65?'warn':'bad'}
@@ -1652,6 +1701,7 @@ function renderResult(att){
   $('#rec-msg').textContent=att.cmp?(cur.base?'선생님 구간과 단어별로 맞춰 비교했어요.':'선생님 녹음과 단어별로 맞춰 비교했어요.'):att.te?'비교할 소리가 부족했어요.':'선생님 녹음이 없어 내 소리만 분석했어요.';
   $('#result').hidden=false;drawRing(v.overall);
   $('#subs').innerHTML=v.parts.map(([k,val])=>`<div class="sub"><span>${esc(k)}</span><b>${val==null?'—':Math.round(val)}</b><div class="bar"><i style="width:${val==null?0:clamp(val,0,100)}%;background:${val==null?'transparent':scoreColor(val)}"></i></div></div>`).join('');
+  {const b=$('#btn-report');b.disabled=false;b.textContent='채점이 이상해요 → 검토 요청';$('#report-box').hidden=true}
   renderHist(att);renderChips(att);renderPointChecks(att,cur.base?cur.base.item:cur.item,cur.base?cur.item.text:null,'#pchk','#pchk-list');
   if(cur.sel!=null&&v.toks[cur.sel])showTokenDetail(att,cur.sel);else $('#word-detail').hidden=true;
   renderAsrBox(att);
@@ -2057,13 +2107,13 @@ function renderTakes(){
 }
 async function tSubmit(){const T=tst.cur;if(!T||T.sel<0||!T.takes[T.sel])return;if(tCap){const c=tCap;tCap=null;await c.stop()}stopAllAudio();const k=T.takes[T.sel];T.blob=k.blob;T.me=k.me;$('#t-takes').hidden=true;$('#t-ask').hidden=true;$('#t-msg').textContent='확인 중…';await tCheck(T)}
 async function tCheck(T){
-  const it=state.bank.byId[T.id];$('#t-rec').disabled=true;$('#t-hint-btn').disabled=true;
+  const it=sItem(state.bank.byId[T.id]);$('#t-rec').disabled=true;$('#t-hint-btn').disabled=true;
   T.azure=null;
   if(state.settings.azureKey&&state.settings.azureKey.trim()){$('#t-msg').textContent='정밀 평가 중…';try{T.azure=parseAzure(await azureAssess(T.me.pcm,it.text));if(T.azure&&T.azure.text)T.asr=asrCompare(it.text,[T.azure.text])}catch(e){T.asrErr='정밀 평가 실패: '+e.message}}
   if(!T.asr&&state.settings.asrMode==='device'&&state.settings.asrConsent){$('#t-msg').textContent=asr.ready?'내가 말한 문장 확인 중…':asr.text();
     try{const text=await asr.run(asrInput(T.me));if(tst&&tst.cur===T)T.asr=asrCompare(it.text,[text])}catch(e){T.asrErr=e.message}}
   // the same speaking score as in practice (intonation, rhythm, stress, words) — kept only if the answer is right
-  try{const te=await getTeacher(it);let prof=null;if(te&&te.an&&!te.local&&it.words)prof=te.profile||(te.profile=teacherProfile(te.an,it.words));
+  try{const te=await getTeacher(it);let prof=null;if(te&&te.an&&!te.local&&it.words)prof=te.profile||(te.profile=teacherProfile(te.an,it.words,it.text));
     const att={id:Date.now(),item:it,blob:T.blob,me:T.me,te,cmp:te&&te.an?compareWithTeacher(te.an,T.me,it,te.local?null:prof):null,asr:T.azure?null:(T.asr||null),azure:T.azure||null,noTake:true};
     finalizeAttempt(att);T.att=att;T.score=att.view&&att.view.overall!=null?Math.round(att.view.overall):null}catch(e){T.score=null}
   if(tst&&tst.cur===T)tReveal();
@@ -2288,6 +2338,9 @@ function bind(){
   $('#btn-rec').addEventListener('click',toggleRecord);
   $('#btn-me').addEventListener('click',playMine);
   $('#btn-retry').addEventListener('click',()=>{toggleRecord()});
+  $('#btn-report').addEventListener('click',()=>{const b=$('#report-box');b.hidden=!b.hidden;if(!b.hidden)$('#report-note').focus()});
+  $('#report-cancel').addEventListener('click',()=>{$('#report-box').hidden=true});
+  $('#report-send').addEventListener('click',sendReport);
   $('#btn-next').addEventListener('click',()=>{if(cur&&cur.base)exitChunk();else finishCard()});
   $('#btn-slow').addEventListener('click',playSlow);
   $('#btn-hum').addEventListener('click',playHum);
@@ -2307,6 +2360,7 @@ function bind(){
   window.addEventListener('resize',()=>{if(cur&&cur.current&&$('#graph-wrap').open)drawAligned(cur.current)});
 }
 async function init(){
+  {const v=document.getElementById('app-ver');if(v)v.textContent='v'+APP_VER}
   bind();pruneTakes();backfillExported();
   await loadBank();
   showView('today');
