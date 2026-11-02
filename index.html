@@ -785,7 +785,7 @@ const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
 const median=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[s.length>>1]};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const APP_VER='2.1';
+const APP_VER='2.2';
 function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),ms)}
 function wavg(pairs){let s=0,w=0;for(const [v,k] of pairs)if(v!=null&&!isNaN(v)){s+=v*k;w+=k}return w?s/w:null}
 const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -1067,9 +1067,14 @@ function trackPitch(x,sr){
     if(rms[i]<gate)continue;
     const o=i*hop;
     for(let tau=minLag;tau<=maxLag;tau++){let acf=0,m=0;const lim=frame-tau;for(let j=0;j<lim;j++){const a=x[o+j],b=x[o+j+tau];acf+=a*b;m+=a*a+b*b}nsdf[tau]=m>0?2*acf/m:0}
-    let maxPeak=0;const peaks=[];
-    for(let tau=minLag+1;tau<maxLag;tau++){if(nsdf[tau]>nsdf[tau-1]&&nsdf[tau]>=nsdf[tau+1]&&nsdf[tau]>0){peaks.push(tau);if(nsdf[tau]>maxPeak)maxPeak=nsdf[tau]}}
-    if(maxPeak<0.55)continue;
+    let maxPeak=0,peaks=[];
+    const findPeaks=hi=>{maxPeak=0;peaks=[];for(let tau=minLag+1;tau<hi;tau++){if(nsdf[tau]>nsdf[tau-1]&&nsdf[tau]>=nsdf[tau+1]&&nsdf[tau]>0){peaks.push(tau);if(nsdf[tau]>maxPeak)maxPeak=nsdf[tau]}}};
+    findPeaks(maxLag);
+    // a fast glide (a big rise or fall) smears periodicity over 40 ms: retry with a centred 25 ms window (pitch >= 95 Hz; lower is usually creak)
+    if(maxPeak<0.55&&rms[i]>=gate*1.5){const w2=Math.round(sr*0.025),o2=o+((frame-w2)>>1),hi2=Math.min(maxLag,Math.floor(sr/95));
+      for(let tau=minLag;tau<=maxLag;tau++){if(tau>hi2){nsdf[tau]=0;continue}let acf=0,m=0;const lim=w2-tau;for(let j=0;j<lim;j++){const a=x[o2+j],b=x[o2+j+tau];acf+=a*b;m+=a*a+b*b}nsdf[tau]=m>0?2*acf/m:0}
+      findPeaks(hi2);if(maxPeak<0.6)continue}
+    else if(maxPeak<0.55)continue;
     const cs=[];for(const p of peaks){if(nsdf[p]>=0.6*maxPeak){const y0=nsdf[p-1],y1=nsdf[p],y2=nsdf[p+1],den=y0-2*y1+y2,shift=den!==0?0.5*(y0-y2)/den:0;cs.push({f:sr/(p+shift),v:y1})}}
     let best=null;for(const c of cs){if(c.v>=0.85*maxPeak){best=c;break}}
     // octave check: if half the chosen period is also strongly periodic, the true pitch is the higher one
@@ -1273,16 +1278,17 @@ function compareWithTeacher(te,me,item,prof){
     const myTop=words.filter(w=>!w.func&&w.promM!=null).sort((a,b)=>b.promM-a.promM)[0]||null;
     // judged against how prominent the teacher made the same word (a 2-word chunk has a different baseline than a sentence)
     const refP=w=>w.promT!=null?Math.min(0.8,w.promT):0.8;
+    // (moving the emphasis between two words the teacher both stresses is not a miss)
     const topIn=g=>words.filter(w=>w.g===g&&!w.func&&w.promM!=null).sort((a,b)=>b.promM-a.promM)[0]||null;
-    const misses=stressW.filter(w=>{if(w.promM==null||w.promM>=refP(w)-0.6)return false;const t=topIn(w.g);return (t&&t!==w&&t.promM-w.promM>=0.5)||w.promM<refP(w)-1.3});
-    for(const miss of misses.slice(0,2)){const pv=miss.k>0&&!words[miss.k-1].stressT&&words[miss.k-1].g===miss.g?words[miss.k-1]:null;const other=topIn(miss.g);miss.stressMiss=true;
+    const misses=stressW.filter(w=>{if(w.promM==null||w.promM>=refP(w)-0.6)return false;const t=topIn(w.g);return (t&&t!==w&&!t.stressT&&t.promM-w.promM>=0.5)||w.promM<refP(w)-1.3});
+    for(const miss of misses.slice(0,2)){const pv=miss.k>0&&!words[miss.k-1].stressT&&words[miss.k-1].g===miss.g?words[miss.k-1]:null;const top=topIn(miss.g),other=top&&!top.stressT?top:null;miss.stressMiss=true;
       hints.push({c:'',p:3,t:other&&other!==miss?`선생님이 강조한 단어: '${miss.w}' · 내가 강조한 단어: '${other.w}' → ${pv?`'${pv.w}' 짧고 낮게 ↘, `:''}'${miss.w}' 올리며 길게 ↗`:`'${miss.w}' — 강조가 약해요 → ${pv?`'${pv.w}' 짧고 낮게 ↘, `:''}'${miss.w}' 더 높고 길게 ↗`});
       miss.notes.push({sev:1,t:`선생님은 이 단어를 강조해요 → ${pv?`앞 '${pv.w}'를 낮게 두고 `:''}더 높고 길게`})}
     // the "step": the teacher drops before a stressed word and climbs on it; check I make the same step
     let stepMiss=0;
     for(const S of stressW){const Pw=S.k>0&&words[S.k-1].g===S.g?words[S.k-1]:null;if(!Pw||Pw.stressT||!(Pw.te&&Pw.me&&S.te&&S.me&&Pw.te.voiced>=3&&Pw.me.voiced>=3&&S.te.voiced>=3&&S.me.voiced>=3))continue;
       const stT=S.te.peak-Pw.te.level,stM=S.me.peak-Pw.me.level;
-      if(stT>=3&&stM<stT-3&&stM<stT*0.5){stepMiss++;S.stepMiss=true;S.notes.push({sev:1,t:`앞 '${Pw.w}'에서 내려갔다가 여기서 올라가야 해요 — 선생님은 크게 올라가는데 나는 ${stM<1?'거의 그대로예요':'조금만 올라가요'}`});hints.push({c:'',p:3,t:`'${Pw.w} ${S.w}' — 계단이 작아요: '${Pw.w}' 낮고 짧게 ↘ → '${S.w}' 높게 올리며 길게 ↗`})}}
+      if(stT>=4&&stM<stT-3&&stM<stT*0.5){stepMiss++;S.stepMiss=true;S.notes.push({sev:1,t:`앞 '${Pw.w}'에서 내려갔다가 여기서 올라가야 해요 — 선생님은 크게 올라가는데 나는 ${stM<1?'거의 그대로예요':'조금만 올라가요'}`});hints.push({c:'',p:3,t:`'${Pw.w} ${S.w}' — 계단이 작아요: '${Pw.w}' 낮고 짧게 ↘ → '${S.w}' 높게 올리며 길게 ↗`})}}
     const sc=stressW.filter(w=>w.promM!=null).map(w=>{let v=w.promM>=refP(w)-0.1?100:w.stressMiss?40:75;if(w.stepMiss)v=Math.min(v,55);return v});res.stress=sc.length?Math.round(mean(sc)):null;
     // a weak word said too strongly (e.g. "SOME cash" instead of "some CASH")
     // (sentence-wide prominence here: inside a short phrase a small word can look big)
@@ -1293,7 +1299,7 @@ function compareWithTeacher(te,me,item,prof){
     if(loud.length){const w=loud[0],nx=words[w.k+1];hints.push({c:'',p:2,t:`'${w.w}' — 너무 세게 말했어요 → 짧고 낮게${nx&&nx.stressT?`, 다음 '${nx.w}'를 강조`:''}`});if(res.stress!=null)res.stress=Math.max(0,res.stress-15*loud.length)}
     // pitch shape / level / length per word
     // my pitch scaled to the teacher's range (a narrower or wider voice is not an intonation error by itself)
-    const kR=(rT>0.5&&rM>0.5)?clamp(rT/rM,0.6,1.7):1;
+    const kR=(rT>0.5&&rM>0.5)?clamp(rT/rM,0.6,1.7):1;res.kR=kR;
     // phrase ends (before , . ? !) carry the boundary tone; small function words elsewhere are not judged on shape
     const rawTok=spokenText(item.text).trim().split(/\s+/).filter(t=>/[A-Za-z0-9]/.test(t));const endAt=rawTok.length===words.length?rawTok.map((t,i)=>/[.,!?;:…—–~]["'’”)]*$/.test(t)||i===rawTok.length-1):words.map((w,i)=>i===words.length-1);
     words.forEach((w,i)=>{w.phraseEnd=!!endAt[i];const mv=w.te&&w.te.voiced>=3?Math.max(Math.abs(w.te.slope),w.te.peak-Math.max(w.te.startP,w.te.endP)):0;w.judged=w.stressT||w.phraseEnd||(!w.func&&mv>=3)});
@@ -1311,13 +1317,15 @@ function compareWithTeacher(te,me,item,prof){
       const dl=meS.level-w.te.level;
       // only a clear swap (teacher high where I am low, or the reverse) on a word that matters; ~an octave = tracking error
       const swap=(w.te.level>=2.5&&meS.level<=-0.5)||(w.te.level<=-2.5&&meS.level>=0.5);
-      if(w.judged&&!w.func&&Math.abs(dl)<9&&(swap&&Math.abs(dl)>=3.5||Math.abs(dl)>=6)){w.notes.push({sev:1,t:dl<0?'선생님보다 많이 낮아요 → 더 높게':'선생님보다 많이 높아요 → 조금 낮게'});if(!shapeHints.find(h=>h.w===w))shapeHints.push({w,sev:1,level:dl})}
+      if(w.judged&&!w.func&&Math.abs(dl)<9&&(swap&&Math.abs(dl)>=3.5||Math.abs(dl)>=6)){const contRise=dl<0&&w.phraseEnd&&w.te.voiced>=5&&(sT==='rise'||(w.te.lift||0)>=4);
+        const t=contRise?'선생님은 이 끝을 올려요 (말이 이어지는 느낌) → 내리지 말고 끝을 올려 주세요':dl<0?'선생님보다 많이 낮아요 → 더 높게':'선생님보다 많이 높아요 → 조금 낮게';
+        w.lvNote=t;w.notes.push({sev:1,t});if(!shapeHints.find(h=>h.w===w))shapeHints.push({w,sev:1,level:dl,t})}
       const relT=w.te.dur/Math.max(0.3,te.dur),relM=w.me.dur/Math.max(0.3,me.dur);w.durRatio=relM/Math.max(1e-3,relT);
       if(!w.func&&w.durRatio<0.6&&(w.stressT||relT>0.08))w.notes.push({sev:1,t:'너무 짧아요 → 조금 더 길게 (강세)'});
       else if(!w.func&&w.durRatio>1.9&&w.me.dur>0.25)w.notes.push({sev:1,t:'너무 길게 끌었어요'});
     }
     shapeHints.sort((a,b)=>(b.sev-a.sev)||((b.w.stressT?1:0)-(a.w.stressT?1:0)));
-    for(const h of shapeHints.slice(0,2)){if(h.sT)hints.push({c:h.sev>1?'bad':'',p:h.sev>1?4:2,t:`'${h.w.w}' — 선생님 ${ARROW[h.sT]} ${SHAPE_KO[h.sT]}, 나 ${ARROW[h.sM]} ${SHAPE_KO[h.sM]} → ${SHAPE_FIX[h.sT]}`});else hints.push({c:'',p:2,t:`'${h.w.w}' — ${h.level<0?'선생님보다 많이 낮아요 → 더 높게':'선생님보다 많이 높아요 → 조금 낮게'}`})}
+    for(const h of shapeHints.slice(0,2)){if(h.sT)hints.push({c:h.sev>1?'bad':'',p:h.sev>1?4:2,t:`'${h.w.w}' — 선생님 ${ARROW[h.sT]} ${SHAPE_KO[h.sT]}, 나 ${ARROW[h.sM]} ${SHAPE_KO[h.sM]} → ${SHAPE_FIX[h.sT]}`});else hints.push({c:'',p:2,t:`'${h.w.w}' — ${h.t}`})}
     // pauses where the teacher links words (연음), and pauses the teacher makes that I skipped
     const gapAfter=k=>k+1<words.length?Math.max(0,(words[k+1].ta-words[k].tb-1)/100):0;
     const pauseFlags=[];
@@ -2039,8 +2047,12 @@ function pointChecks(att,list){const ws=att.cmp?att.cmp.words:[];
     if(!sub.length||!sub.every(w=>w.me))return{s:'',t:'비교할 소리가 부족해요'};
     if(x.k==='linking'){const me=att.me;let run=0,best=0;for(let f=sub[0].ua;f<=sub[sub.length-1].ub;f++){if(me.rms[f]<=me.gate*0.6){run++;if(run>best)best=run}else run=0}const g=best/100;
       return g>=0.18?{s:'bad',t:`중간에 ${g.toFixed(1)}초 끊겼어요 → 한 덩어리로`}:g>=0.12?{s:'warn',t:'살짝 끊겼어요 → 더 붙여서'}:{s:'ok',t:'끊지 않고 이어 말했어요'}}
-    if(x.k==='intonation'){const sev=Math.max(0,...sub.map(w=>w.shapeSev||0));const lv=sub.find(w=>w.te&&w.me&&w.te.voiced>=3&&w.me.voiced>=3&&Math.abs(w.me.level-w.te.level)>=3.5&&Math.abs(w.me.level-w.te.level)<9);
-      if(sev>=2)return{s:'bad',t:'높낮이 방향이 반대예요 → 선생님 멜로디 다시 듣기'};if(sev||lv)return{s:'warn',t:sev?'높낮이 움직임이 약해요':(lv.me.level<lv.te.level?`'${lv.w}'가 낮아요`:`'${lv.w}'가 높아요`)};return{s:'ok',t:'높낮이가 선생님과 비슷해요'}}
+    if(x.k==='intonation'){const sev=Math.max(0,...sub.map(w=>w.shapeSev||0));const lv=sub.find(w=>w.lvNote);
+      const me=att.me,te=att.te&&att.te.an;const longest=(an,a,b)=>{let run=0,best=0;for(let f=a;f<=b;f++){if(an.rms[f]<=an.gate*0.6){run++;if(run>best)best=run}else run=0}return best};
+      const brM=longest(me,sub[0].ua,sub[sub.length-1].ub),brT=te?longest(te,sub[0].ta,sub[sub.length-1].tb):0;
+      if(sev>=2)return{s:'bad',t:'높낮이 방향이 반대예요 → 선생님 멜로디 다시 듣기'};
+      if(brM>=18&&brT<10)return{s:'warn',t:`중간에 ${(brM/100).toFixed(1)}초 끊겼어요 → 한 흐름으로`};
+      if(sev||lv)return{s:'warn',t:sev?'높낮이 움직임이 약해요':`'${lv.w}' — ${lv.lvNote}`};return{s:'ok',t:'높낮이 흐름이 선생님과 비슷해요'}}
     if(x.k==='stress'){const loud=sub.filter(w=>w.func&&!w.stressT&&w.promM!=null&&w.promM>=0.9&&(w.promT==null||w.promT<=0.2));const weak=sub.filter(w=>(w.stressT||(w.promT!=null&&w.promT>=0.6))&&w.promM!=null&&w.promT!=null&&w.promM<Math.min(0.8,w.promT)-0.8);const step=sub.find(w=>w.stepMiss);
       if(step)return{s:'bad',t:`'${step.w}' 앞에서 낮췄다가 올리는 계단이 작아요`};if(weak.length)return{s:'warn',t:`'${weak[0].w}'를 더 세게(높게·길게)`};if(loud.length)return{s:'warn',t:`'${loud[0].w}'는 약하게`};return{s:'ok',t:'강세 위치가 선생님과 비슷해요'}}
     if(x.k==='rhythm'){const tT=att.te&&att.te.an?att.te.an.dur:0,tM=att.me.dur;const dT=sub.reduce((a,w)=>a+(w.te?w.te.dur:0),0),dM=sub.reduce((a,w)=>a+w.me.dur,0);if(!(tT>0&&tM>0&&dT>0))return{s:'',t:'비교할 소리가 부족해요'};
