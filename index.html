@@ -752,7 +752,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="row"><button class="btn small" id="btn-reset" style="color:var(--bad)">모든 기록 삭제</button><span class="small muted" id="reset-confirm" hidden>정말 지우려면 5초 안에 한 번 더 누르세요.</span></div>
       </div>
     </details>
-    <p class="small muted">베어쌤 복습 v1.8.2 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
+    <p class="small muted">베어쌤 복습 v1.9 · 홈 화면에 추가하면 앱처럼 쓸 수 있어요.</p>
   </section>
 </main>
 
@@ -1204,11 +1204,14 @@ function makeHum(an){
 
 // my pitch movement vs the teacher's on one word — tolerant near the category edges, so a 2.0 vs 1.8 slope is not a "miss".
 // 0 = same movement, 1 = movement missing (flat), 2 = the opposite movement
-function shapeMiss(T,M,stressed){const sT=T.shape,hatM=M.peak-Math.max(M.startP,M.endP);
-  if(sT==='rise'){if(M.slope<=-1.5)return 2;return M.slope<0.8&&M.slope<T.slope-2?1:0}
-  if(sT==='fall'){if(M.slope>=1.5)return 2;return M.slope>-0.8&&M.slope>T.slope+2?1:0}
-  if(sT==='hat')return hatM<1&&stressed?1:0;
+function shapeMiss(T,M,stressed){const sT=T.shape,hatM=M.peak-Math.max(M.startP,M.endP),hatT=T.peak-Math.max(T.startP,T.endP);
+  // natural speakers vary a lot on small moves: the bar grows with the teacher's own movement
+  if(sT==='rise'){const s=T.slope;if(M.slope<=-Math.max(1.5,0.6*s))return 2;return s>=3.5&&M.slope<Math.max(0.5,0.25*s)?1:0}
+  if(sT==='fall'){const s=-T.slope;if(M.slope>=Math.max(1.5,0.6*s))return 2;return s>=3.5&&M.slope>-Math.max(0.5,0.25*s)?1:0}
+  if(sT==='hat')return stressed&&hatT>=3&&hatM<1?1:0;
   return 0}
+function scaleF(f,k){if(!f||k===1||f.voiced<3)return f;const g=Object.assign({},f,{startP:f.startP*k,endP:f.endP*k,peak:f.peak*k,level:f.level*k,slope:f.slope*k});
+  g.shape=(f.voiced>=6&&g.peak-Math.max(g.startP,g.endP)>=2.2&&g.peak-Math.min(g.startP,g.endP)>=3)?'hat':g.slope>=2?'rise':g.slope<=-2?'fall':'flat';return g}
 // pitch features from a list of semitone values (same rules as segFeat)
 function supFeat(v){if(v.length<5)return null;const s=[...v].sort((a,b)=>a-b),k=Math.max(1,Math.floor(v.length*0.3));const startP=mean(v.slice(0,k)),endP=mean(v.slice(-k)),peak=s[Math.min(s.length-1,Math.floor(s.length*0.9))],slope=endP-startP;
   return{startP,endP,peak,slope,level:s[s.length>>1],shape:(v.length>=6&&peak-Math.max(startP,endP)>=2.2&&peak-Math.min(startP,endP)>=3)?'hat':slope>=2?'rise':slope<=-2?'fall':'flat'}}
@@ -1250,24 +1253,31 @@ function compareWithTeacher(te,me,item,prof){
       if(stT>=3&&stM<stT-3&&stM<stT*0.5){stepMiss++;S.stepMiss=true;S.notes.push({sev:1,t:`앞 '${Pw.w}'에서 내려갔다가 여기서 올라가야 해요 — 선생님은 크게 올라가는데 나는 ${stM<1?'거의 그대로예요':'조금만 올라가요'}`});hints.push({c:'',p:3,t:`'${Pw.w} ${S.w}' — 계단이 작아요: '${Pw.w}' 낮고 짧게 ↘ → '${S.w}' 높게 올리며 길게 ↗`})}}
     const sc=stressW.filter(w=>w.promM!=null).map(w=>{let v=w.promM>=refP(w)-0.1?100:w.promM>=refP(w)-0.7?70:35;if(w.stepMiss)v=Math.min(v,55);return v});res.stress=sc.length?Math.round(mean(sc)):null;
     // a weak word said too strongly (e.g. "SOME cash" instead of "some CASH")
-    const loud=words.filter(w=>w.func&&!w.stressT&&w.promM!=null&&w.promM>=0.9&&(w.promT==null||w.promT<=0.2));
+    const topStressM=Math.max(-9,...stressW.filter(w=>w.promM!=null).map(w=>w.promM));
+    const loud=words.filter(w=>w.func&&!w.stressT&&w.promM!=null&&w.promM>=1.2&&w.promM>topStressM&&(w.promT==null||w.promT<=0.2));
     for(const w of loud)w.notes.push({sev:1,t:"너무 세게 말했어요 → 짧고 낮게 (모음은 '어'처럼)"});
     if(loud.length){const w=loud[0],nx=words[w.k+1];hints.push({c:'',p:2,t:`'${w.w}' — 너무 세게 말했어요 → 짧고 낮게${nx&&nx.stressT?`, 다음 '${nx.w}'를 강조`:''}`});if(res.stress!=null)res.stress=Math.max(0,res.stress-15*loud.length)}
     // pitch shape / level / length per word
+    // my pitch scaled to the teacher's range (a narrower or wider voice is not an intonation error by itself)
+    const kR=(rT>0.5&&rM>0.5)?clamp(rT/rM,0.6,1.7):1;
+    // phrase ends (before , . ? !) carry the boundary tone; small function words elsewhere are not judged on shape
+    const rawTok=String(item.text||'').trim().split(/\s+/).filter(t=>/[A-Za-z0-9]/.test(t));const endAt=rawTok.length===words.length?rawTok.map((t,i)=>/[.,!?;:…—–~]["'’”)]*$/.test(t)||i===rawTok.length-1):words.map((w,i)=>i===words.length-1);
+    words.forEach((w,i)=>{w.phraseEnd=!!endAt[i];const mv=w.te&&w.te.voiced>=3?Math.max(Math.abs(w.te.slope),w.te.peak-Math.max(w.te.startP,w.te.endP)):0;w.judged=w.stressT||w.phraseEnd||(!w.func&&mv>=3)});
     const shapeHints=[];
     for(const w of words){
       if(!(w.te&&w.me&&w.te.voiced>=3&&w.me.voiced>=3))continue;
-      const sT=w.te.shape,sM=w.me.shape;
+      const meS=scaleF(w.me,kR);const sT=w.te.shape,sM=meS.shape;
       // judge the movement twice — on the whole word, and only on frames where both voices have pitch — and flag
       // only if both agree, so a few unvoiced frames at a word's edge can't turn "the same" into "different"
       const ci=[];for(let i=w.ta-tA;i<=w.tb-tA;i++)if(!isNaN(teLine[i])&&!isNaN(meLine[i]))ci.push(i);
-      const cT=supFeat(ci.map(i=>teLine[i])),cM=supFeat(ci.map(i=>meLine[i]));
-      const judge=st=>{if(!SHAPE_FIX[sT])return 0;const a=shapeMiss(w.te,w.me,st);if(!a||!cT||!cM)return a;return cT.shape===sT?Math.min(a,shapeMiss(cT,cM,st)):0};
-      w.shapeSev=judge(true);const sev=judge(w.stressT);
+      const cT=supFeat(ci.map(i=>teLine[i])),cM=supFeat(ci.map(i=>meLine[i]*kR));
+      const judge=st=>{if(!SHAPE_FIX[sT])return 0;const a=shapeMiss(w.te,meS,st);if(!a||!cT||!cM)return a;return cT.shape===sT?Math.min(a,shapeMiss(cT,cM,st)):0};
+      w.shapeSev=w.judged?judge(true):0;const sev=w.judged?judge(w.stressT):0;
       if(sev){w.notes.push({sev,t:`선생님 ${ARROW[sT]} ${SHAPE_KO[sT]}, 나 ${ARROW[sM]} ${SHAPE_KO[sM]} → ${SHAPE_FIX[sT]}`});shapeHints.push({w,sev,sT,sM})}
-      const dl=w.me.level-w.te.level;
-      // a gap of about an octave is almost always a pitch-tracking error, not a real difference
-      if(Math.abs(dl)>=3.5&&Math.abs(dl)<9&&Math.abs(w.te.level)>=1.5){w.notes.push({sev:1,t:dl<0?'선생님보다 많이 낮아요 → 더 높게':'선생님보다 많이 높아요 → 조금 낮게'});if(!shapeHints.find(h=>h.w===w))shapeHints.push({w,sev:1,level:dl})}
+      const dl=meS.level-w.te.level;
+      // only a clear swap (teacher high where I am low, or the reverse) on a word that matters; ~an octave = tracking error
+      const swap=(w.te.level>=2.5&&meS.level<=-0.5)||(w.te.level<=-2.5&&meS.level>=0.5);
+      if(w.judged&&!w.func&&Math.abs(dl)<9&&(swap&&Math.abs(dl)>=3.5||Math.abs(dl)>=6)){w.notes.push({sev:1,t:dl<0?'선생님보다 많이 낮아요 → 더 높게':'선생님보다 많이 높아요 → 조금 낮게'});if(!shapeHints.find(h=>h.w===w))shapeHints.push({w,sev:1,level:dl})}
       const relT=w.te.dur/Math.max(0.3,te.dur),relM=w.me.dur/Math.max(0.3,me.dur);w.durRatio=relM/Math.max(1e-3,relT);
       if(!w.func&&w.durRatio<0.6&&(w.stressT||relT>0.08))w.notes.push({sev:1,t:'너무 짧아요 → 조금 더 길게 (강세)'});
       else if(!w.func&&w.durRatio>1.9&&w.me.dur>0.25)w.notes.push({sev:1,t:'너무 길게 끌었어요'});
@@ -1279,7 +1289,7 @@ function compareWithTeacher(te,me,item,prof){
     const pauseFlags=[];
     const teSilentAt=(a,b)=>{const x=al.inv[clamp(a-uA,0,nU-1)]+tA,y=al.inv[clamp(b-uA,0,nU-1)]+tA;let c=0;for(let q=x;q<=y;q++)if(te.rms[q]<=te.gate*0.6)c++;return c>=Math.max(8,(b-a+1)*0.4)};
     for(const run of me.pauses){if(run.a<uA||run.b>uB)continue;if(teSilentAt(run.a,run.b))continue;const len=(run.b-run.a+1)/100;const j=clamp(Math.round((run.a+run.b)/2)-uA,0,nU-1);const ti=al.inv[j]+tA;let k=-1;for(let q=0;q<words.length;q++)if(words[q].ta<=ti)k=q;if(k<0)continue;const w=words[k];const nearEnd=ti>w.tb-Math.max(3,(w.tb-w.ta)*0.25);
-      if(nearEnd){if(k+1<words.length&&gapAfter(k)<0.1&&len>=0.2){words[k+1].notes.push({sev:1,t:`앞 단어와 ${len.toFixed(1)}초 끊겼어요 → 이어서 (연음)`});pauseFlags.push({k,len})}}
+      if(nearEnd){if(k+1<words.length&&gapAfter(k)<0.1&&len>=0.2&&!w.phraseEnd){words[k+1].notes.push({sev:1,t:`앞 단어와 ${len.toFixed(1)}초 끊겼어요 → 이어서 (연음)`});pauseFlags.push({k,len})}}
       else if(len>=0.3){w.notes.push({sev:1,t:`단어 중간에서 ${len.toFixed(1)}초 끊겼어요 → 한 번에`});pauseFlags.push({k,len,mid:true})}}
     pauseFlags.sort((a,b)=>b.len-a.len);
     for(const f of pauseFlags.slice(0,2)){const w=words[f.k];hints.push({c:'',p:2,t:f.mid?`'${w.w}' 중간에서 ${f.len.toFixed(1)}초 끊겼어요 → 한 번에 이어서`:`'${w.w} ${words[f.k+1].w}' 사이에서 ${f.len.toFixed(1)}초 끊겼어요 → 선생님처럼 이어서 (연음)`})}
@@ -1289,14 +1299,14 @@ function compareWithTeacher(te,me,item,prof){
       const ga=words[k].tb+1,gb=words[k+1].ta-1;let silT=0;for(let q=ga;q<=gb;q++)if(te.rms[q]<=te.gate*0.6)silT++;if(silT<15)continue;
       // my frames aligned to that gap, with a margin (alignment inside silence is loose)
       const ua=Math.max(uA,al.lo[clamp(ga-tA,0,nT-1)]+uA-5),ub=Math.min(uB,al.hi[clamp(gb-tA,0,nT-1)]+uA+5);let sil=0;for(let q=ua;q<=ub;q++)if(me.rms[q]<=me.gate*0.6)sil++;
-      if(sil<Math.max(6,silT*0.35)){const g=silT/100;missed.push({k,g});words[k].notes.push({sev:1,t:`이 단어 뒤에서 살짝 쉬어 주세요 (선생님 ${g.toFixed(1)}초)`})}}
+      if(sil<Math.max(6,silT*0.35)){const g=silT/100;missed.push({k,g});words[k].notes.push({sev:silT>=35?1:0,t:`이 단어 뒤에서 살짝 쉬어 주세요 (선생님 ${g.toFixed(1)}초)`})}}
     if(missed.length)hints.push({c:'',p:1,t:`'${words[missed[0].k].w}' 뒤에서 살짝 쉬어 주세요 (선생님은 ${missed[0].g.toFixed(1)}초 쉼)`});
     // the word whose sound differs most from the teacher's (a "listen and compare" pointer, not a verdict)
     const costs=[];for(let i=0;i<nT;i++)if(al.cost[i]>0)costs.push(al.cost[i]);const medC=costs.length?median(costs):0;
     if(medC>0){const ranked=words.filter(w=>!w.func&&(w.tb-w.ta)>=6).map(w=>({w,ratio:w.cost/medC})).sort((a,b)=>b.ratio-a.ratio);if(ranked.length&&ranked[0].ratio>=1.6){const w=ranked[0].w;w.soundDiff=true;w.notes.push({sev:0,t:'소리가 선생님과 가장 달라요 → ▶ 비교로 들어보세요'});hints.push({c:'',p:1,t:`'${w.w}' — 소리가 선생님과 가장 달라요 → 단어를 눌러 ▶ 비교로 들어보세요`})}}
     // scores
     const comp=words.filter(w=>w.te&&w.me&&w.te.voiced>=3&&w.me.voiced>=3);let shapeS=null,levelS=null;
-    if(comp.length){shapeS=mean(comp.map(w=>{const a=w.te.shape,m=w.shapeSev||0;if(a==='flat')return w.me.shape==='flat'?1:0.75;if(a==='hat')return m?0.6:1;return m===2?0:m===1?0.4:1}))*100;levelS=mean(comp.map(w=>Math.max(0,1-Math.abs(w.me.level-w.te.level)/7)))*100}
+    if(comp.length){const cj=comp.filter(w=>w.judged);shapeS=mean((cj.length?cj:comp).map(w=>{const a=w.te.shape,m=w.shapeSev||0;if(a==='flat')return scaleF(w.me,kR).shape==='flat'||Math.abs(scaleF(w.me,kR).slope)<3?1:0.75;if(a==='hat')return m?0.6:1;return m===2?0:m===1?0.4:1}))*100;levelS=mean(comp.map(w=>Math.max(0,1-Math.abs(scaleF(w.me,kR).level-w.te.level)/7)))*100}
     const corrS=r==null?null:clamp((r+1)/2*100,0,100);
     let into=wavg([[corrS,0.35],[shapeS,0.35],[levelS,0.3]]);if(into!=null&&rangeRatio<0.55)into-=(0.55-rangeRatio)*40;
     // each flagged word costs points directly, so one wrong rise/fall can't hide behind an otherwise similar contour
@@ -1581,13 +1591,16 @@ async function takeDays(){const m={};for(const k of await idb.keys('take:')){con
 async function pruneTakes(){try{const lim=addDays(todayStr(),-14);for(const k of await idb.keys('take:'))if(k.slice(5,15)<lim)await idb.del(k)}catch(e){}}
 // a compact record of every scored take (overall, parts, weakest words) so progress on one sentence can be reviewed
 function logTry(att){try{const id=att.item&&att.item.id;if(!id||!att.view||att.view.overall==null)return;const base=String(id).split('#')[0];const v=att.view;
-  const weak=att.azure?att.azure.words.filter(w=>w.acc!=null&&w.acc<80).sort((a,b)=>a.acc-b.acc).slice(0,3).map(w=>{const lp=(w.phonemes||[]).filter(p=>p.acc!=null).sort((a,b)=>a.acc-b.acc)[0];return `${w.w} ${Math.round(w.acc)}${lp?' /'+lp.p+'/ '+Math.round(lp.acc):''}`}):[];
+  const weak=att.azure?att.azure.words.filter(w=>w.acc!=null&&w.acc<(isFuncW(w.w)?55:80)).sort((a,b)=>a.acc-b.acc).slice(0,3).map(w=>{const lp=(w.phonemes||[]).filter(p=>p.acc!=null).sort((a,b)=>a.acc-b.acc)[0];return `${w.w} ${Math.round(w.acc)}${lp?' /'+lp.p+'/ '+Math.round(lp.acc):''}`}):[];
   const flags=v.toks.filter(t=>t.ps==='bad'||t.ps==='warn').map(t=>t.text).slice(0,4);
   const rec={t:new Date(att.id).toISOString(),a:att.id,o:Math.round(v.overall),p:Object.fromEntries(v.parts.filter(x=>x[1]!=null).map(x=>[x[0],Math.round(x[1])])),w:weak,f:flags,k:String(id).includes('#')?'chunk':att.noTake?'test':'practice'};
   const L=(state.tries[base]||[]).filter(x=>x.a!==att.id);L.push(rec);state.tries[base]=L.slice(-10);store.set(LS.tries,state.tries)}catch(e){}}
 function renderHist(att){const el=$('#hist');if(!el)return;const id=String(att.item.id).split('#')[0];const L=(state.tries[id]||[]).filter(x=>x.k!=='chunk');if(L.length<2){el.hidden=true;return}
   const last=L.slice(-6),keys=Object.keys(last[last.length-1].p);
   el.innerHTML=`<div class="hist-h">이 문장 최근 기록</div><div class="hist-o">${last.map(x=>`<b class="num" style="color:${scoreColor(x.o)}">${x.o}</b>`).join(' → ')}</div><div class="hist-p">${keys.map(k=>`${esc(k)} ${last.map(x=>x.p[k]??'—').join('→')}`).join(' · ')}</div>`;el.hidden=false}
+const FUNC_CX=new Set("i'm i've i'll i'd you're you've you'll you'd he's she's it's we're we've we'll they're they've they'll that's there's what's gonna wanna gotta".split(' '));
+const isFuncW=w=>{const n=normWord(w);return FUNC.has(n)||FUNC_CX.has(n)};
+function azAdjAcc(w){return w.err==='Omission'?0:w.acc==null?null:isFuncW(w.w)?Math.max(w.acc,75):w.acc}
 // Azure word -> index of the sentence's base token, matched by spelling (apostrophes ignored); handles "you" + "'ll" vs "you'll"
 function azureToBase(words,base){const key=t=>String(t||'').toLowerCase().replace(/[’‘`']/g,'').replace(/[^a-z0-9]/g,'');const out=new Map();const az=words.filter(w=>w.err!=='Insertion');
   // the sentence as expanded pieces (you'll -> you + will), each remembering its word
@@ -1608,11 +1621,12 @@ function finalizeAttempt(att){
   const rank={unknown:0,ok:1,warn:2,bad:3,missing:4};const worse=(a,b)=>rank[b]>rank[a]?b:a;
   if(cmp&&cmp.words.length){const wb=wordToBase(cmp.words,item.text),okMap=cmp.words.length===nBase;cmp.words.forEach((w,k)=>{const d=wb?map[wb[k]]:okMap?map[k]:Math.min(k,disp.length-1);if(d==null)return;const tk=toks[d];tk.ws.push(w);const sev=w.notes.reduce((m,n)=>Math.max(m,n.sev),0);tk.status=worse(tk.status,sev>=2?'bad':sev===1?'warn':(w.te&&w.me)?'ok':'unknown');tk.ps=worse(tk.ps||'unknown',sev>=2?'bad':sev===1?'warn':'unknown');for(const n of w.notes)tk.notes.push(n.t)})}
   const extras=[];
-  if(att.azure){const am=azureToBase(att.azure.words,baseTokens(item.text));let ri=0;for(const w of att.azure.words){if(w.err==='Insertion'){extras.push(w.w);continue}const d=map[Math.min(am.get(w)??ri,nBase-1)];ri++;if(d==null)continue;const tk=toks[d];tk.az=(tk.az||[]).concat([w]);const s=w.err==='Omission'?'missing':w.acc==null?null:w.acc>=80?'ok':w.acc>=60?'warn':'bad';if(s){tk.status=worse(tk.status,s);if(s==='missing')tk.notes.unshift('빠뜨렸어요');else if(s!=='ok')tk.notes.unshift(`발음 정확도 ${Math.round(w.acc)}점`)}}}
+  if(att.azure){const am=azureToBase(att.azure.words,baseTokens(item.text));let ri=0;for(const w of att.azure.words){if(w.err==='Insertion'){extras.push(w.w);continue}const d=map[Math.min(am.get(w)??ri,nBase-1)];ri++;if(d==null)continue;const tk=toks[d];tk.az=(tk.az||[]).concat([w]);const fw=isFuncW(w.w),s=w.err==='Omission'?'missing':w.acc==null?null:w.acc>=(fw?55:80)?'ok':w.acc>=(fw?35:60)?'warn':'bad';if(s){tk.status=worse(tk.status,s);if(s==='missing')tk.notes.unshift('빠뜨렸어요');else if(s!=='ok')tk.notes.unshift(`발음 정확도 ${Math.round(w.acc)}점`)}}}
   else if(att.asr){const A=att.asr;A.status.forEach((s,k)=>{const d=map[k];if(d==null)return;const tk=toks[d];if(s==='missing'){tk.status=worse(tk.status,'missing');tk.notes.unshift('인식 안 됨 — 빠뜨렸거나 발음이 약했어요')}else if(s==='sub'){tk.status=worse(tk.status,'bad');tk.heard=A.heard[k];tk.notes.unshift(`'${A.heard[k]}'로 들렸어요`)}else if(s==='near'){tk.status=worse(tk.status,'warn');tk.heard=A.heard[k];tk.notes.unshift(`'${A.heard[k]}'에 가깝게 들렸어요`)}else if(tk.status==='unknown')tk.status='ok'});extras.push(...A.extras)}
-  const wordsScore=att.azure?att.azure.acc:att.asr?att.asr.accuracy:null;
+  let azAcc=null,azPron=null;if(att.azure){const v=att.azure.words.filter(w=>w.err!=='Insertion').map(azAdjAcc).filter(x=>x!=null);azAcc=v.length?mean(v):att.azure.acc;azPron=att.azure.pron!=null?clamp(att.azure.pron+(azAcc-(att.azure.acc??azAcc))*0.6,0,100):null}
+  const wordsScore=att.azure?azAcc:att.asr?att.asr.accuracy:null;
   const parts=[[att.azure?'발음':'단어',wordsScore],['억양',cmp?cmp.into:null],['리듬·연음',cmp?cmp.rhythm:null],['강세',cmp?cmp.stress:null]];if(att.azure&&att.azure.pros!=null)parts.push(['운율',att.azure.pros]);
-  let overall=att.azure&&att.azure.pron!=null?wavg([[att.azure.pron,0.6],[cmp?cmp.into:null,0.25],[cmp?cmp.rhythm:null,0.15]]):wavg([[wordsScore,0.35],[cmp?cmp.into:null,0.3],[cmp?cmp.rhythm:null,0.2],[cmp?cmp.stress:null,0.15]]);
+  let overall=att.azure&&azPron!=null?wavg([[azPron,0.6],[cmp?cmp.into:null,0.25],[cmp?cmp.rhythm:null,0.15]]):wavg([[wordsScore,0.35],[cmp?cmp.into:null,0.3],[cmp?cmp.rhythm:null,0.2],[cmp?cmp.stress:null,0.15]]);
   // flagged words pull the score down (and therefore bring the sentence back sooner)
   if(overall!=null){const nBad=toks.filter(t=>t.ps==='bad'||t.status==='missing').length,nWarn=toks.filter(t=>t.ps==='warn'&&t.status!=='missing').length;
     overall-=4*nBad+2*nWarn;if(nBad+nWarn>=1)overall=Math.min(overall,89);if(nBad>=1)overall=Math.min(overall,84);if(nBad+nWarn>=3)overall=Math.min(overall,79);overall=Math.max(0,overall)}
@@ -1620,7 +1634,7 @@ function finalizeAttempt(att){
   overall=overall==null?null:Math.round(overall);
   const hints=[];const ref=baseTokens(item.text);
   if(att.asr&&!att.azure){let m=0,s=0;att.asr.status.forEach((st,k)=>{if(st==='missing'&&m<2){hints.push({c:'bad',p:6,t:`'${ref[k]}' — 인식 안 됨 (빠뜨렸거나 발음이 약했어요)`});m++}else if(st==='sub'&&s<2){hints.push({c:'bad',p:5,t:`'${ref[k]}' → '${att.asr.heard[k]}'로 들렸어요`});s++}});if(att.asr.extras.length)hints.push({c:'',p:1,t:`문장에 없는 말: ${att.asr.extras.slice(0,3).map(w=>"'"+w+"'").join(', ')}`})}
-  if(att.azure){const bad=att.azure.words.filter(w=>w.err==='Mispronunciation'||(w.acc!=null&&w.acc<60)).sort((a,b)=>(a.acc??100)-(b.acc??100)).slice(0,3);for(const w of bad){const low=(w.phonemes||[]).filter(p=>p.acc!=null&&p.acc<60).sort((a,b)=>a.acc-b.acc);const ph=low.map(p=>p.p);const tip=low.length?phTip(low[0].p):'';hints.push({c:'bad',p:5,t:`'${w.w}' 발음 ${w.acc!=null?Math.round(w.acc)+'점':''}${ph.length?' — 특히 /'+ph.join(' ')+'/':''}${tip?` → ${tip}`:''}`})}for(const w of att.azure.words.filter(w=>w.err==='Omission').slice(0,2))hints.push({c:'bad',p:6,t:`'${w.w}'를 빠뜨렸어요`})}
+  if(att.azure){const bad=att.azure.words.filter(w=>isFuncW(w.w)?(w.acc!=null&&w.acc<35):(w.err==='Mispronunciation'||(w.acc!=null&&w.acc<60))).sort((a,b)=>(a.acc??100)-(b.acc??100)).slice(0,3);for(const w of bad){const low=(w.phonemes||[]).filter(p=>p.acc!=null&&p.acc<60).sort((a,b)=>a.acc-b.acc);const ph=low.map(p=>p.p);const tip=low.length?phTip(low[0].p):'';hints.push({c:'bad',p:5,t:`'${w.w}' 발음 ${w.acc!=null?Math.round(w.acc)+'점':''}${ph.length?' — 특히 /'+ph.join(' ')+'/':''}${tip?` → ${tip}`:''}`})}for(const w of att.azure.words.filter(w=>w.err==='Omission').slice(0,2))hints.push({c:'bad',p:6,t:`'${w.w}'를 빠뜨렸어요`})}
   if(cmp)hints.push(...cmp.hints);
   else if(!att.te)hints.push({c:'info',p:0,t:'이 문장은 선생님 녹음이 없어서 억양·리듬 비교는 못 해요.'});
   else hints.push({c:'info',p:0,t:'선생님 소리나 내 소리가 너무 짧아서 비교하지 못했어요.'});
