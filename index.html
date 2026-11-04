@@ -370,7 +370,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="chips" id="prio-f" aria-label="고르는 범위"></div>
       </div>
       <div class="prio-list" id="prio-list"></div>
-      <p class="small muted" style="margin:10px 0 0">줄을 누르면 수업·문서별로 나뉘어요. '잘한 것'(85점 이상)은 한 달 넘게 안 본 문장부터 골라요. 랜덤 연습 점수도 복습 일정에 그대로 반영돼요.</p>
+      <p class="small muted" style="margin:10px 0 0">줄을 누르면 수업·문서별로 나뉘어요. '잘한 것'(85점 이상)은 한 달 넘게 안 본 문장부터 골라요. 랜덤 연습 점수도 복습 일정에 그대로 반영돼요. '숙제 통과'는 숙제로 내고 다음 수업에서 지적이 없었던 문장이에요. 오늘의 연습과 랜덤에서 맨 뒤로 가고, 한 달쯤 지나면 한 번씩 다시 나와요.</p>
     </div>
     <div class="grid2">
       <div class="card">
@@ -785,7 +785,7 @@ const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
 const median=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[s.length>>1]};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const APP_VER='2.2';
+const APP_VER='2.3';
 function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),ms)}
 function wavg(pairs){let s=0,w=0;for(const [v,k] of pairs)if(v!=null&&!isNaN(v)){s+=v*k;w+=k}return w?s/w:null}
 const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -888,6 +888,10 @@ function applyGrade(id,grade,score){
   state.log.push({t:p.last,id,score:score==null?null:Math.round(score),g:grade});
   saveProgress();
 }
+// ---- homework the teacher checked: a submitted sentence with no point at the lesson after it was submitted ("통과") ----
+function lessonDates(){if(lessonDates._b===state.bank)return lessonDates._v;const st=new Set();for(const i of state.bank.items)for(const p of i.points||[]){const d=String(p.at||'').slice(0,10);if(/^\d{4}-\d{2}-\d{2}$/.test(d))st.add(d)}lessonDates._b=state.bank;lessonDates._v=[...st].sort();return lessonDates._v}
+// the lesson date it passed at, or null (not submitted, not checked yet, or pointed out at/after that lesson)
+function hwPassed(i){const ex=state.exported&&state.exported[i.id];if(!ex)return null;const L=lessonDates().find(d=>d>=ex);if(!L)return null;return (i.points||[]).some(p=>String(p.at||'').slice(0,10)>=L)?null:L}
 function latestLesson(){const ls=state.bank.items.filter(i=>i.lesson&&/^\d{4}-\d{2}-\d{2}$/.test(i.lesson)).map(i=>i.lesson);return ls.length?ls.sort().pop():null}
 function latestWeekItems(){const L=latestLesson();if(!L)return[];return state.bank.items.filter(i=>/^\d{4}-\d{2}-\d{2}$/.test(i.lesson||'')&&dayDiff(i.lesson,L)>=0&&dayDiff(i.lesson,L)<=6)}
 function weekItems(){const cs=state.bank.currentSet;if(cs){const inSet=state.bank.items.filter(i=>i.sets&&i.sets.includes(cs));if(inSet.length)return inSet}return latestWeekItems()}
@@ -901,10 +905,12 @@ function buildSession(){
   const overdue=i=>{const p=P(i.id);return p&&p.due&&p.due<=today};
   const isNew=i=>!P(i.id);
   // focus = newest lesson week first, then the current bundle (homework set)
-  const lw=new Set(latestWeekItems().map(i=>i.id));
-  const cs=new Set(weekItems().map(i=>i.id).filter(id=>!lw.has(id)));
+  // homework that passed the teacher's check goes to the back: a maintenance review after a month, otherwise only leftover slots
+  const passed=i=>!!hwPassed(i),passedWait=i=>passed(i)&&sinceLast(i)<30;
+  const lw=new Set(latestWeekItems().filter(i=>!passed(i)).map(i=>i.id));
+  const cs=new Set(weekItems().filter(i=>!passed(i)).map(i=>i.id).filter(id=>!lw.has(id)));
   const wk=new Set([...lw,...cs]);
-  const breakdown={week:0,set:0,due:0,weak:0,fresh:0};
+  const breakdown={week:0,set:0,due:0,weak:0,fresh:0,passed:0};
   const weekCap=Math.ceil(N*clamp(s.weekShare,20,100)/100);
   const weakFirst=(a,b)=>(P(a.id).avg??100)-(P(b.id).avg??100);
   const lDue=items.filter(i=>lw.has(i.id)&&overdue(i)).sort(weakFirst);
@@ -913,11 +919,11 @@ function buildSession(){
   const sNew=items.filter(i=>cs.has(i.id)&&isNew(i)).sort(sortNew);
   const take=(list,key,cap,group)=>{for(const it of list){if(queue.length>=cap)break;for(const g of (group?expandGroup(it,list,taken):[it])){if(queue.length>=cap)break;if(push(g))breakdown[key]++}}};
   take(lDue,'week',weekCap,false);take(lNew,'week',weekCap,true);take(sDue,'set',weekCap,false);take(sNew,'set',weekCap,true);
-  const due=items.filter(i=>!wk.has(i.id)&&overdue(i)).sort((a,b)=>{const pa=P(a.id),pb=P(b.id);const oa=dayDiff(pa.due,today),ob=dayDiff(pb.due,today);if(oa!==ob)return ob-oa;return (pa.avg??100)-(pb.avg??100)});
+  const due=items.filter(i=>!wk.has(i.id)&&overdue(i)&&!passedWait(i)).sort((a,b)=>{const pa=P(a.id),pb=P(b.id);const oa=dayDiff(pa.due,today),ob=dayDiff(pb.due,today);if(oa!==ob)return ob-oa;return (pa.avg??100)-(pb.avg??100)});
   const dueCap=Math.max(0,N-queue.length);let d=0;
   for(const it of due){if(d>=dueCap)break;if(push(it)){breakdown.due++;d++}}
   const weakCap=Math.round(N*clamp(s.strugglePct,0,60)/100);
-  const weak=items.filter(i=>{const p=P(i.id);return p&&p.reps>=2&&p.avg!=null&&p.avg<75&&!taken.has(i.id)}).sort((a,b)=>(P(a.id).last||'')<(P(b.id).last||'')?-1:1);
+  const weak=items.filter(i=>{const p=P(i.id);return p&&p.reps>=2&&p.avg!=null&&p.avg<75&&!taken.has(i.id)&&!passed(i)}).sort((a,b)=>(P(a.id).last||'')<(P(b.id).last||'')?-1:1);
   let w=0;for(const it of weak){if(w>=weakCap)break;if(push(it)){breakdown.weak++;w++}}
   const freshToday=items.filter(i=>!wk.has(i.id)&&P(i.id)&&P(i.id).first===today).length;
   // while this week's lesson or the current bundle still has unseen sentences, older material comes in
@@ -929,6 +935,11 @@ function buildSession(){
   take(lDue,'week',N,false);take(sDue,'set',N,false);
   for(const it of due){if(queue.length>=N)break;if(push(it))breakdown.due++}
   take(lNew,'week',N,true);take(sNew,'set',N,true);
+  // still room: today's focus is all in already, so older unseen material (up to the normal daily new count) comes before passed homework
+  const freshCap2=Math.max(0,perDay-freshToday-f);let f2=0;
+  for(const it of fresh){if(f2>=freshCap2||queue.length>=N)break;for(const g of expandGroup(it,fresh,taken)){if(f2>=freshCap2||queue.length>=N)break;if(push(g)){breakdown.fresh++;f2++}}}
+  const back=items.filter(i=>passedWait(i)&&overdue(i)).sort((a,b)=>P(a.id).due<P(b.id).due?-1:1);
+  for(const it of back){if(queue.length>=N)break;if(push(it))breakdown.passed++}
   return{queue,breakdown};
 }
 function coverage(){const items=state.bank.items;const total=items.length;let started=0,mastered=0;for(const i of items){const p=P(i.id);if(p){started++;if(p.state==='mastered')mastered++}}return{total,started,mastered}}
@@ -1877,14 +1888,15 @@ function renderToday(){
   $('#demo-banner').hidden=!(state.bank.demo||state.bank.source==='demo');
   const {queue,breakdown}=buildSession();
   $('#today-count').textContent=queue.length;
-  $('#today-breakdown').innerHTML=[['최신 수업',breakdown.week,'t1'],['현재 세트',breakdown.set,'t1'],['복습',breakdown.due,''],['취약',breakdown.weak,'t3'],['과거 신규',breakdown.fresh,'t2']].filter(x=>x[1]>0).map(x=>`<span class="chip ${x[2]}">${x[0]} ${x[1]}</span>`).join('')||'<span class="chip">오늘 할 것이 없어요</span>';
+  $('#today-breakdown').innerHTML=[['최신 수업',breakdown.week,'t1'],['현재 세트',breakdown.set,'t1'],['복습',breakdown.due,''],['취약',breakdown.weak,'t3'],['과거 신규',breakdown.fresh,'t2'],['숙제 통과',breakdown.passed,'']].filter(x=>x[1]>0).map(x=>`<span class="chip ${x[2]}">${x[0]} ${x[1]}</span>`).join('')||'<span class="chip">오늘 할 것이 없어요</span>';
   const F=fbPending();$('#fb-pin').hidden=!F;
   if(F){$('#fb-pin').innerHTML=`<b>${F.d.slice(5).replace('-','/')} 수업 피드백 복습이 먼저예요.</b><br>선생님이 짚어 준 ${F.total}문장만 연습해요${F.items.length<F.total?` — 남은 ${F.items.length}문장(지적 ${F.n}개)`:`(지적 ${F.n}개)`}. 끝까지 하면 평소 오늘의 연습으로 돌아가요.`;$('#today-count').textContent=F.items.length;$('#today-breakdown').innerHTML='<span class="chip t1">수업 피드백 '+F.items.length+'</span>';$('#btn-start').disabled=false;$('#btn-start').textContent='수업 피드백 복습 시작';$('#btn-start').onclick=()=>startFeedback(F)}
   else{$('#btn-start').textContent='연습 시작';$('#btn-start').disabled=!queue.length;$('#btn-start').onclick=()=>startSession(queue,'오늘')}
   renderPrio();
   const wk=weekItems();$('#week-count').textContent=wk.length;$('#week-label').textContent=weekLabel();
   const wkDone=wk.filter(i=>{const p=P(i.id);return p&&p.reps>=1}).length,wkGood=wk.filter(i=>{const p=P(i.id);return p&&p.avg>=80}).length;
-  $('#week-bar').style.width=(wk.length?wkDone/wk.length*100:0)+'%';$('#week-sub').textContent=wk.length?`연습 ${wkDone} · 80점 이상 ${wkGood}`:'';
+  const wkPass=wk.filter(hwPassed).length;
+  $('#week-bar').style.width=(wk.length?wkDone/wk.length*100:0)+'%';$('#week-sub').textContent=wk.length?`연습 ${wkDone} · 80점 이상 ${wkGood}${wkPass?` · 숙제 통과 ${wkPass}(뒤로)`:''}`:'';
   const cv=coverage();const pct=cv.total?Math.round(cv.started/cv.total*100):0;$('#cov-pct').textContent=pct+'%';$('#cov-bar').style.width=pct+'%';$('#cov-sub').textContent=`${cv.started}/${cv.total} 시작 · 숙달 ${cv.mastered}`;
   const td=state.settings.targetDate;const daysLeft=td?Math.max(0,dayDiff(todayStr(),td)):null;$('#goal-date').textContent=td?`목표일 ${td}`:'';
   const unstarted=cv.total-cv.started;const perDay=daysLeft?Math.ceil(unstarted/Math.max(1,daysLeft)):null;
@@ -1902,11 +1914,13 @@ const isGood=i=>{const p=P(i.id);return !!(p&&p.avg!=null&&p.avg>=85)};
 const sinceLast=i=>{const p=P(i.id);return p&&p.last?dayDiff(p.last.slice(0,10),todayStr()):9999};
 function prioPick(list){const f=state.settings.randF||'all';return f==='new'?list.filter(i=>!P(i.id)):f==='weak'?list.filter(i=>{const p=P(i.id);return p&&p.avg!=null&&p.avg<75}):f==='good'?list.filter(isGood):list}
 // random order; for "잘한 것" the ones not seen for a month or more come first (still shuffled within each part)
-function prioOrder(pool){const r=shuffled(pool);if((state.settings.randF||'all')!=='good')return r;return r.filter(i=>sinceLast(i)>=30).concat(r.filter(i=>sinceLast(i)<30))}
+function prioOrder(pool){const r=shuffled(pool);if((state.settings.randF||'all')!=='good')return r.filter(i=>!hwPassed(i)).concat(r.filter(hwPassed));return r.filter(i=>sinceLast(i)>=30).concat(r.filter(i=>sinceLast(i)<30))}
 function prioStats(list){const st=list.filter(i=>P(i.id));const sc=st.map(i=>P(i.id).avg).filter(v=>v!=null);return{n:list.length,started:st.length,avg:sc.length?Math.round(mean(sc)):null,mastered:st.filter(i=>P(i.id).state==='mastered').length,weak:st.filter(i=>P(i.id).avg!=null&&P(i.id).avg<75).length,good:list.filter(isGood).length}}
 function prioSubgroups(list){const cs=state.bank.currentSet;const g=new Map();
-  for(const i of list){const key=i.sets&&i.sets.length?i.sets[0]:(i.lesson?`${i.lesson} 수업`:'기타');if(!g.has(key))g.set(key,[]);g.get(key).push(i)}
-  return[...g.entries()].map(([k,v])=>({key:k,items:v,cur:k===cs,last:v.reduce((m,i)=>i.lesson>m?i.lesson:m,'')})).sort((a,b)=>(b.cur-a.cur)||(a.last<b.last?1:a.last>b.last?-1:0))}
+  const PASS=' · 숙제 통과';
+  for(const i of list){const key=(i.sets&&i.sets.length?i.sets[0]:(i.lesson?`${i.lesson} 수업`:'기타'))+(hwPassed(i)?PASS:'');if(!g.has(key))g.set(key,[]);g.get(key).push(i)}
+  // "… · 숙제 통과" groups (submitted, checked, no point) sit at the end
+  return[...g.entries()].map(([k,v])=>({key:k,items:v,cur:k===cs,pass:k.endsWith(PASS),last:v.reduce((m,i)=>i.lesson>m?i.lesson:m,'')})).sort((a,b)=>(a.pass-b.pass)||(b.cur-a.cur)||(a.last<b.last?1:a.last>b.last?-1:0))}
 function prioLine(st){return`${st.n}문장 · 시작 ${st.started}${st.avg!=null?` · 평균 ${st.avg}점`:''}${st.weak?` · 약한 것 ${st.weak}`:''}${st.good?` · 잘한 것 ${st.good}`:''}`}
 let prioOpen=new Set(),prioGroups={};
 function renderPrio(){
