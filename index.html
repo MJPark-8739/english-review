@@ -370,7 +370,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;back
         <div class="chips" id="prio-f" aria-label="고르는 범위"></div>
       </div>
       <div class="prio-list" id="prio-list"></div>
-      <p class="small muted" style="margin:10px 0 0">줄을 누르면 수업·문서별로 나뉘어요. '잘한 것'(85점 이상)은 한 달 넘게 안 본 문장부터 골라요. 랜덤 연습 점수도 복습 일정에 그대로 반영돼요. '숙제 통과'는 숙제로 내고 다음 수업에서 지적이 없었던 문장이에요. 오늘의 연습과 랜덤에서 맨 뒤로 가고, 한 달쯤 지나면 한 번씩 다시 나와요.</p>
+      <p class="small muted" style="margin:10px 0 0">줄을 누르면 수업·문서별로 나뉘어요. '잘한 것'(85점 이상)은 한 달 넘게 안 본 문장부터 골라요. 랜덤 연습 점수도 복습 일정에 그대로 반영돼요. '숙제 통과 N회'는 숙제로 내고 다음 수업에서 지적이 없었던 횟수예요. 한 번 통과할 때마다 우선순위가 한 단계씩 내려가서(1회: 현재 세트 우선에서 빠지고 일반 복습으로, 2회: 복습·신규 다음, 3회+: 그다음) 연습과 숙제에 덜 나와요. 다시 지적받으면 원래대로 돌아와요.</p>
     </div>
     <div class="grid2">
       <div class="card">
@@ -785,12 +785,12 @@ const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
 const median=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[s.length>>1]};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const APP_VER='2.3';
+const APP_VER='2.4';
 function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),ms)}
 function wavg(pairs){let s=0,w=0;for(const [v,k] of pairs)if(v!=null&&!isNaN(v)){s+=v*k;w+=k}return w?s/w:null}
 const IS_IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-const LS={tries:'bear.tries.v1',fbDone:'bear.fbdone.v1',recall:'bear.recall.v1',exported:'bear.exported.v1',progress:'bear.progress.v1',settings:'bear.settings.v1',log:'bear.log.v1',local:'bear.localItems.v1',sync:'bear.sync.v1',bankCache:'bear.bankCache.v1'};
+const LS={exportLog:'bear.exportlog.v1',tries:'bear.tries.v1',fbDone:'bear.fbdone.v1',recall:'bear.recall.v1',exported:'bear.exported.v1',progress:'bear.progress.v1',settings:'bear.settings.v1',log:'bear.log.v1',local:'bear.localItems.v1',sync:'bear.sync.v1',bankCache:'bear.bankCache.v1'};
 const idb={
   open(){return new Promise((res,rej)=>{try{const r=indexedDB.open('bear',1);r.onupgradeneeded=()=>{const db=r.result;if(!db.objectStoreNames.contains('clips'))db.createObjectStore('clips')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}})},
   async get(k){try{const db=await this.open();return await new Promise((res,rej)=>{const t=db.transaction('clips').objectStore('clips').get(k);t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error)})}catch(e){return undefined}},
@@ -811,7 +811,7 @@ const DEMO_BANK={version:1,demo:true,items:[
   {id:'demo-04',text:"I'm on the fence about it.",ko:'아직 결정을 못 했어요.',tier:2,source:'데모',lesson:'2026-08-13',kind:'sentence'}
 ]};
 const DEFAULTS={testN:10,testSrc:'hw',randN:10,randF:'all',hwFmt:'docx',dailyTarget:20,newPerDay:6,weekShare:70,strugglePct:25,targetDate:addDays(todayStr(),150),showKo:true,hideText:false,showMelody:true,melodyOpen:true,ttsRate:0.95,asrMode:'device',asrConsent:false,azureKey:'',azureRegion:'koreacentral',ghOwner:'MJPark-8739',ghRepo:'english-review-data',ghBranch:'main',ghToken:''};
-const state={tries:store.get(LS.tries,{}),fbDone:store.get(LS.fbDone,{}),recall:store.get(LS.recall,{}),exported:store.get(LS.exported,{}),bank:{items:[],byId:{},tiers:DEFAULT_TIERS,demo:true,source:'demo'},progress:store.get(LS.progress,{}),log:store.get(LS.log,[]),localItems:store.get(LS.local,[]),settings:Object.assign({},DEFAULTS,store.get(LS.settings,{})),session:null,view:'today',bankPage:1};
+const state={exportLog:store.get(LS.exportLog,{}),tries:store.get(LS.tries,{}),fbDone:store.get(LS.fbDone,{}),recall:store.get(LS.recall,{}),exported:store.get(LS.exported,{}),bank:{items:[],byId:{},tiers:DEFAULT_TIERS,demo:true,source:'demo'},progress:store.get(LS.progress,{}),log:store.get(LS.log,[]),localItems:store.get(LS.local,[]),settings:Object.assign({},DEFAULTS,store.get(LS.settings,{})),session:null,view:'today',bankPage:1};
 if(IS_IOS&&state.settings.asrMode==='browser')state.settings.asrMode='device';
 function saveProgress(){store.set(LS.progress,state.progress);store.set(LS.log,state.log.slice(-3000))}
 function saveSettings(){store.set(LS.settings,state.settings)}
@@ -890,8 +890,20 @@ function applyGrade(id,grade,score){
 }
 // ---- homework the teacher checked: a submitted sentence with no point at the lesson after it was submitted ("통과") ----
 function lessonDates(){if(lessonDates._b===state.bank)return lessonDates._v;const st=new Set();for(const i of state.bank.items)for(const p of i.points||[]){const d=String(p.at||'').slice(0,10);if(/^\d{4}-\d{2}-\d{2}$/.test(d))st.add(d)}lessonDates._b=state.bank;lessonDates._v=[...st].sort();return lessonDates._v}
-// the lesson date it passed at, or null (not submitted, not checked yet, or pointed out at/after that lesson)
-function hwPassed(i){const ex=state.exported&&state.exported[i.id];if(!ex)return null;const L=lessonDates().find(d=>d>=ex);if(!L)return null;return (i.points||[]).some(p=>String(p.at||'').slice(0,10)>=L)?null:L}
+// (the previous single "exported" date is kept in the history too)
+function logExport(id,d){const a=[...(state.exportLog[id]||[])],prev=state.exported&&state.exported[id];let ch=false;for(const x of [prev,d])if(x&&!a.includes(x)){a.push(x);ch=true}if(ch){state.exportLog[id]=a.sort().slice(-20);hwCache.v++}}
+// how many homework checks in a row it passed: each lesson after a submission without a point on it = +1, any point = back to 0
+const hwCache={v:0,b:null,k:-1,m:new Map()};
+function hwLevel(i){if(hwCache.b!==state.bank||hwCache.k!==hwCache.v){hwCache.b=state.bank;hwCache.k=hwCache.v;hwCache.m=new Map()}
+  if(hwCache.m.has(i.id))return hwCache.m.get(i.id);
+  const ex=[...(state.exportLog[i.id]||[])];const e1=state.exported&&state.exported[i.id];if(e1&&!ex.includes(e1))ex.push(e1);
+  let lv=0;if(ex.length){const LD=lessonDates(),checks=new Set();for(const d of ex){const L=LD.find(x=>x>=d);if(L)checks.add(L)}
+    const pts=new Set((i.points||[]).map(p=>String(p.at||'').slice(0,10)));for(const L of LD){if(pts.has(L))lv=0;else if(checks.has(L))lv++}}
+  hwCache.m.set(i.id,lv);return lv}
+const hwPassed=i=>hwLevel(i)>0;
+// each pass = one step down: 1 = out of the lesson/set focus (a normal review); 2 = after reviews and new material;
+// 3+ = after that. From step 2 they still come back for upkeep after 30 days per step without practice.
+const hwBack=i=>{const lv=hwLevel(i);return lv>=2&&sinceLast(i)<30*(lv-1)};
 function latestLesson(){const ls=state.bank.items.filter(i=>i.lesson&&/^\d{4}-\d{2}-\d{2}$/.test(i.lesson)).map(i=>i.lesson);return ls.length?ls.sort().pop():null}
 function latestWeekItems(){const L=latestLesson();if(!L)return[];return state.bank.items.filter(i=>/^\d{4}-\d{2}-\d{2}$/.test(i.lesson||'')&&dayDiff(i.lesson,L)>=0&&dayDiff(i.lesson,L)<=6)}
 function weekItems(){const cs=state.bank.currentSet;if(cs){const inSet=state.bank.items.filter(i=>i.sets&&i.sets.includes(cs));if(inSet.length)return inSet}return latestWeekItems()}
@@ -906,7 +918,7 @@ function buildSession(){
   const isNew=i=>!P(i.id);
   // focus = newest lesson week first, then the current bundle (homework set)
   // homework that passed the teacher's check goes to the back: a maintenance review after a month, otherwise only leftover slots
-  const passed=i=>!!hwPassed(i),passedWait=i=>passed(i)&&sinceLast(i)<30;
+  const passed=i=>hwLevel(i)>0,passedWait=hwBack;
   const lw=new Set(latestWeekItems().filter(i=>!passed(i)).map(i=>i.id));
   const cs=new Set(weekItems().filter(i=>!passed(i)).map(i=>i.id).filter(id=>!lw.has(id)));
   const wk=new Set([...lw,...cs]);
@@ -919,11 +931,11 @@ function buildSession(){
   const sNew=items.filter(i=>cs.has(i.id)&&isNew(i)).sort(sortNew);
   const take=(list,key,cap,group)=>{for(const it of list){if(queue.length>=cap)break;for(const g of (group?expandGroup(it,list,taken):[it])){if(queue.length>=cap)break;if(push(g))breakdown[key]++}}};
   take(lDue,'week',weekCap,false);take(lNew,'week',weekCap,true);take(sDue,'set',weekCap,false);take(sNew,'set',weekCap,true);
-  const due=items.filter(i=>!wk.has(i.id)&&overdue(i)&&!passedWait(i)).sort((a,b)=>{const pa=P(a.id),pb=P(b.id);const oa=dayDiff(pa.due,today),ob=dayDiff(pb.due,today);if(oa!==ob)return ob-oa;return (pa.avg??100)-(pb.avg??100)});
+  const due=items.filter(i=>!wk.has(i.id)&&overdue(i)&&!passedWait(i)).sort((a,b)=>{const la=hwLevel(a),lb=hwLevel(b);if(la!==lb)return la-lb;const pa=P(a.id),pb=P(b.id);const oa=dayDiff(pa.due,today),ob=dayDiff(pb.due,today);if(oa!==ob)return ob-oa;return (pa.avg??100)-(pb.avg??100)});
   const dueCap=Math.max(0,N-queue.length);let d=0;
   for(const it of due){if(d>=dueCap)break;if(push(it)){breakdown.due++;d++}}
   const weakCap=Math.round(N*clamp(s.strugglePct,0,60)/100);
-  const weak=items.filter(i=>{const p=P(i.id);return p&&p.reps>=2&&p.avg!=null&&p.avg<75&&!taken.has(i.id)&&!passed(i)}).sort((a,b)=>(P(a.id).last||'')<(P(b.id).last||'')?-1:1);
+  const weak=items.filter(i=>{const p=P(i.id);return p&&p.reps>=2&&p.avg!=null&&p.avg<75&&!taken.has(i.id)&&hwLevel(i)<2}).sort((a,b)=>(P(a.id).last||'')<(P(b.id).last||'')?-1:1);
   let w=0;for(const it of weak){if(w>=weakCap)break;if(push(it)){breakdown.weak++;w++}}
   const freshToday=items.filter(i=>!wk.has(i.id)&&P(i.id)&&P(i.id).first===today).length;
   // while this week's lesson or the current bundle still has unseen sentences, older material comes in
@@ -938,7 +950,7 @@ function buildSession(){
   // still room: today's focus is all in already, so older unseen material (up to the normal daily new count) comes before passed homework
   const freshCap2=Math.max(0,perDay-freshToday-f);let f2=0;
   for(const it of fresh){if(f2>=freshCap2||queue.length>=N)break;for(const g of expandGroup(it,fresh,taken)){if(f2>=freshCap2||queue.length>=N)break;if(push(g)){breakdown.fresh++;f2++}}}
-  const back=items.filter(i=>passedWait(i)&&overdue(i)).sort((a,b)=>P(a.id).due<P(b.id).due?-1:1);
+  const back=items.filter(i=>passedWait(i)&&overdue(i)).sort((a,b)=>(hwLevel(a)-hwLevel(b))||(P(a.id).due<P(b.id).due?-1:1));
   for(const it of back){if(queue.length>=N)break;if(push(it))breakdown.passed++}
   return{queue,breakdown};
 }
@@ -1848,17 +1860,19 @@ function mergeProgress(local,remote){
   const recall=Object.assign({},remote.recall||{});for(const [id,r] of Object.entries(local.recall||{})){const q=recall[id];if(!q||(r.last||'')>(q.last||''))recall[id]=r}
   const exported=Object.assign({},remote.exported||{});for(const [id,d] of Object.entries(local.exported||{}))if(!exported[id]||d>exported[id])exported[id]=d;
   const fbDone=Object.assign({},remote.fbDone||{},local.fbDone||{});
+  const exportLog={};for(const src of [remote.exportLog||{},local.exportLog||{}])for(const [id,a] of Object.entries(src))exportLog[id]=[...new Set([...(exportLog[id]||[]),...(a||[])])].sort().slice(-20);
+  for(const [id,d] of Object.entries(exported))if(!(exportLog[id]||[]).includes(d))exportLog[id]=[...(exportLog[id]||[]),d].sort().slice(-20);
   const tries={};for(const src of [remote.tries||{},local.tries||{}])for(const [id,a] of Object.entries(src)){const m=new Map((tries[id]||[]).map(x=>[x.t,x]));for(const x of a||[])m.set(x.t,x);tries[id]=[...m.values()].sort((x,y)=>x.t<y.t?-1:1).slice(-10)}
-  return{progress,log:log.slice(-3000),localItems:Object.values(li),recall,exported,fbDone,tries};
+  return{progress,log:log.slice(-3000),localItems:Object.values(li),recall,exported,exportLog,fbDone,tries};
 }
 let syncing=false;
 async function syncIfReady(silent){
   if(!gh.ready()||syncing)return;syncing=true;const el=$('#sync-state');el.textContent='동기화 중…';
   try{
     const remote=await gh.getText('progress.json');let rj={};if(remote){try{rj=JSON.parse(remote.text)}catch(e){rj={}}}
-    const merged=mergeProgress({progress:state.progress,log:state.log,localItems:state.localItems,recall:state.recall,exported:state.exported,fbDone:state.fbDone,tries:state.tries},rj);state.fbDone=merged.fbDone;store.set(LS.fbDone,state.fbDone);state.tries=merged.tries;store.set(LS.tries,state.tries);
+    const merged=mergeProgress({progress:state.progress,log:state.log,localItems:state.localItems,recall:state.recall,exported:state.exported,exportLog:state.exportLog,fbDone:state.fbDone,tries:state.tries},rj);state.fbDone=merged.fbDone;state.exportLog=merged.exportLog;store.set(LS.exportLog,state.exportLog);hwCache.v++;store.set(LS.fbDone,state.fbDone);state.tries=merged.tries;store.set(LS.tries,state.tries);
     state.progress=merged.progress;state.log=merged.log;state.localItems=merged.localItems;state.recall=merged.recall;state.exported=merged.exported;saveProgress();store.set(LS.local,state.localItems);store.set(LS.recall,state.recall);store.set(LS.exported,state.exported);
-    const out=JSON.stringify({updatedAt:new Date().toISOString(),device:navigator.platform||'',progress:state.progress,log:state.log,localItems:state.localItems,recall:state.recall,exported:state.exported,fbDone:state.fbDone,tries:state.tries});
+    const out=JSON.stringify({updatedAt:new Date().toISOString(),device:navigator.platform||'',progress:state.progress,log:state.log,localItems:state.localItems,recall:state.recall,exported:state.exported,exportLog:state.exportLog,fbDone:state.fbDone,tries:state.tries});
     if(!remote||remote.text!==out){await gh.putText('progress.json',out,remote?remote.sha:null,'progress '+new Date().toISOString().slice(0,16))}
     const t=new Date();store.set(LS.sync,t.toISOString());el.textContent=`${pad2(t.getMonth()+1)}-${pad2(t.getDate())} ${pad2(t.getHours())}:${pad2(t.getMinutes())}`;
     if(!silent)toast('기록을 동기화했어요');
@@ -1895,8 +1909,8 @@ function renderToday(){
   renderPrio();
   const wk=weekItems();$('#week-count').textContent=wk.length;$('#week-label').textContent=weekLabel();
   const wkDone=wk.filter(i=>{const p=P(i.id);return p&&p.reps>=1}).length,wkGood=wk.filter(i=>{const p=P(i.id);return p&&p.avg>=80}).length;
-  const wkPass=wk.filter(hwPassed).length;
-  $('#week-bar').style.width=(wk.length?wkDone/wk.length*100:0)+'%';$('#week-sub').textContent=wk.length?`연습 ${wkDone} · 80점 이상 ${wkGood}${wkPass?` · 숙제 통과 ${wkPass}(뒤로)`:''}`:'';
+  const wkPass=wk.filter(hwPassed).length;const wkLv=[...new Set(wk.map(hwLevel).filter(Boolean))].sort();
+  $('#week-bar').style.width=(wk.length?wkDone/wk.length*100:0)+'%';$('#week-sub').textContent=wk.length?`연습 ${wkDone} · 80점 이상 ${wkGood}${wkPass?` · 숙제 통과 ${wkPass}(${wkLv.length>1?wkLv.map(l=>`${l}회 ${wk.filter(i=>hwLevel(i)===l).length}`).join('·'):'우선순위 낮춤'})`:''}`:'';
   const cv=coverage();const pct=cv.total?Math.round(cv.started/cv.total*100):0;$('#cov-pct').textContent=pct+'%';$('#cov-bar').style.width=pct+'%';$('#cov-sub').textContent=`${cv.started}/${cv.total} 시작 · 숙달 ${cv.mastered}`;
   const td=state.settings.targetDate;const daysLeft=td?Math.max(0,dayDiff(todayStr(),td)):null;$('#goal-date').textContent=td?`목표일 ${td}`:'';
   const unstarted=cv.total-cv.started;const perDay=daysLeft?Math.ceil(unstarted/Math.max(1,daysLeft)):null;
@@ -1914,13 +1928,14 @@ const isGood=i=>{const p=P(i.id);return !!(p&&p.avg!=null&&p.avg>=85)};
 const sinceLast=i=>{const p=P(i.id);return p&&p.last?dayDiff(p.last.slice(0,10),todayStr()):9999};
 function prioPick(list){const f=state.settings.randF||'all';return f==='new'?list.filter(i=>!P(i.id)):f==='weak'?list.filter(i=>{const p=P(i.id);return p&&p.avg!=null&&p.avg<75}):f==='good'?list.filter(isGood):list}
 // random order; for "잘한 것" the ones not seen for a month or more come first (still shuffled within each part)
-function prioOrder(pool){const r=shuffled(pool);if((state.settings.randF||'all')!=='good')return r.filter(i=>!hwPassed(i)).concat(r.filter(hwPassed));return r.filter(i=>sinceLast(i)>=30).concat(r.filter(i=>sinceLast(i)<30))}
+function prioOrder(pool){const r=shuffled(pool),byLv=a=>a.map((i,k)=>[i,k]).sort((x,y)=>(hwLevel(x[0])-hwLevel(y[0]))||(x[1]-y[1])).map(x=>x[0]);
+  if((state.settings.randF||'all')!=='good')return byLv(r);return byLv(r.filter(i=>sinceLast(i)>=30)).concat(byLv(r.filter(i=>sinceLast(i)<30)))}
 function prioStats(list){const st=list.filter(i=>P(i.id));const sc=st.map(i=>P(i.id).avg).filter(v=>v!=null);return{n:list.length,started:st.length,avg:sc.length?Math.round(mean(sc)):null,mastered:st.filter(i=>P(i.id).state==='mastered').length,weak:st.filter(i=>P(i.id).avg!=null&&P(i.id).avg<75).length,good:list.filter(isGood).length}}
 function prioSubgroups(list){const cs=state.bank.currentSet;const g=new Map();
-  const PASS=' · 숙제 통과';
-  for(const i of list){const key=(i.sets&&i.sets.length?i.sets[0]:(i.lesson?`${i.lesson} 수업`:'기타'))+(hwPassed(i)?PASS:'');if(!g.has(key))g.set(key,[]);g.get(key).push(i)}
-  // "… · 숙제 통과" groups (submitted, checked, no point) sit at the end
-  return[...g.entries()].map(([k,v])=>({key:k,items:v,cur:k===cs,pass:k.endsWith(PASS),last:v.reduce((m,i)=>i.lesson>m?i.lesson:m,'')})).sort((a,b)=>(a.pass-b.pass)||(b.cur-a.cur)||(a.last<b.last?1:a.last>b.last?-1:0))}
+  const lvKey=i=>{const l=hwLevel(i);return l?` · 숙제 통과 ${l>=3?'3회+':l+'회'}`:''};
+  for(const i of list){const key=(i.sets&&i.sets.length?i.sets[0]:(i.lesson?`${i.lesson} 수업`:'기타'))+lvKey(i);if(!g.has(key))g.set(key,[]);g.get(key).push(i)}
+  // "… · 숙제 통과 N회" groups (submitted, checked, no point) sit at the end, lowest step last
+  return[...g.entries()].map(([k,v])=>({key:k,items:v,cur:k===cs,pass:Math.min(3,Math.max(...v.map(hwLevel))),last:v.reduce((m,i)=>i.lesson>m?i.lesson:m,'')})).sort((a,b)=>(a.pass-b.pass)||(b.cur-a.cur)||(a.last<b.last?1:a.last>b.last?-1:0))}
 function prioLine(st){return`${st.n}문장 · 시작 ${st.started}${st.avg!=null?` · 평균 ${st.avg}점`:''}${st.weak?` · 약한 것 ${st.weak}`:''}${st.good?` · 잘한 것 ${st.good}`:''}`}
 let prioOpen=new Set(),prioGroups={};
 function renderPrio(){
@@ -2296,7 +2311,7 @@ async function hwBuild(){
   }catch(e){blob=null}
   if(!blob){blob=new Blob([toWav(all)],{type:'audio/wav'});ext='wav'}
   hw.blob=blob;hw.ext=ext;hw.fileName=`homework-${todayStr()}.${ext}`;
-  for(const id of ids)state.exported[id]=todayStr();store.set(LS.exported,state.exported);
+  for(const id of ids){logExport(id,todayStr());state.exported[id]=todayStr()}store.set(LS.exported,state.exported);store.set(LS.exportLog,state.exportLog);
   const fmt=state.settings.hwFmt==='txt'?'txt':'docx';const info={title:'영어 숙제 녹음',date:todayStr(),label:hw.label,file:hw.fileName,secs:all.length/16000,rows:ids.map((id,i)=>({n:i+1,t:starts[i],en:state.bank.byId[id].text,ko:state.bank.byId[id].ko||''}))};
   hw.listBlob=fmt==='txt'?listTxt(info):listDocx(info);hw.listExt=fmt;hw.listName=`homework-${todayStr()}.${fmt}`;
   const la=$('#hw-list-download');if(la.href)URL.revokeObjectURL(la.href);la.href=URL.createObjectURL(hw.listBlob);la.download=hw.listName;
@@ -2393,6 +2408,7 @@ function bind(){
   window.addEventListener('resize',()=>{if(cur&&cur.current&&$('#graph-wrap').open)drawAligned(cur.current)});
 }
 async function init(){
+  {let ch=false;for(const [id,d] of Object.entries(state.exported||{}))if(!(state.exportLog[id]||[]).includes(d)){logExport(id,d);ch=true}if(ch)store.set(LS.exportLog,state.exportLog)}
   {const v=document.getElementById('app-ver');if(v)v.textContent='v'+APP_VER}
   bind();pruneTakes();backfillExported();
   await loadBank();
